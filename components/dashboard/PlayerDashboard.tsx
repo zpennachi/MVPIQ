@@ -1,0 +1,385 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { SubmissionList } from '@/components/feedback/SubmissionList'
+import { CardSkeleton } from '@/components/ui/LoadingSkeleton'
+import type { FeedbackSubmission } from '@/types/database'
+import { MessageSquare, Users, DollarSign, HelpCircle } from 'lucide-react'
+import Link from 'next/link'
+
+interface PlayerDashboardProps {
+  userId: string
+}
+
+export function PlayerDashboard({ userId }: PlayerDashboardProps) {
+  const [submissions, setSubmissions] = useState<FeedbackSubmission[]>([])
+  const [loading, setLoading] = useState(true)
+  const [teams, setTeams] = useState<{ team: { id: string; name: string }; player_number: string | null }[]>([])
+  const [profile, setProfile] = useState<{ full_name: string | null; email: string; profile_photo_url: string | null } | null>(null)
+  const [hasPaid, setHasPaid] = useState(false)
+  const [oneOnOnes, setOneOnOnes] = useState<any[]>([])
+  const [availableCredits, setAvailableCredits] = useState(0)
+  const supabase = createClient()
+
+  useEffect(() => {
+    loadData()
+    checkPaymentStatus()
+    loadOneOnOnes()
+    checkCredits()
+  }, [userId])
+
+  const checkCredits = async () => {
+    try {
+      const response = await fetch('/api/credits/check')
+      if (response.ok) {
+        const data = await response.json()
+        setAvailableCredits(data.availableCredits || 0)
+      }
+    } catch (error) {
+      console.error('Error checking credits:', error)
+    }
+  }
+
+  useEffect(() => {
+    // Check for payment success in URL
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('video_payment') === 'success') {
+      // Remove query param and refresh data
+      window.history.replaceState({}, '', '/dashboard')
+      loadData()
+      alert('Payment successful! Your video has been uploaded.')
+    }
+  }, [])
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name, email, profile_photo_url')
+        .eq('id', userId)
+        .single()
+      if (data) setProfile(data)
+    }
+    loadProfile()
+  }, [userId])
+
+  const checkPaymentStatus = async () => {
+    // Check if user has any videos with 'ready' status (which means payment was completed)
+    // or any successful payment of $50 or more
+    const { count: readyVideos } = await supabase
+      .from('videos')
+      .select('*', { count: 'exact', head: true })
+      .eq('player_id', userId)
+      .eq('status', 'ready')
+
+    const { data: payments } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('player_id', userId)
+      .eq('status', 'succeeded')
+      .gte('amount', 5000) // $50 in cents
+
+    setHasPaid((readyVideos || 0) > 0 || (payments?.length || 0) > 0)
+  }
+
+  const loadOneOnOnes = async () => {
+    const { data } = await supabase
+      .from('booked_sessions')
+      .select(`
+        *,
+        mentor:profiles!booked_sessions_mentor_id_fkey(*)
+      `)
+      .eq('user_id', userId)
+      .in('status', ['pending', 'confirmed'])
+      .order('start_time', { ascending: true })
+
+    if (data) setOneOnOnes(data)
+  }
+
+  const loadData = async () => {
+    setLoading(true)
+    
+    // Load submissions
+    const { data: submissionsData } = await supabase
+      .from('feedback_submissions')
+      .select('*, videos(*)')
+      .eq('player_id', userId)
+      .order('created_at', { ascending: false })
+
+    if (submissionsData) setSubmissions(submissionsData as FeedbackSubmission[])
+
+    // Load team memberships
+    const { data: teamMembersData } = await supabase
+      .from('team_members')
+      .select(`
+        player_number,
+        team:teams(id, name)
+      `)
+      .eq('player_id', userId)
+
+    if (teamMembersData) {
+      const teamsList = teamMembersData
+        .filter(tm => {
+          const team = tm.team
+          return team && !Array.isArray(team) && typeof team === 'object' && 'id' in team && 'name' in team
+        })
+        .map(tm => {
+          const team = Array.isArray(tm.team) ? tm.team[0] : tm.team
+          return {
+            team: team as { id: string; name: string },
+            player_number: tm.player_number,
+          }
+        })
+      setTeams(teamsList)
+    }
+
+    setLoading(false)
+  }
+
+  const getInitials = (name: string | null) => {
+    if (!name) return 'U'
+    const parts = name.split(' ')
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+    }
+    return name[0].toUpperCase()
+  }
+
+  const displayName = profile?.full_name || profile?.email || 'there'
+  const firstName = displayName !== 'there' ? displayName.split(' ')[0] : ''
+  const playerNumber = teams.length > 0 ? teams[0].player_number : null
+  const schoolName = teams.length > 0 ? teams[0].team.name : null
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-8 bg-[#272727] rounded w-1/3 animate-pulse"></div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
+        <CardSkeleton />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6 fade-in">
+      {/* Personalized Overlay */}
+      <div className="bg-gradient-to-r from-[#272727] to-black border border-[#272727] rounded-lg p-6 sm:p-8 fade-in-delay-1 dotted-bg-subtle">
+        <div className="flex items-center gap-4 sm:gap-6">
+          {/* Profile Photo */}
+          {profile?.profile_photo_url ? (
+            <img
+              src={profile.profile_photo_url}
+              alt={profile?.full_name || 'Profile'}
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover flex-shrink-0 border-2 border-[#ffc700]/40"
+            />
+          ) : (
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#ffc700]/20 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-[#ffc700]/40">
+              <span className="text-2xl sm:text-3xl font-bold text-[#ffc700]">
+                {getInitials(profile?.full_name || null)}
+              </span>
+            </div>
+          )}
+          
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">
+              {firstName ? `Welcome back, ${firstName}!` : 'Welcome back!'}
+            </h1>
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-2">
+              {playerNumber && (
+                <div className="flex items-center gap-2 text-[#d9d9d9]">
+                  <span className="text-sm font-medium">#{playerNumber}</span>
+                </div>
+              )}
+              {schoolName && (
+                <div className="flex items-center gap-2 text-[#d9d9d9]">
+                  <Users className="w-4 h-4" />
+                  <span className="text-sm">{schoolName}</span>
+                </div>
+              )}
+              {availableCredits > 0 && (
+                <div className="flex items-center gap-2 bg-green-600/20 border border-green-500/40 rounded-lg px-3 py-1.5">
+                  <DollarSign className="w-4 h-4 text-green-400" />
+                  <span className="text-sm font-medium text-green-400">
+                    {availableCredits} Session Credit{availableCredits > 1 ? 's' : ''}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+          {/* Pending Feedback Requests - Videos submitted waiting for feedback */}
+          {submissions.filter(s => s.status !== 'completed' && s.status !== 'paid').length > 0 && (
+            <div className="bg-gradient-to-r from-[#ffc700]/10 to-[#ffc700]/5 border-2 border-[#ffc700]/40 rounded-lg shadow-mvp p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-lg sm:text-xl font-semibold text-white">Pending Feedback Requests</h2>
+                  <p className="text-sm text-[#d9d9d9]/70 mt-1">
+                    Your videos are being reviewed by professional mentors
+                  </p>
+                </div>
+                <Link
+                  href="/dashboard/feedback"
+                  className="text-sm text-[#ffc700] hover:text-[#e6b300] transition font-medium"
+                >
+                  View All →
+                </Link>
+              </div>
+              <SubmissionList 
+                submissions={submissions.filter(s => s.status !== 'completed' && s.status !== 'paid')} 
+                userRole="player" 
+                onUpdate={loadData} 
+              />
+              {submissions.filter(s => s.status !== 'completed' && s.status !== 'paid').length > 0 && (
+                <div className="mt-4 pt-4 border-t border-[#ffc700]/20">
+                  <Link
+                    href="/contact"
+                    className="inline-flex items-center gap-2 text-[#ffc700] hover:text-[#e6b300] text-sm font-medium transition"
+                  >
+                    <HelpCircle className="w-4 h-4" />
+                    Need help with your order?
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* New Feedback - Completed feedback they haven't seen yet */}
+          {submissions.filter(s => s.status === 'completed' && s.feedback_text).length > 0 && (
+            <div className="bg-gradient-to-r from-green-900/20 to-green-800/10 border-2 border-green-800/40 rounded-lg shadow-mvp p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-lg sm:text-xl font-semibold text-white">New Feedback Available</h2>
+                  <p className="text-sm text-[#d9d9d9]/70 mt-1">
+                    Professional feedback is ready for your review
+                  </p>
+                </div>
+                <Link
+                  href="/dashboard/feedback"
+                  className="text-sm text-green-400 hover:text-green-300 transition font-medium"
+                >
+                  View All →
+                </Link>
+              </div>
+              <SubmissionList 
+                submissions={submissions.filter(s => s.status === 'completed' && s.feedback_text).slice(0, 3)} 
+                userRole="player" 
+                onUpdate={loadData} 
+              />
+            </div>
+          )}
+
+          {/* Upcoming Appointments - Show next 3 */}
+          {oneOnOnes.slice(0, 3).length > 0 && (
+            <div className="bg-black border border-[#272727] rounded-lg shadow-mvp p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg sm:text-xl font-semibold text-white">Upcoming Appointments</h2>
+                <Link
+                  href="/dashboard/one-on-ones"
+                  className="text-sm text-[#ffc700] hover:text-[#e6b300] transition"
+                >
+                  View All →
+                </Link>
+              </div>
+              <div className="space-y-3">
+                {oneOnOnes.slice(0, 3).map((session: any) => {
+                  const mentor = session.mentor as any
+                  const getMentorInitials = (name: string | null) => {
+                    if (!name) return 'M'
+                    const parts = name.split(' ')
+                    if (parts.length >= 2) {
+                      return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+                    }
+                    return name[0].toUpperCase()
+                  }
+
+                  return (
+                    <div
+                      key={session.id}
+                      className="p-4 bg-[#272727]/50 border border-[#272727] rounded-lg hover:border-[#ffc700]/40 transition-all duration-300"
+                    >
+                      <div className="flex items-start gap-4">
+                        {mentor?.profile_photo_url ? (
+                          <img
+                            src={mentor.profile_photo_url}
+                            alt={mentor?.full_name || 'Mentor'}
+                            className="w-12 h-12 rounded-full object-cover flex-shrink-0 border-2 border-[#ffc700]/40"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-[#ffc700]/20 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-[#ffc700]/40">
+                            <span className="text-lg font-bold text-[#ffc700]">
+                              {getMentorInitials(mentor?.full_name || null)}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          {mentor && (
+                            <p className="text-sm font-semibold text-[#ffc700] mb-1">
+                              {mentor.full_name || mentor.email || 'Mentor'}
+                            </p>
+                          )}
+                          <p className="text-sm text-white">
+                            {new Date(session.start_time).toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}
+                          </p>
+                          <p className="text-xs text-[#d9d9d9]/70 mt-1 capitalize">
+                            Status: <span className="text-white">{session.status}</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="mt-4 pt-4 border-t border-[#272727]">
+                <Link
+                  href="/contact"
+                  className="inline-flex items-center gap-2 text-[#ffc700] hover:text-[#e6b300] text-sm font-medium transition"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                  Need help with your session?
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {submissions.length === 0 && oneOnOnes.length === 0 && (
+            <div className="bg-black border border-[#272727] rounded-lg shadow-mvp p-12 text-center">
+              <MessageSquare className="w-16 h-16 mx-auto mb-4 text-[#272727]" />
+              <h3 className="text-lg font-semibold text-white mb-2">Welcome to your dashboard!</h3>
+              <p className="text-[#d9d9d9] mb-6 max-w-md mx-auto">
+                Get started by booking a one-on-one session or submitting gameplay feedback
+              </p>
+              <div className="flex gap-3 justify-center">
+                <Link
+                  href="/dashboard/one-on-ones"
+                  className="px-4 py-2 bg-[#ffc700] text-black rounded-md hover:bg-[#e6b300] transition font-medium"
+                >
+                  Book Session
+                </Link>
+                <Link
+                  href="/dashboard/feedback"
+                  className="px-4 py-2 bg-[#272727] text-white rounded-md hover:bg-[#272727]/80 transition font-medium"
+                >
+                  Submit Feedback
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+  )
+}

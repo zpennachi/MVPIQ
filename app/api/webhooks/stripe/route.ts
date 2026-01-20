@@ -1,0 +1,507 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import Stripe from 'stripe'
+import { env, isStripeConfigured } from '@/lib/env'
+import { logger } from '@/lib/logger'
+import { handleApiError, ValidationError, NotFoundError } from '@/lib/errors'
+import { sendEmails } from '@/lib/email'
+
+if (!isStripeConfigured()) {
+  throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET')
+}
+
+const stripe = new Stripe(env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2024-06-20',
+})
+
+const webhookSecret = env.STRIPE_WEBHOOK_SECRET!
+
+export async function POST(request: NextRequest) {
+  const body = await request.text()
+  const signature = request.headers.get('stripe-signature')
+
+  if (!signature || !webhookSecret) {
+    return NextResponse.json(
+      { error: 'Missing signature or webhook secret' },
+      { status: 400 }
+    )
+  }
+
+  let event: Stripe.Event
+
+  try {
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
+  } catch (err) {
+    logger.error('Webhook signature verification failed', err)
+    return NextResponse.json(
+      { error: err instanceof Error ? `Webhook Error: ${err.message}` : 'Webhook Error: Invalid signature' },
+      { status: 400 }
+    )
+  }
+
+  const supabase = await createClient()
+
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session
+
+        // Check if this is a video upload payment
+        if (session.metadata?.type === 'video_upload') {
+          const videoId = session.metadata?.videoId || session.client_reference_id
+          const mentorId = session.metadata?.mentorId
+
+          if (!mentorId) {
+            logger.error('No mentorId in payment metadata', undefined, { videoId, sessionId: session.id })
+            break
+          }
+
+          if (videoId) {
+            // Get video and mentor details in parallel
+            const [videoResult, mentorResult] = await Promise.all([
+              supabase
+                .from('videos')
+                .select('*, player_id')
+                .eq('id', videoId)
+                .single(),
+              supabase
+                .from('profiles')
+                .select('id, email, full_name')
+                .eq('id', mentorId)
+                .eq('role', 'mentor')
+                .single(),
+            ])
+
+            if (videoResult.error || !videoResult.data) {
+              logger.error('Video not found in webhook', videoResult.error, { videoId })
+              break
+            }
+
+            if (mentorResult.error || !mentorResult.data) {
+              logger.error('Invalid mentor selected in webhook', mentorResult.error, { mentorId, videoId })
+              break
+            }
+
+            const video = videoResult.data
+            const mentor = mentorResult.data
+
+            // Update video status to ready
+            await supabase
+              .from('videos')
+              .update({
+                status: 'ready',
+              })
+              .eq('id', videoId)
+
+            // Create feedback submission with selected mentor
+            const { data: submission, error: submissionError } = await supabase
+              .from('feedback_submissions')
+              .insert({
+                video_id: videoId,
+                player_id: video.player_id,
+                mentor_id: mentorId,
+                status: 'assigned', // Mark as assigned since mentor is selected
+                payment_status: 'completed',
+                payment_intent_id: session.id,
+              })
+              .select()
+              .single()
+
+            if (submissionError) {
+              logger.error('Failed to create feedback submission in webhook', submissionError, { videoId, mentorId })
+            } else {
+              logger.info('Feedback submission created in webhook', {
+                submissionId: submission.id,
+                videoId,
+                mentorId,
+                mentorEmail: mentor.email,
+              })
+
+              // Get player info
+              const { data: playerProfile } = await supabase
+                .from('profiles')
+                .select('full_name, email')
+                .eq('id', video.player_id)
+                .single()
+
+              const playerName = playerProfile?.full_name || playerProfile?.email || 'Player'
+              const playerEmail = playerProfile?.email
+
+              // Send emails using centralized utility
+              const emailResults = await sendEmails([
+                ...(playerEmail
+                  ? [
+                      {
+                        type: 'submission_success' as const,
+                        recipient: playerEmail,
+                        data: {
+                          videoTitle: video.title || 'Video Submission',
+                          dashboardLink: `${env.NEXT_PUBLIC_APP_URL}/dashboard/feedback`,
+                        },
+                      },
+                    ]
+                  : []),
+                ...(mentor.email
+                  ? [
+                      {
+                        type: 'new_submission' as const,
+                        recipient: mentor.email,
+                        data: {
+                          mentorName: mentor.full_name || mentor.email,
+                          videoTitle: video.title || 'Video Submission',
+                          playerName,
+                          dashboardLink: `${env.NEXT_PUBLIC_APP_URL}/dashboard/feedback`,
+                        },
+                      },
+                    ]
+                  : []),
+              ])
+
+              logger.info('Webhook emails processed', {
+                sent: emailResults.filter(r => r.success).length,
+                failed: emailResults.filter(r => !r.success).length,
+              })
+            }
+
+            // Update payment record
+            await supabase
+              .from('payments')
+              .update({
+                status: 'succeeded',
+              })
+              .eq('stripe_payment_intent_id', session.id)
+
+            logger.info('Payment completed for video upload', { videoId })
+            break
+          }
+        }
+
+        // Check if this is a session booking payment
+        // Check both metadata.sessionId and client_reference_id
+        const sessionId = session.metadata?.sessionId || session.client_reference_id
+
+        if (sessionId) {
+          // First, get the session to verify it exists and get user/mentor IDs
+          const { data: existingSession } = await supabase
+            .from('booked_sessions')
+            .select('user_id, mentor_id, start_time')
+            .eq('id', sessionId)
+            .single()
+
+          if (!existingSession) {
+            logger.error('Session not found in webhook', undefined, { sessionId })
+            break
+          }
+
+          // Update session status
+          await supabase
+            .from('booked_sessions')
+            .update({
+              payment_status: 'completed',
+              status: 'confirmed',
+              payment_intent_id: session.id,
+            })
+            .eq('id', sessionId)
+
+          // Fetch user and mentor profiles directly - use maybeSingle to avoid errors
+          const [userResult, mentorResult] = await Promise.all([
+            supabase
+              .from('profiles')
+              .select('email, full_name')
+              .eq('id', existingSession.user_id)
+              .maybeSingle(),
+            supabase
+              .from('profiles')
+              .select('email, full_name')
+              .eq('id', existingSession.mentor_id)
+              .maybeSingle(),
+          ])
+
+          const userEmail = userResult.data?.email
+          const userName = userResult.data?.full_name || userResult.data?.email
+          const mentorEmail = mentorResult.data?.email
+          const mentorName = mentorResult.data?.full_name || mentorResult.data?.email
+
+          logger.info('Starting email notifications for session', {
+            sessionId,
+            userId: existingSession.user_id,
+            mentorId: existingSession.mentor_id,
+          })
+
+          // Send emails using centralized utility
+          const emailResults = await sendEmails([
+            ...(userEmail
+              ? [
+                  {
+                    type: 'session_confirmation' as const,
+                    recipient: userEmail,
+                    data: {
+                      sessionId,
+                      mentorName,
+                      startTime: existingSession.start_time,
+                    },
+                  },
+                ]
+              : []),
+            ...(mentorEmail
+              ? [
+                  {
+                    type: 'session_booking_notification' as const,
+                    recipient: mentorEmail,
+                    data: {
+                      sessionId,
+                      userName,
+                      startTime: existingSession.start_time,
+                    },
+                  },
+                ]
+              : []),
+          ])
+
+          if (emailResults.length === 0) {
+            logger.warn('No emails sent for session', { sessionId, userEmail, mentorEmail })
+          } else {
+            logger.info('Session emails processed', {
+              sessionId,
+              sent: emailResults.filter(r => r.success).length,
+              failed: emailResults.filter(r => !r.success).length,
+            })
+          }
+
+          logger.info('Payment completed for session', { sessionId })
+          break
+        }
+
+        // Otherwise, handle as feedback submission payment
+        const submissionId = session.metadata?.submissionId || session.client_reference_id
+
+        if (!submissionId) {
+          logger.warn('No submission ID in checkout session', { sessionId: session.id })
+          break
+        }
+
+        // Update submission status
+        await supabase
+          .from('feedback_submissions')
+          .update({
+            payment_status: 'completed',
+            status: 'assigned',
+          })
+          .eq('id', submissionId)
+
+        // Update payment record
+        await supabase
+          .from('payments')
+          .update({
+            status: 'succeeded',
+          })
+          .eq('stripe_payment_intent_id', session.id)
+
+        logger.info('Payment completed for submission', { submissionId })
+        break
+      }
+
+      case 'checkout.session.async_payment_succeeded': {
+        const session = event.data.object as Stripe.Checkout.Session
+
+        // Check if this is a video upload payment
+        if (session.metadata?.type === 'video_upload') {
+          const videoId = session.metadata?.videoId || session.client_reference_id
+          const mentorId = session.metadata?.mentorId
+
+            if (!mentorId) {
+              logger.error('No mentorId in async payment metadata', undefined, { videoId, sessionId: session.id })
+              break
+            }
+
+          if (videoId) {
+            // Get video details
+            const { data: video, error: videoError } = await supabase
+              .from('videos')
+              .select('*, player_id')
+              .eq('id', videoId)
+              .single()
+
+            if (videoError || !video) {
+              logger.error('Video not found in async webhook', videoError, { videoId })
+              break
+            }
+
+            // Verify mentor exists
+            const { data: mentor, error: mentorError } = await supabase
+              .from('profiles')
+              .select('id, email, full_name')
+              .eq('id', mentorId)
+              .eq('role', 'mentor')
+              .single()
+
+            if (mentorError || !mentor) {
+              logger.error('Invalid mentor in async webhook', mentorError, { mentorId, videoId })
+              break
+            }
+
+              // Update video status to ready
+              await supabase
+                .from('videos')
+                .update({
+                  status: 'ready',
+                })
+                .eq('id', videoId)
+
+              // Create feedback submission if it doesn't exist
+              const { data: existingSubmission } = await supabase
+                .from('feedback_submissions')
+                .select('id')
+                .eq('video_id', videoId)
+                .single()
+
+              if (!existingSubmission) {
+                const { data: submission, error: submissionError } = await supabase
+                  .from('feedback_submissions')
+                  .insert({
+                    video_id: videoId,
+                    player_id: video.player_id,
+                    mentor_id: mentorId,
+                    status: 'assigned', // Mark as assigned since mentor is selected
+                    payment_status: 'completed',
+                    payment_intent_id: session.id,
+                  })
+                  .select()
+                  .single()
+
+                if (!submissionError && submission) {
+                  logger.info('Created feedback submission (async)', {
+                    submissionId: submission.id,
+                    videoId,
+                    mentorId,
+                  })
+
+                  // Get player info
+                  const { data: playerProfile } = await supabase
+                    .from('profiles')
+                    .select('full_name, email')
+                    .eq('id', video.player_id)
+                    .single()
+
+                  const playerName = playerProfile?.full_name || playerProfile?.email || 'Player'
+                  const playerEmail = playerProfile?.email
+
+                  // Send emails using centralized utility
+                  const emailResults = await sendEmails([
+                    ...(playerEmail
+                      ? [
+                          {
+                            type: 'submission_success' as const,
+                            recipient: playerEmail,
+                            data: {
+                              videoTitle: video.title || 'Video Submission',
+                              dashboardLink: `${env.NEXT_PUBLIC_APP_URL}/dashboard/feedback`,
+                            },
+                          },
+                        ]
+                      : []),
+                    ...(mentor.email
+                      ? [
+                          {
+                            type: 'new_submission' as const,
+                            recipient: mentor.email,
+                            data: {
+                              mentorName: mentor.full_name || mentor.email,
+                              videoTitle: video.title || 'Video Submission',
+                              playerName,
+                              dashboardLink: `${env.NEXT_PUBLIC_APP_URL}/dashboard/feedback`,
+                            },
+                          },
+                        ]
+                      : []),
+                  ])
+
+                  logger.info('Async webhook emails processed', {
+                    sent: emailResults.filter(r => r.success).length,
+                    failed: emailResults.filter(r => !r.success).length,
+                  })
+                }
+              }
+            }
+
+            await supabase
+              .from('payments')
+              .update({
+                status: 'succeeded',
+              })
+              .eq('stripe_payment_intent_id', session.id)
+          }
+          break
+        }
+
+        // Otherwise, handle as feedback submission payment
+        const submissionId = session.metadata?.submissionId || session.client_reference_id
+
+        if (submissionId) {
+          await supabase
+            .from('feedback_submissions')
+            .update({
+              payment_status: 'completed',
+              status: 'assigned',
+            })
+            .eq('id', submissionId)
+
+          await supabase
+            .from('payments')
+            .update({
+              status: 'succeeded',
+            })
+            .eq('stripe_payment_intent_id', session.id)
+        }
+        break
+      }
+
+      case 'checkout.session.async_payment_failed': {
+        const session = event.data.object as Stripe.Checkout.Session
+
+        // Check if this is a video upload payment
+        if (session.metadata?.type === 'video_upload') {
+          const videoId = session.metadata?.videoId || session.client_reference_id
+
+          if (videoId) {
+            // Keep video in pending_payment status, can retry
+            await supabase
+              .from('payments')
+              .update({
+                status: 'failed',
+              })
+              .eq('stripe_payment_intent_id', session.id)
+          }
+          break
+        }
+
+        // Otherwise, handle as feedback submission payment
+        const submissionId = session.metadata?.submissionId || session.client_reference_id
+
+        if (submissionId) {
+          await supabase
+            .from('feedback_submissions')
+            .update({
+              payment_status: 'failed',
+            })
+            .eq('id', submissionId)
+
+          await supabase
+            .from('payments')
+            .update({
+              status: 'failed',
+            })
+            .eq('stripe_payment_intent_id', session.id)
+        }
+        break
+      }
+
+      default:
+        logger.warn('Unhandled webhook event type', { eventType: event.type })
+    }
+
+    return NextResponse.json({ received: true })
+  } catch (error) {
+    return handleApiError(error)
+  }
+}
