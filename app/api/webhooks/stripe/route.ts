@@ -6,21 +6,40 @@ import { logger } from '@/lib/logger'
 import { handleApiError, ValidationError, NotFoundError } from '@/lib/errors'
 import { sendEmails } from '@/lib/email'
 
-if (!isStripeConfigured()) {
-  throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET')
+// Lazy initialization to avoid build-time errors
+let stripe: Stripe | null = null
+let webhookSecret: string | null = null
+
+function getStripe(): Stripe {
+  if (!stripe) {
+    if (!isStripeConfigured()) {
+      throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET')
+    }
+    stripe = new Stripe(env.STRIPE_SECRET_KEY!, {
+      apiVersion: '2024-06-20' as Stripe.LatestApiVersion,
+    })
+  }
+  return stripe
 }
 
-const stripe = new Stripe(env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20' as Stripe.LatestApiVersion,
-})
-
-const webhookSecret = env.STRIPE_WEBHOOK_SECRET!
+function getWebhookSecret(): string {
+  if (!webhookSecret) {
+    if (!isStripeConfigured()) {
+      throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET')
+    }
+    webhookSecret = env.STRIPE_WEBHOOK_SECRET!
+  }
+  return webhookSecret
+}
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
   const signature = request.headers.get('stripe-signature')
 
-  if (!signature || !webhookSecret) {
+  const webhookSecret = getWebhookSecret()
+  const stripe = getStripe()
+
+  if (!signature) {
     return NextResponse.json(
       { error: 'Missing signature or webhook secret' },
       { status: 400 }
