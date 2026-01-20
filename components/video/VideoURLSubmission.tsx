@@ -266,7 +266,7 @@ export function VideoURLSubmission({
                 <ul className="list-disc list-inside space-y-1 text-xs">
                   <li>Paste a link from <strong className="text-[#ffc700]">YouTube</strong>, <strong className="text-[#ffc700]">Hudl</strong>, or any publicly accessible video</li>
                   <li>Make sure the video is publicly viewable (not private)</li>
-                  <li>After submission, you'll select a mentor and proceed to payment</li>
+                  <li>After submission, you&apos;ll select a mentor and proceed to payment</li>
                 </ul>
               </div>
             </div>

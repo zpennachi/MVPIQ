@@ -98,7 +98,7 @@ export async function DynamicHomepage() {
                   </ul>
                 </div>
                 <div className="text-white text-sm italic">
-                  "SMITH WAS CONSIDERED BY MANY TO BE ONE OF THE MOST IMPORTANT PLAYERS ON THE STEELERS' OFFENSIVE LINE."
+                  &quot;SMITH WAS CONSIDERED BY MANY TO BE ONE OF THE MOST IMPORTANT PLAYERS ON THE STEELERS&apos; OFFENSIVE LINE.&quot;
                 </div>
               </div>
               
@@ -202,7 +202,7 @@ export async function DynamicHomepage() {
                 <div className="flex-1">
                   <h4 className="font-bold text-white mb-2 text-lg uppercase tracking-wide">Get Matched with a Professional Athlete:</h4>
                   <p className="text-white leading-relaxed">
-                    We'll pair you with a former professional athlete who best fits your development objectives.
+                    We&apos;ll pair you with a former professional athlete who best fits your development objectives.
                   </p>
                 </div>
               </div>
@@ -237,7 +237,7 @@ export async function DynamicHomepage() {
               ATHLETE INSIGHTS: STORIES AND LESSONS FROM THE PROS
             </h2>
             <p className="text-lg sm:text-xl text-white text-center mb-12 max-w-3xl mx-auto leading-relaxed">
-              Explore our Media Archive to discover valuable insights and stories from seasoned athletes. Learn from their experiences, challenges, and triumphs as they share what it takes to grow and succeed in the world of sports. Whether you're seeking inspiration or practical advice, our collection offers a wealth of knowledge to help you on your athletic journey.
+              Explore our Media Archive to discover valuable insights and stories from seasoned athletes. Learn from their experiences, challenges, and triumphs as they share what it takes to grow and succeed in the world of sports. Whether you&apos;re seeking inspiration or practical advice, our collection offers a wealth of knowledge to help you on your athletic journey.
             </p>
             <div className="text-center">
               <Link
@@ -348,7 +348,7 @@ export async function DynamicHomepage() {
                           </div>
                           {mentorData.quote && (
                             <div className="text-white text-sm italic">
-                              "{mentorData.quote}"
+                              &quot;{mentorData.quote}&quot;
                             </div>
                           )}
                         </div>
