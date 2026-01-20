@@ -194,9 +194,9 @@ export function MentorAvailability({ mentorId }: MentorAvailabilityProps) {
                   {format(day, 'MMM d')}
                 </div>
                 <div className="space-y-1">
-                  {daySlots.map((slot) => (
+                  {daySlots.map((slot, idx) => (
                     <div
-                      key={slot.id}
+                      key={`${slot.originalSlotId}-${slot.start_time}-${idx}`}
                       className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded p-1 text-xs"
                     >
                       <div className="flex items-center justify-between">
@@ -243,9 +243,9 @@ export function MentorAvailability({ mentorId }: MentorAvailabilityProps) {
                     {format(day, 'MMM d')}
                   </div>
                   <div className="space-y-1.5">
-                    {daySlots.map((slot) => (
+                    {daySlots.map((slot, idx) => (
                       <div
-                        key={slot.id}
+                        key={`${slot.originalSlotId}-${slot.start_time}-${idx}`}
                         className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded p-1.5 text-xs"
                       >
                         <div className="flex items-center justify-between">
