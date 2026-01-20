@@ -48,6 +48,8 @@ export const emailNotificationSchema = z.object({
   data: z.record(z.unknown()).optional(),
 })
 
+export type EmailType = z.infer<typeof emailNotificationSchema>['type']
+
 // Session payment validation
 export const sessionPaymentSchema = z.object({
   sessionId: z.string().uuid('Invalid session ID format'),
