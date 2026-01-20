@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #FFD700;">Payment Received</h2>
             <p>Hi there,</p>
-            <p>Your payment of $${(data.amount as number / 100).toFixed(2)} has been confirmed.</p>
+            <p>Your payment of $${((data.amount as number) / 100).toFixed(2)} has been confirmed.</p>
             <p><strong>Submission ID:</strong> ${data.submissionId as string}</p>
             <p><strong>Video:</strong> ${(data.videoTitle as string) || 'N/A'}</p>
             <p>Your feedback request has been submitted and will be reviewed by our professional athletes.</p>

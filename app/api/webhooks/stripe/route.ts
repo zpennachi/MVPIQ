@@ -11,7 +11,7 @@ if (!isStripeConfigured()) {
 }
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2024-06-20' as Stripe.LatestApiVersion,
 })
 
 const webhookSecret = env.STRIPE_WEBHOOK_SECRET!

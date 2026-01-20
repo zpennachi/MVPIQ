@@ -272,7 +272,7 @@ export default function SettingsPage() {
                     <div className="flex-1">
                       <p className="text-sm font-medium text-white">{profilePhoto?.name}</p>
                       <p className="text-xs text-[#d9d9d9]/70">
-                        {(profilePhoto?.size || 0) / (1024 * 1024).toFixed(2)} MB
+                        {((profilePhoto?.size || 0) / (1024 * 1024)).toFixed(2)} MB
                       </p>
                     </div>
                     <button
