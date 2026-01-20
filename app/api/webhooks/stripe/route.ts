@@ -309,10 +309,10 @@ export async function POST(request: NextRequest) {
           const videoId = session.metadata?.videoId || session.client_reference_id
           const mentorId = session.metadata?.mentorId
 
-            if (!mentorId) {
-              logger.error('No mentorId in async payment metadata', undefined, { videoId, sessionId: session.id })
-              break
-            }
+          if (!mentorId) {
+            logger.error('No mentorId in async payment metadata', undefined, { videoId, sessionId: session.id })
+            break
+          }
 
           if (videoId) {
             // Get video details
@@ -340,87 +340,86 @@ export async function POST(request: NextRequest) {
               break
             }
 
-              // Update video status to ready
-              await supabase
-                .from('videos')
-                .update({
-                  status: 'ready',
-                })
-                .eq('id', videoId)
+            // Update video status to ready
+            await supabase
+              .from('videos')
+              .update({
+                status: 'ready',
+              })
+              .eq('id', videoId)
 
-              // Create feedback submission if it doesn't exist
-              const { data: existingSubmission } = await supabase
+            // Create feedback submission if it doesn't exist
+            const { data: existingSubmission } = await supabase
+              .from('feedback_submissions')
+              .select('id')
+              .eq('video_id', videoId)
+              .single()
+
+            if (!existingSubmission) {
+              const { data: submission, error: submissionError } = await supabase
                 .from('feedback_submissions')
-                .select('id')
-                .eq('video_id', videoId)
+                .insert({
+                  video_id: videoId,
+                  player_id: video.player_id,
+                  mentor_id: mentorId,
+                  status: 'assigned', // Mark as assigned since mentor is selected
+                  payment_status: 'completed',
+                  payment_intent_id: session.id,
+                })
+                .select()
                 .single()
 
-              if (!existingSubmission) {
-                const { data: submission, error: submissionError } = await supabase
-                  .from('feedback_submissions')
-                  .insert({
-                    video_id: videoId,
-                    player_id: video.player_id,
-                    mentor_id: mentorId,
-                    status: 'assigned', // Mark as assigned since mentor is selected
-                    payment_status: 'completed',
-                    payment_intent_id: session.id,
-                  })
-                  .select()
+              if (!submissionError && submission) {
+                logger.info('Created feedback submission (async)', {
+                  submissionId: submission.id,
+                  videoId,
+                  mentorId,
+                })
+
+                // Get player info
+                const { data: playerProfile } = await supabase
+                  .from('profiles')
+                  .select('full_name, email')
+                  .eq('id', video.player_id)
                   .single()
 
-                if (!submissionError && submission) {
-                  logger.info('Created feedback submission (async)', {
-                    submissionId: submission.id,
-                    videoId,
-                    mentorId,
-                  })
+                const playerName = playerProfile?.full_name || playerProfile?.email || 'Player'
+                const playerEmail = playerProfile?.email
 
-                  // Get player info
-                  const { data: playerProfile } = await supabase
-                    .from('profiles')
-                    .select('full_name, email')
-                    .eq('id', video.player_id)
-                    .single()
-
-                  const playerName = playerProfile?.full_name || playerProfile?.email || 'Player'
-                  const playerEmail = playerProfile?.email
-
-                  // Send emails using centralized utility
-                  const emailResults = await sendEmails([
-                    ...(playerEmail
-                      ? [
-                          {
-                            type: 'submission_success' as const,
-                            recipient: playerEmail,
-                            data: {
-                              videoTitle: video.title || 'Video Submission',
-                              dashboardLink: `${env.NEXT_PUBLIC_APP_URL}/dashboard/feedback`,
-                            },
+                // Send emails using centralized utility
+                const emailResults = await sendEmails([
+                  ...(playerEmail
+                    ? [
+                        {
+                          type: 'submission_success' as const,
+                          recipient: playerEmail,
+                          data: {
+                            videoTitle: video.title || 'Video Submission',
+                            dashboardLink: `${env.NEXT_PUBLIC_APP_URL}/dashboard/feedback`,
                           },
-                        ]
-                      : []),
-                    ...(mentor.email
-                      ? [
-                          {
-                            type: 'new_submission' as const,
-                            recipient: mentor.email,
-                            data: {
-                              mentorName: mentor.full_name || mentor.email,
-                              videoTitle: video.title || 'Video Submission',
-                              playerName,
-                              dashboardLink: `${env.NEXT_PUBLIC_APP_URL}/dashboard/feedback`,
-                            },
+                        },
+                      ]
+                    : []),
+                  ...(mentor.email
+                    ? [
+                        {
+                          type: 'new_submission' as const,
+                          recipient: mentor.email,
+                          data: {
+                            mentorName: mentor.full_name || mentor.email,
+                            videoTitle: video.title || 'Video Submission',
+                            playerName,
+                            dashboardLink: `${env.NEXT_PUBLIC_APP_URL}/dashboard/feedback`,
                           },
-                        ]
-                      : []),
-                  ])
+                        },
+                      ]
+                    : []),
+                ])
 
-                  logger.info('Async webhook emails processed', {
-                    sent: emailResults.filter(r => r.success).length,
-                    failed: emailResults.filter(r => !r.success).length,
-                  })
-                }
+                logger.info('Async webhook emails processed', {
+                  sent: emailResults.filter(r => r.success).length,
+                  failed: emailResults.filter(r => !r.success).length,
+                })
               }
             }
 
