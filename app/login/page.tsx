@@ -41,8 +41,9 @@ export default function LoginPage() {
     setGoogleLoading(true)
 
     try {
-      // Use NEXT_PUBLIC_APP_URL if available (production), otherwise use current origin (dev)
-      const redirectUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+      // Always use current origin (will be Vercel URL when deployed)
+      // This ensures we use the correct URL whether dev or production
+      const redirectUrl = window.location.origin
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
