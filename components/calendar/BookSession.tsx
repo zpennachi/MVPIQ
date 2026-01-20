@@ -477,7 +477,7 @@ export function BookSession({ userId, userRole }: BookSessionProps) {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
                 <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                  {selectedMentor.full_name || selectedMentor.email}'s Availability
+                  {selectedMentor.full_name || selectedMentor.email}&apos;s Availability
                   {selectedMentorData.expandedSlots && selectedMentorData.expandedSlots.length > 0 && (
                     <span className="ml-2 text-xs sm:text-sm font-normal text-gray-500 dark:text-gray-400 block sm:inline">
                       ({selectedMentorData.expandedSlots.length} available slots)
