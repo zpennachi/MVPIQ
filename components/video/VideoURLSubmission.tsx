@@ -242,7 +242,7 @@ export function VideoURLSubmission({
               onClick={() => {
                 setShowForm(false)
                 setError(null)
-                setFormData({ videoUrl: '', description: '', playerNumbers: '' })
+                setFormData({ videoUrl: '', title: '', description: '', playerNumbers: '' })
               }}
               className="text-[#d9d9d9] hover:text-white p-1 touch-manipulation"
               aria-label="Close form"
