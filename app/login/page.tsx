@@ -41,10 +41,12 @@ export default function LoginPage() {
     setGoogleLoading(true)
 
     try {
+      // Use NEXT_PUBLIC_APP_URL if available (production), otherwise use current origin (dev)
+      const redirectUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: `${redirectUrl}/dashboard`,
         },
       })
 
