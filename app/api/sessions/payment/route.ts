@@ -346,19 +346,32 @@ export async function POST(request: NextRequest) {
         updateData.meeting_link = meetingLink
       }
       
-      // Only add google_event_id if the column exists (check by trying to update it)
-      // If column doesn't exist, just skip it - meeting_link is more important
+      // Try update with google_event_id first
       if (googleEventId) {
-        // Try to include it, but don't fail if column doesn't exist
         updateData.google_event_id = googleEventId
       }
       
-      const { data: updatedSession, error: updateError } = await supabase
+      let { data: updatedSession, error: updateError } = await supabase
         .from('booked_sessions')
         .update(updateData)
         .eq('id', sessionId)
         .select()
         .single()
+
+      // If update fails due to missing google_event_id column, retry without it
+      if (updateError && updateError.message?.includes('google')) {
+        logger.warn('google_event_id column may not exist, retrying without it', { sessionId, error: updateError.message })
+        const { google_event_id, ...updateDataWithoutGoogle } = updateData
+        const retryResult = await supabase
+          .from('booked_sessions')
+          .update(updateDataWithoutGoogle)
+          .eq('id', sessionId)
+          .select()
+          .single()
+        
+        updatedSession = retryResult.data
+        updateError = retryResult.error
+      }
 
       if (updateError) {
         logger.error('Failed to update session status in dev mode', updateError, { sessionId })
