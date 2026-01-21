@@ -35,12 +35,11 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient()
     const { data: adminProfiles, error: adminError } = await supabase
       .from('profiles')
-      .select('id, email, google_calendar_connected, google_calendar_id, google_calendar_access_token, google_calendar_refresh_token')
+      .select('id, email, google_calendar_connected, google_calendar_id, google_calendar_access_token, google_calendar_refresh_token, google_calendar_token_expires_at')
       .eq('role', 'admin')
     
-    // Find the first admin with connected calendar and tokens
+    // Find the first admin with tokens (prioritize connected=true, but also check if tokens exist)
     const adminProfile = adminProfiles?.find(p => 
-      p.google_calendar_connected === true && 
       p.google_calendar_access_token && 
       p.google_calendar_refresh_token
     ) || null
@@ -52,15 +51,23 @@ export async function GET(request: NextRequest) {
     logger.info('OAuth status check', {
       adminCount: adminProfiles?.length || 0,
       adminError: adminError?.message,
-      foundConnectedAdmin: !!adminProfile,
+      foundAdminWithTokens: !!adminProfile,
       adminEmail: adminProfile?.email,
+      adminId: adminProfile?.id,
+      connected: adminProfile?.google_calendar_connected,
       hasAccessToken: !!adminProfile?.google_calendar_access_token,
       hasRefreshToken: !!adminProfile?.google_calendar_refresh_token,
+      accessTokenLength: adminProfile?.google_calendar_access_token?.length || 0,
+      refreshTokenLength: adminProfile?.google_calendar_refresh_token?.length || 0,
+      expiresAt: adminProfile?.google_calendar_token_expires_at,
       allAdmins: adminProfiles?.map(p => ({
         email: p.email,
+        id: p.id,
         connected: p.google_calendar_connected,
         hasAccessToken: !!p.google_calendar_access_token,
         hasRefreshToken: !!p.google_calendar_refresh_token,
+        accessTokenLength: p.google_calendar_access_token?.length || 0,
+        refreshTokenLength: p.google_calendar_refresh_token?.length || 0,
       })),
     })
 
@@ -113,7 +120,12 @@ export async function GET(request: NextRequest) {
             hasTokens: hasOAuth,
             hasEnvVars: hasOAuthEnv,
             adminEmail: adminProfile?.email,
+            adminId: adminProfile?.id,
             calendarId: adminProfile?.google_calendar_id,
+            expiresAt: adminProfile?.google_calendar_token_expires_at,
+            // Diagnostic info
+            totalAdmins: adminProfiles?.length || 0,
+            adminsWithTokens: adminProfiles?.filter(p => p.google_calendar_access_token && p.google_calendar_refresh_token).length || 0,
           },
         },
         note: result.meetLink 
