@@ -50,14 +50,24 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: 'Service account is configured correctly!',
+        message: result.meetLink 
+          ? 'Service account is configured correctly and Meet link was generated!'
+          : 'Service account is configured correctly, but Meet link was not generated.',
         details: {
           eventId: result.eventId,
-          meetLink: result.meetLink,
+          meetLink: result.meetLink || 'NOT GENERATED - Check Vercel logs for conferenceData details',
           calendarId,
           email: env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.substring(0, 30) + '...',
         },
-        note: 'A test event was created in your calendar. You can delete it.',
+        note: result.meetLink 
+          ? 'A test event was created in your calendar with a Meet link. You can delete it.'
+          : 'A test event was created but no Meet link was generated. Check Vercel function logs for the full conferenceData response. The calendar might need Meet enabled or the service account might need additional permissions.',
+        troubleshooting: !result.meetLink ? [
+          'Check Vercel function logs for the full calendar event response',
+          'Verify the calendar has Google Meet enabled',
+          'Ensure the calendar is shared with the service account with "Make changes to events" permission',
+          'Try opening the event in Google Calendar - it might have a Meet link that wasn\'t returned in the API response'
+        ] : undefined,
       })
     } catch (createError: any) {
       logger.error('Failed to create test calendar event', createError)
