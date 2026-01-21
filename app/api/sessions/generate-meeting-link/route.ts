@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createCalendarEvent, refreshAccessToken, getCalendarId } from '@/lib/google-calendar'
-import { env } from '@/lib/env'
+import { createCalendarEvent } from '@/lib/google-calendar'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
@@ -47,91 +46,56 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    // Get mentor profile separately
-    const { data: mentor, error: mentorError } = await supabase
-      .from('profiles')
-      .select('id, email, full_name, google_calendar_connected, google_calendar_access_token, google_calendar_refresh_token, google_calendar_id, google_calendar_token_expires_at')
-      .eq('id', session.mentor_id)
-      .single()
+    // Get mentor and user profiles
+    const [mentorResult, userResult] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', session.mentor_id)
+        .single(),
+      supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', session.user_id)
+        .single(),
+    ])
 
-    if (mentorError || !mentor) {
-      logger.error('Mentor not found', mentorError, { mentorId: session.mentor_id })
+    if (mentorResult.error || !mentorResult.data) {
+      logger.error('Mentor not found', mentorResult.error, { mentorId: session.mentor_id })
       return NextResponse.json({ error: 'Mentor not found' }, { status: 404 })
     }
 
-    // Generate Google Calendar event with Meet link (if mentor has connected calendar)
+    if (userResult.error || !userResult.data) {
+      logger.error('User not found', userResult.error, { userId: session.user_id })
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    const mentor = mentorResult.data
+    const user = userResult.data
+
+    // Generate Google Calendar event with Meet link using service account
     let meetingLink: string | null = null
     let googleEventId: string | undefined = undefined
 
-    if (mentor?.google_calendar_connected && mentor.google_calendar_access_token) {
-      try {
-        // Check if token is expired and refresh if needed
-        let accessToken = mentor.google_calendar_access_token
-        const tokenExpiresAt = mentor.google_calendar_token_expires_at
-          ? new Date(mentor.google_calendar_token_expires_at)
-          : null
+    try {
+      const { eventId, meetLink } = await createCalendarEvent({
+        summary: `1-on-1 Session: ${user.full_name || 'Student'} with ${mentor.full_name || 'Mentor'}`,
+        description: `Scheduled mentoring session via MVP-IQ`,
+        startTime: new Date(session.start_time),
+        endTime: new Date(session.end_time),
+        mentorEmail: mentor.email || '',
+        userEmail: user.email || '',
+        mentorName: mentor.full_name || 'Mentor',
+        userName: user.full_name || 'Student',
+      })
 
-        if (tokenExpiresAt && tokenExpiresAt < new Date() && mentor.google_calendar_refresh_token) {
-          try {
-            if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REDIRECT_URI) {
-              accessToken = await refreshAccessToken(
-                {
-                  clientId: env.GOOGLE_CLIENT_ID,
-                  clientSecret: env.GOOGLE_CLIENT_SECRET,
-                  redirectUri: env.GOOGLE_REDIRECT_URI,
-                },
-                mentor.google_calendar_refresh_token
-              )
+      meetingLink = meetLink
+      googleEventId = eventId
 
-              // Update stored token
-              await supabase
-                .from('profiles')
-                .update({
-                  google_calendar_access_token: accessToken,
-                  google_calendar_token_expires_at: new Date(Date.now() + 3600 * 1000).toISOString(),
-                })
-                .eq('id', mentor.id)
-
-              logger.info('Refreshed Google Calendar access token', { mentorId: mentor.id })
-            }
-          } catch (refreshError: any) {
-            logger.error('Failed to refresh Google Calendar token', refreshError, { mentorId: mentor.id })
-          }
-        }
-
-        // Get user details
-        const { data: userProfile } = await supabase
-          .from('profiles')
-          .select('email, full_name')
-          .eq('id', session.user_id)
-          .single()
-
-        // Create calendar event
-        const { eventId, meetLink } = await createCalendarEvent(
-          accessToken,
-          getCalendarId(mentor.google_calendar_id),
-          {
-            summary: `1-on-1 Session: ${userProfile?.full_name || 'Student'} with ${mentor.full_name || 'Mentor'}`,
-            description: `Scheduled mentoring session via MVP-IQ`,
-            startTime: new Date(session.start_time),
-            endTime: new Date(session.end_time),
-            mentorEmail: mentor.email || '',
-            userEmail: userProfile?.email || '',
-            mentorName: mentor.full_name || 'Mentor',
-            userName: userProfile?.full_name || 'Student',
-          }
-        )
-
-        meetingLink = meetLink
-        googleEventId = eventId
-
-        logger.info('Google Calendar event created immediately', { sessionId, eventId, meetLink })
-      } catch (calendarError: any) {
-        logger.error('Failed to create Google Calendar event immediately', calendarError, { sessionId })
-        // Continue without calendar event - don't fail the booking
-      }
-    } else {
-      logger.warn('Mentor does not have Google Calendar connected', { mentorId: session.mentor_id })
+      logger.info('Google Calendar event created immediately', { sessionId, eventId, meetLink })
+    } catch (calendarError: any) {
+      logger.error('Failed to create Google Calendar event immediately', calendarError, { sessionId })
+      // Continue without calendar event - don't fail the booking
     }
 
     // Update session with meeting link and calendar event ID immediately

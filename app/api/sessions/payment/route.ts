@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createCalendarEvent, refreshAccessToken, getCalendarId } from '@/lib/google-calendar'
+import { createCalendarEvent } from '@/lib/google-calendar'
 import { env } from '@/lib/env'
 import { logger } from '@/lib/logger'
 import Stripe from 'stripe'
@@ -23,80 +23,44 @@ function getStripe(): Stripe {
   return stripe
 }
 
-// Helper function to create Google Calendar event with Meet link
+// Helper function to create Google Calendar event with Meet link using service account
 async function createGoogleCalendarEvent(session: any): Promise<{ meetLink: string; eventId?: string } | null> {
   try {
     const supabase = await createClient()
     
-    // Get mentor's Google Calendar credentials
-    const { data: mentor } = await supabase
-      .from('profiles')
-      .select('id, email, full_name, google_calendar_connected, google_calendar_access_token, google_calendar_refresh_token, google_calendar_id, google_calendar_token_expires_at')
-      .eq('id', session.mentor_id)
-      .single()
+    // Get mentor and user details
+    const [mentorResult, userResult] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', session.mentor_id)
+        .single(),
+      supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', session.user_id)
+        .single(),
+    ])
 
-    if (!mentor?.google_calendar_connected || !mentor.google_calendar_access_token) {
-      logger.warn('Mentor does not have Google Calendar connected', { mentorId: session.mentor_id })
+    const mentor = mentorResult.data
+    const user = userResult.data
+
+    if (!mentor || !user) {
+      logger.warn('Mentor or user not found', { mentorId: session.mentor_id, userId: session.user_id })
       return null
     }
 
-    // Check if token is expired and refresh if needed
-    let accessToken = mentor.google_calendar_access_token
-    const tokenExpiresAt = mentor.google_calendar_token_expires_at 
-      ? new Date(mentor.google_calendar_token_expires_at)
-      : null
-
-    if (tokenExpiresAt && tokenExpiresAt < new Date() && mentor.google_calendar_refresh_token) {
-      try {
-        if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REDIRECT_URI) {
-          accessToken = await refreshAccessToken(
-            {
-              clientId: env.GOOGLE_CLIENT_ID,
-              clientSecret: env.GOOGLE_CLIENT_SECRET,
-              redirectUri: env.GOOGLE_REDIRECT_URI,
-            },
-            mentor.google_calendar_refresh_token
-          )
-
-          // Update stored token
-          await supabase
-            .from('profiles')
-            .update({
-              google_calendar_access_token: accessToken,
-              google_calendar_token_expires_at: new Date(Date.now() + 3600 * 1000).toISOString(), // 1 hour
-            })
-            .eq('id', mentor.id)
-
-          logger.info('Refreshed Google Calendar access token', { mentorId: mentor.id })
-        }
-      } catch (refreshError: any) {
-        logger.error('Failed to refresh Google Calendar token', refreshError, { mentorId: mentor.id })
-        return null
-      }
-    }
-
-    // Get user details
-    const { data: user } = await supabase
-      .from('profiles')
-      .select('email, full_name')
-      .eq('id', session.user_id)
-      .single()
-
-    // Create calendar event
-    const { eventId, meetLink } = await createCalendarEvent(
-      accessToken,
-      getCalendarId(mentor.google_calendar_id),
-      {
-        summary: `1-on-1 Session: ${user?.full_name || 'Student'} with ${mentor.full_name || 'Mentor'}`,
-        description: `Scheduled mentoring session via MVP-IQ`,
-        startTime: new Date(session.start_time),
-        endTime: new Date(session.end_time),
-        mentorEmail: mentor.email || '',
-        userEmail: user?.email || '',
-        mentorName: mentor.full_name || 'Mentor',
-        userName: user?.full_name || 'Student',
-      }
-    )
+    // Create calendar event using service account
+    const { eventId, meetLink } = await createCalendarEvent({
+      summary: `1-on-1 Session: ${user.full_name || 'Student'} with ${mentor.full_name || 'Mentor'}`,
+      description: `Scheduled mentoring session via MVP-IQ`,
+      startTime: new Date(session.start_time),
+      endTime: new Date(session.end_time),
+      mentorEmail: mentor.email || '',
+      userEmail: user.email || '',
+      mentorName: mentor.full_name || 'Mentor',
+      userName: user.full_name || 'Student',
+    })
 
     logger.info('Google Calendar event created', { sessionId: session.id, eventId, meetLink })
 
@@ -277,7 +241,7 @@ export async function POST(request: NextRequest) {
     
     logger.info('Payment route called', { sessionId, isDevMode, hasStripeKey: !!process.env.STRIPE_SECRET_KEY })
 
-    // Create Google Calendar event with Meet link (if mentor has connected calendar)
+    // Create Google Calendar event with Meet link using service account
     // Only generate if not already created (preserve existing meeting link)
     let meetingLink: string | null = session.meeting_link || null
     let googleEventId: string | undefined = session.google_event_id || undefined
@@ -292,7 +256,7 @@ export async function POST(request: NextRequest) {
         if (meetingLink) {
           logger.info('Google Meet link generated in payment route', { sessionId, meetingLink, googleEventId })
         } else {
-          logger.warn('No meeting link generated - mentor may not have Google Calendar connected', { sessionId, mentorId: session.mentor_id })
+          logger.warn('No meeting link generated - service account may not be configured', { sessionId, mentorId: session.mentor_id })
         }
       } catch (calendarError: any) {
         logger.error('Failed to create Google Calendar event in payment route', calendarError, { sessionId })

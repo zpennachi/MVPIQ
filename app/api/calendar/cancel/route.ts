@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { deleteCalendarEvent, refreshAccessToken } from '@/lib/google-calendar'
-import { env } from '@/lib/env'
+import { deleteCalendarEvent } from '@/lib/google-calendar'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,63 +41,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    // If session has a Google Calendar event, delete it
-    if (session.google_event_id && mentor?.google_calendar_connected && mentor.google_calendar_id) {
+    // If session has a Google Calendar event, delete it using service account
+    if (session.google_event_id) {
       try {
-        let accessToken = mentor.google_calendar_access_token
-
-        if (!accessToken && mentor.google_calendar_refresh_token) {
-          // Token might be expired, try to refresh
-          if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REDIRECT_URI) {
-            try {
-              accessToken = await refreshAccessToken(
-                {
-                  clientId: env.GOOGLE_CLIENT_ID,
-                  clientSecret: env.GOOGLE_CLIENT_SECRET,
-                  redirectUri: env.GOOGLE_REDIRECT_URI,
-                },
-                mentor.google_calendar_refresh_token
-              )
-
-              // Update stored token
-              await supabase
-                .from('profiles')
-                .update({ google_calendar_access_token: accessToken })
-                .eq('id', mentor.id)
-            } catch (refreshError) {
-              console.error('Error refreshing token:', refreshError)
-            }
-          }
-        }
-
-        if (accessToken) {
-          // Delete Google Calendar event
-          await deleteCalendarEvent(
-            accessToken,
-            mentor.google_calendar_id,
-            session.google_event_id
-          )
-
-          console.log('✅ Deleted Google Calendar event:', session.google_event_id)
-        } else {
-          console.warn('⚠️ No access token available to delete Google Calendar event')
-        }
+        await deleteCalendarEvent(session.google_event_id)
+        console.log('✅ Deleted Google Calendar event:', session.google_event_id)
       } catch (error: any) {
         console.error('❌ Error deleting Google Calendar event:', error)
         // Log the error but don't fail the cancellation
         console.error('Error details:', {
           message: error.message,
           eventId: session.google_event_id,
-          calendarId: mentor.google_calendar_id,
-          mentorId: mentor.id,
         })
       }
-    } else {
-      console.log('ℹ️ No Google Calendar event to delete:', {
-        hasEventId: !!session.google_event_id,
-        isConnected: mentor?.google_calendar_connected,
-        hasCalendarId: !!mentor?.google_calendar_id,
-      })
     }
 
     // Update session status in database

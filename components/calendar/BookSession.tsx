@@ -162,15 +162,8 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
       const weekEnd = addDays(weekStart, 7)
       console.log('Loading slots for mentor:', mentorId, 'Week:', weekStart.toISOString(), 'to', weekEnd.toISOString())
       
-      // First, check if mentor has Google Calendar connected
-      const { data: mentor } = await supabase
-        .from('profiles')
-        .select('id, google_calendar_connected')
-        .eq('id', mentorId)
-        .single()
-      
       // Always use MVPIQ availability_slots table (source of truth)
-      // Google Calendar is only used for syncing booked sessions and blocking out unavailable times
+      // Google Calendar service account is used for creating events with Meet links
       const { data: slots, error: slotsError } = await supabase
         .from('availability_slots')
         .select('*')
