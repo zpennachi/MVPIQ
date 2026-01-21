@@ -48,6 +48,15 @@ export async function GET(request: NextRequest) {
         userName: 'Test User',
       })
 
+      // IMPORTANT: Service accounts cannot create Meet links on regular Gmail accounts
+      // They require Google Workspace with domain-wide delegation
+      const isGmailAccount = calendarId.includes('@gmail.com')
+      const meetLinkIssue = !result.meetLink && isGmailAccount
+        ? 'Service accounts cannot create Meet links on regular Gmail accounts. You need either: (1) Google Workspace account with domain-wide delegation, or (2) Use the calendar owner\'s OAuth token instead.'
+        : !result.meetLink
+        ? 'Meet link not generated. Check Vercel logs for details.'
+        : null
+
       return NextResponse.json({
         success: true,
         message: result.meetLink 
@@ -55,18 +64,20 @@ export async function GET(request: NextRequest) {
           : 'Service account is configured correctly, but Meet link was not generated.',
         details: {
           eventId: result.eventId,
-          meetLink: result.meetLink || 'NOT GENERATED - Check Vercel logs for conferenceData details',
+          meetLink: result.meetLink || 'NOT GENERATED',
           calendarId,
           email: env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.substring(0, 30) + '...',
+          isGmailAccount,
+          limitation: meetLinkIssue,
         },
         note: result.meetLink 
           ? 'A test event was created in your calendar with a Meet link. You can delete it.'
-          : 'A test event was created but no Meet link was generated. Check Vercel function logs for the full conferenceData response. The calendar might need Meet enabled or the service account might need additional permissions.',
+          : meetLinkIssue || 'A test event was created but no Meet link was generated.',
         troubleshooting: !result.meetLink ? [
-          'Check Vercel function logs for the full calendar event response',
-          'Verify the calendar has Google Meet enabled',
-          'Ensure the calendar is shared with the service account with "Make changes to events" permission',
-          'Try opening the event in Google Calendar - it might have a Meet link that wasn\'t returned in the API response'
+          '⚠️ IMPORTANT: Service accounts cannot create Meet links on regular Gmail accounts',
+          '✅ Solution 1: Use Google Workspace account with domain-wide delegation (advanced)',
+          '✅ Solution 2: Use calendar owner\'s OAuth token instead of service account (simpler)',
+          '📖 See HOW_TO_CHECK_VERCEL_LOGS.md for how to view detailed error logs',
         ] : undefined,
       })
     } catch (createError: any) {
