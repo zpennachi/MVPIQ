@@ -74,10 +74,13 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
   const loadUpcomingSessions = async () => {
     setLoadingSessions(true)
     try {
-      // First get the sessions
+      // Get sessions with user profile data in one query (like MyAppointments does)
       const { data: sessions, error: sessionsError } = await supabase
         .from('booked_sessions')
-        .select('*')
+        .select(`
+          *,
+          user:profiles!booked_sessions_user_id_fkey(id, full_name, email, profile_photo_url)
+        `)
         .eq('mentor_id', mentorId)
         .in('status', ['pending', 'confirmed'])
         .gte('start_time', new Date().toISOString())
@@ -90,53 +93,14 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
       }
 
       if (!sessions || sessions.length === 0) {
+        console.log('No upcoming sessions found for mentor:', mentorId)
         setUpcomingSessions([])
         return
       }
 
-      // Get all unique user IDs
-      const userIds = Array.from(new Set(sessions.map(s => s.user_id)))
-      console.log('Fetching profiles for user IDs:', userIds)
-      
-      // Fetch all user profiles in one query
-      const { data: userProfiles, error: usersError } = await supabase
-        .from('profiles')
-        .select('id, email, full_name, profile_photo_url')
-        .in('id', userIds)
-
-      console.log('Profile query result:', { userProfiles, usersError, count: userProfiles?.length || 0 })
-
-      if (usersError) {
-        console.error('Error loading user profiles:', usersError)
-      }
-
-      // Create a map of user_id -> user profile
-      const userMap = new Map()
-      if (userProfiles && userProfiles.length > 0) {
-        userProfiles.forEach(user => {
-          userMap.set(user.id, user)
-          console.log('Mapped user:', user.id, user.full_name || user.email)
-        })
-      } else {
-        console.warn('No user profiles returned! Expected:', userIds.length, 'Got:', 0)
-      }
-      
-      console.log('User map size:', userMap.size, 'Expected:', userIds.length)
-
-      // Combine sessions with user data
-      const sessionsWithUsers = sessions.map(session => {
-        const user = userMap.get(session.user_id)
-        if (!user) {
-          console.warn('No user profile found for session:', session.id, 'user_id:', session.user_id)
-        }
-        return {
-          ...session,
-          user: user || null,
-        }
-      })
-
-      console.log('Loaded sessions with users:', sessionsWithUsers.length, sessionsWithUsers)
-      setUpcomingSessions(sessionsWithUsers as any)
+      // Sessions already have user data from the join query
+      console.log('Loaded upcoming sessions:', sessions.length, sessions)
+      setUpcomingSessions(sessions as any)
     } catch (error) {
       console.error('Unexpected error loading sessions:', error)
       setUpcomingSessions([])
