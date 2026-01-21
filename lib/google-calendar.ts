@@ -79,7 +79,10 @@ async function getOAuthClient(): Promise<{ client: any; calendarId: string } | n
       .single()
 
     if (profileError) {
-      logger.warn('No admin profile with connected calendar found', { error: profileError.message })
+      logger.warn('No admin profile with connected calendar found', { 
+        error: profileError.message || 'Unknown error',
+        code: profileError.code,
+      })
       return null
     }
 
