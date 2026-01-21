@@ -282,7 +282,7 @@ export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
                       <strong>{isMentorView ? 'Client:' : 'Mentor:'}</strong>
                       {(isMentorView ? apt.user : apt.mentor)?.profile_photo_url ? (
                         <img
-                          src={(isMentorView ? apt.user : apt.mentor)?.profile_photo_url}
+                          src={(isMentorView ? apt.user : apt.mentor)?.profile_photo_url || ''}
                           alt={(isMentorView ? apt.user : apt.mentor)?.full_name || (isMentorView ? 'Client' : 'Mentor')}
                           className="w-6 h-6 rounded-full object-cover border border-gray-300 dark:border-gray-600"
                         />
