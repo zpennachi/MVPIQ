@@ -169,43 +169,8 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
         .eq('id', mentorId)
         .single()
       
-      // If mentor has Google Calendar connected, use Google Calendar availability
-      if (mentor?.google_calendar_connected) {
-        try {
-          const response = await fetch(
-            `/api/calendar/availability?mentorId=${mentorId}&startDate=${weekStart.toISOString()}&endDate=${weekEnd.toISOString()}&duration=60`
-          )
-          
-          if (response.ok) {
-            const { availableSlots } = await response.json()
-            
-            // Convert to ExpandedSlot format
-            const expandedSlots: ExpandedSlot[] = availableSlots.map((slot: any) => ({
-              originalSlotId: 'google-calendar', // Special ID for Google Calendar slots
-              start_time: slot.start_time,
-              end_time: slot.end_time,
-              duration_minutes: 60,
-              isRecurring: false,
-              recurringPattern: null,
-            }))
-            
-            // Update mentor with Google Calendar slots
-            setMentors(prev => prev.map(m => 
-              m.mentor.id === mentorId 
-                ? { ...m, slots: [], expandedSlots } 
-                : m
-            ))
-            
-            setLoadingSlots(false)
-            return
-          }
-        } catch (error) {
-          console.error('Error loading Google Calendar availability:', error)
-          // Fall through to old system
-        }
-      }
-      
-      // Fallback: Load from availability_slots table (old system)
+      // Always use MVPIQ availability_slots table (source of truth)
+      // Google Calendar is only used for syncing booked sessions and blocking out unavailable times
       const { data: slots, error: slotsError } = await supabase
         .from('availability_slots')
         .select('*')
@@ -299,6 +264,11 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
       const startTime = parseISO(selectedSlot.start_time)
       const endTime = parseISO(selectedSlot.end_time)
       
+      // Validate that originalSlotId is a valid UUID (not 'google-calendar' or invalid)
+      if (!selectedSlot.originalSlotId || selectedSlot.originalSlotId === 'google-calendar' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedSlot.originalSlotId)) {
+        throw new Error('Invalid availability slot. Please select a valid time slot.')
+      }
+
       const { data: session, error: sessionError } = await supabase
         .from('booked_sessions')
         .insert({
@@ -313,7 +283,10 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
         .select()
         .single()
 
-      if (sessionError) throw sessionError
+      if (sessionError) {
+        console.error('Booking error:', sessionError)
+        throw new Error(sessionError.message || 'Failed to create booking. Please try again.')
+      }
 
       // Check if user has available credits
       if (availableCredits > 0) {
