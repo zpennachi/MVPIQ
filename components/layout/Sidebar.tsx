@@ -86,10 +86,17 @@ export function Sidebar() {
       const sevenDaysAgo = new Date()
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
       
-      const { data: feedback } = await supabase
+      // Query for pending/assigned OR recent (within 7 days)
+      const { data: allFeedback } = await supabase
         .from('feedback_submissions')
         .select('id, status, created_at')
-        .or(`status.eq.pending,status.eq.assigned,and(status.neq.completed,created_at.gte.${sevenDaysAgo.toISOString()})`)
+      
+      // Filter on client side to find new feedback
+      const feedback = allFeedback?.filter(f => {
+        const isPendingOrAssigned = f.status === 'pending' || f.status === 'assigned'
+        const isRecent = new Date(f.created_at) >= sevenDaysAgo
+        return isPendingOrAssigned || (isRecent && f.status !== 'completed')
+      })
 
       // Get seen feedback IDs from localStorage (only on client side)
       const seenFeedbackIds = typeof window !== 'undefined' 
@@ -122,10 +129,16 @@ export function Sidebar() {
       const sevenDaysAgo = new Date()
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
       
-      const { data: feedback } = await supabase
+      const { data: allFeedback } = await supabase
         .from('feedback_submissions')
-        .select('id')
-        .or(`status.eq.pending,status.eq.assigned,and(status.neq.completed,created_at.gte.${sevenDaysAgo.toISOString()})`)
+        .select('id, status, created_at')
+      
+      // Filter on client side to find new feedback
+      const feedback = allFeedback?.filter(f => {
+        const isPendingOrAssigned = f.status === 'pending' || f.status === 'assigned'
+        const isRecent = new Date(f.created_at) >= sevenDaysAgo
+        return isPendingOrAssigned || (isRecent && f.status !== 'completed')
+      })
 
       if (feedback && typeof window !== 'undefined') {
         const seenIds = JSON.parse(localStorage.getItem('seen_feedback_ids') || '[]')
