@@ -25,7 +25,8 @@ The app now supports two calendar systems:
    - Choose "Web application"
    - Add authorized redirect URIs:
      - `http://localhost:3000/api/calendar/callback` (for local dev)
-     - `https://yourdomain.com/api/calendar/callback` (for production)
+     - `https://mvpiq.vercel.app/api/calendar/callback` (for production on Vercel)
+     - If you have a custom domain, also add: `https://yourdomain.com/api/calendar/callback`
 
 5. Save your credentials:
    - Client ID: `GOOGLE_CLIENT_ID`
@@ -40,7 +41,8 @@ Add these to your `.env.local` (local) and Vercel environment variables (product
 GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-client-secret
 GOOGLE_REDIRECT_URI=http://localhost:3000/api/calendar/callback  # Local
-# GOOGLE_REDIRECT_URI=https://yourdomain.com/api/calendar/callback  # Production
+# GOOGLE_REDIRECT_URI=https://mvpiq.vercel.app/api/calendar/callback  # Production on Vercel
+# If you have a custom domain, use: GOOGLE_REDIRECT_URI=https://yourdomain.com/api/calendar/callback
 
 # Optional: Service account fallback (for Meet links if OAuth not available)
 GOOGLE_SERVICE_ACCOUNT_EMAIL=your-service-account@project.iam.gserviceaccount.com
