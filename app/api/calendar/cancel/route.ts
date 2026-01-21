@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    // If session has a Google Calendar event, delete it using service account
+    // If session has a Google Calendar event, delete it using OAuth
     if (session.google_event_id) {
       try {
         await deleteCalendarEvent(session.google_event_id)

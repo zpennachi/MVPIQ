@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     const mentor = mentorResult.data
     const userProfile = userResult.data
 
-    // Generate Google Calendar event with Meet link using service account
+    // Generate Google Calendar event with Meet link using OAuth
     let meetingLink: string | null = null
     let googleEventId: string | undefined = undefined
 
@@ -107,10 +107,10 @@ export async function POST(request: NextRequest) {
         errorCode: calendarError?.code,
         errorStack: calendarError?.stack,
         hint: errorMessage.includes('not configured') 
-          ? 'Google OAuth or service account not configured. See GOOGLE_CALENDAR_SETUP.md'
+          ? 'Google OAuth not configured. See GOOGLE_CALENDAR_SETUP.md'
           : errorMessage.includes('OAuth') 
           ? 'OAuth tokens may be invalid or expired. Try reconnecting calendar in settings.'
-          : 'Check OAuth tokens or service account credentials and calendar permissions'
+          : 'Check OAuth tokens and calendar permissions'
       })
       // Continue without calendar event - don't fail the booking
     }

@@ -23,7 +23,7 @@ function getStripe(): Stripe {
   return stripe
 }
 
-// Helper function to create Google Calendar event with Meet link using service account
+// Helper function to create Google Calendar event with Meet link using OAuth
 async function createGoogleCalendarEvent(session: any): Promise<{ meetLink: string; eventId?: string } | null> {
   try {
     const supabase = await createClient()
@@ -50,7 +50,7 @@ async function createGoogleCalendarEvent(session: any): Promise<{ meetLink: stri
       return null
     }
 
-    // Create calendar event using service account
+    // Create calendar event using OAuth
     const { eventId, meetLink } = await createCalendarEvent({
       summary: `1-on-1 Session: ${user.full_name || 'Student'} with ${mentor.full_name || 'Mentor'}`,
       description: `Scheduled mentoring session via MVP-IQ`,
@@ -241,7 +241,7 @@ export async function POST(request: NextRequest) {
     
     logger.info('Payment route called', { sessionId, isDevMode, hasStripeKey: !!process.env.STRIPE_SECRET_KEY })
 
-    // Create Google Calendar event with Meet link using service account
+    // Create Google Calendar event with Meet link using OAuth
     // Only generate if not already created (preserve existing meeting link)
     let meetingLink: string | null = session.meeting_link || null
     let googleEventId: string | undefined = session.google_event_id || undefined
@@ -279,10 +279,10 @@ export async function POST(request: NextRequest) {
           errorCode: calendarError?.code,
           errorStack: calendarError?.stack,
           hint: errorMessage.includes('not configured') 
-            ? 'Google OAuth or service account not configured. See GOOGLE_CALENDAR_SETUP.md'
+            ? 'Google OAuth not configured. See GOOGLE_CALENDAR_SETUP.md'
             : errorMessage.includes('OAuth')
             ? 'OAuth tokens may be invalid or expired. Try reconnecting calendar in settings.'
-            : 'Check OAuth tokens or service account credentials and calendar permissions'
+            : 'Check OAuth tokens and calendar permissions'
         })
         // Continue without calendar event - don't fail the booking
         // Keep existing meeting link if it exists

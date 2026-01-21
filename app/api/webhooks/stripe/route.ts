@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
             break
           }
 
-          // Create Google Calendar event with Meet link using service account
+          // Create Google Calendar event with Meet link using OAuth
           let meetingLink: string | null = null
           let googleEventId: string | undefined = undefined
 
@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
             const user = userResult.data
 
             if (mentor && user) {
-              // Create calendar event using service account
+              // Create calendar event using OAuth
               const calendarResult = await createCalendarEvent({
                 summary: `1-on-1 Session: ${user.full_name || 'Student'} with ${mentor.full_name || 'Mentor'}`,
                 description: `Scheduled mentoring session via MVP-IQ`,

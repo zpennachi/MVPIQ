@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 /**
  * GET /api/calendar/oauth/connect
  * Initiates Google OAuth flow for calendar owner to connect their Google account
- * This allows Meet links to be generated (service accounts can't do this with Gmail)
+ * This allows Meet links to be generated via OAuth
  */
 export async function GET(request: NextRequest) {
   try {
