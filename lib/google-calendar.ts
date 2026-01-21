@@ -100,49 +100,89 @@ async function getOAuthClient(): Promise<{ client: any; calendarId: string } | n
     const expiresAt = adminProfile.google_calendar_token_expires_at
     const now = new Date()
     
-    if (expiresAt && new Date(expiresAt) <= now) {
+    // Only refresh if token is actually expired (with 5 minute buffer)
+    const expirationBuffer = 5 * 60 * 1000 // 5 minutes
+    const isExpired = expiresAt && new Date(expiresAt).getTime() <= (now.getTime() + expirationBuffer)
+    
+    if (isExpired) {
       // Token expired, refresh it
-      logger.info('OAuth token expired, refreshing...')
+      logger.info('OAuth token expired, refreshing...', {
+        expiresAt,
+        now: now.toISOString(),
+        adminId: adminProfile.id,
+      })
       
       if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
         logger.warn('Cannot refresh OAuth token - GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET not set')
-        return null
+        // Don't return null - use existing token even if expired, let Google API handle it
+        logger.warn('Will attempt to use expired token - Google API may refresh automatically')
+      } else {
+        try {
+          const oauth2Client = new google.auth.OAuth2(
+            env.GOOGLE_CLIENT_ID,
+            env.GOOGLE_CLIENT_SECRET,
+            '' // Redirect URI not needed for refresh
+          )
+
+          oauth2Client.setCredentials({
+            refresh_token: adminProfile.google_calendar_refresh_token,
+          })
+
+          const { credentials } = await oauth2Client.refreshAccessToken()
+          
+          if (!credentials.access_token) {
+            logger.error('Failed to refresh OAuth token - no access_token in response', {
+              hasRefreshToken: !!credentials.refresh_token,
+              hasIdToken: !!credentials.id_token,
+            })
+            // Don't return null - use existing token, let Google API handle it
+            logger.warn('Will attempt to use existing token - Google API may refresh automatically')
+          } else {
+            accessToken = credentials.access_token
+
+            // Update token in database
+            const newExpiresAt = credentials.expiry_date 
+              ? new Date(credentials.expiry_date).toISOString()
+              : new Date(Date.now() + 3600 * 1000).toISOString()
+
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({
+                google_calendar_access_token: accessToken,
+                google_calendar_token_expires_at: newExpiresAt,
+                // Only update refresh_token if a new one was provided
+                ...(credentials.refresh_token && { google_calendar_refresh_token: credentials.refresh_token }),
+              })
+              .eq('id', adminProfile.id)
+
+            if (updateError) {
+              logger.error('Failed to update OAuth token in database', updateError, {
+                adminId: adminProfile.id,
+              })
+              // Continue with new token even if DB update failed
+            } else {
+              logger.info('OAuth token refreshed and saved successfully', {
+                adminId: adminProfile.id,
+                newExpiresAt,
+              })
+            }
+          }
+        } catch (refreshError: any) {
+          logger.error('Exception during OAuth token refresh', refreshError, {
+            adminId: adminProfile.id,
+            errorMessage: refreshError?.message,
+            errorCode: refreshError?.code,
+          })
+          // Don't return null - use existing token, let Google API handle it
+          logger.warn('Will attempt to use existing token despite refresh error - Google API may refresh automatically')
+        }
       }
-
-      const oauth2Client = new google.auth.OAuth2(
-        env.GOOGLE_CLIENT_ID,
-        env.GOOGLE_CLIENT_SECRET,
-        '' // Redirect URI not needed for refresh
-      )
-
-      oauth2Client.setCredentials({
-        refresh_token: adminProfile.google_calendar_refresh_token,
+    } else {
+      logger.info('OAuth token is still valid', {
+        expiresAt,
+        now: now.toISOString(),
+        timeUntilExpiry: expiresAt ? `${Math.round((new Date(expiresAt).getTime() - now.getTime()) / 1000 / 60)} minutes` : 'unknown',
       })
-
-      const { credentials } = await oauth2Client.refreshAccessToken()
-      
-      if (!credentials.access_token) {
-        logger.error('Failed to refresh OAuth token')
-        return null
-      }
-
-      accessToken = credentials.access_token
-
-      // Update token in database
-      const newExpiresAt = credentials.expiry_date 
-        ? new Date(credentials.expiry_date).toISOString()
-        : new Date(Date.now() + 3600 * 1000).toISOString()
-
-      await supabase
-        .from('profiles')
-        .update({
-          google_calendar_access_token: accessToken,
-          google_calendar_token_expires_at: newExpiresAt,
-          ...(credentials.refresh_token && { google_calendar_refresh_token: credentials.refresh_token }),
-        })
-        .eq('id', adminProfile.id)
-
-      logger.info('OAuth token refreshed successfully')
     }
 
     // Create OAuth client
