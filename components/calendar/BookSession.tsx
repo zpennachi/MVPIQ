@@ -390,11 +390,18 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
           console.error('❌ Session status was NOT updated to confirmed!', verifySession)
           alert('⚠️ Session created but status update may have failed. Please refresh the page.')
         } else {
+          console.log('✅ Session confirmed with meeting link:', verifySession.meeting_link)
           alert('✅ Dev Mode: Session booked and confirmed!')
         }
         
         setShowPaymentModal(false)
         setSelectedSlot(null)
+        
+        // Trigger dashboard refresh by calling onBookingSuccess callback
+        if (onBookingSuccess) {
+          onBookingSuccess()
+        }
+        
         // Immediately refresh slots to prevent double-booking
         if (selectedMentor) {
           await loadMentorSlots(selectedMentor.id)

@@ -48,6 +48,27 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
     checkPaymentStatus()
     loadOneOnOnes()
     checkCredits()
+    
+    // Refresh appointments when page becomes visible (user returns from booking)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadOneOnOnes()
+      }
+    }
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    // Also refresh on focus (user switches back to tab)
+    const handleFocus = () => {
+      loadOneOnOnes()
+    }
+    
+    window.addEventListener('focus', handleFocus)
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
   }, [userId])
 
   const checkCredits = async () => {
