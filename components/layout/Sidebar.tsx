@@ -77,6 +77,7 @@ export function Sidebar() {
       loadNotificationCounts(user.id)
       return () => clearInterval(interval)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, profile?.role, user])
 
   const loadNotificationCounts = async (mentorId: string) => {
@@ -90,8 +91,10 @@ export function Sidebar() {
         .select('id, status, created_at')
         .or(`status.eq.pending,status.eq.assigned,and(status.neq.completed,created_at.gte.${sevenDaysAgo.toISOString()})`)
 
-      // Get seen feedback IDs from localStorage
-      const seenFeedbackIds = JSON.parse(localStorage.getItem('seen_feedback_ids') || '[]')
+      // Get seen feedback IDs from localStorage (only on client side)
+      const seenFeedbackIds = typeof window !== 'undefined' 
+        ? JSON.parse(localStorage.getItem('seen_feedback_ids') || '[]')
+        : []
       const unseenFeedback = feedback?.filter(f => !seenFeedbackIds.includes(f.id)) || []
       setNewFeedbackCount(unseenFeedback.length)
 
@@ -103,8 +106,10 @@ export function Sidebar() {
         .in('status', ['pending', 'confirmed'])
         .gte('start_time', new Date().toISOString())
 
-      // Get seen session IDs from localStorage
-      const seenSessionIds = JSON.parse(localStorage.getItem('seen_session_ids') || '[]')
+      // Get seen session IDs from localStorage (only on client side)
+      const seenSessionIds = typeof window !== 'undefined'
+        ? JSON.parse(localStorage.getItem('seen_session_ids') || '[]')
+        : []
       const unseenSessions = sessions?.filter(s => !seenSessionIds.includes(s.id)) || []
       setNewSessionsCount(unseenSessions.length)
     } catch (error) {
@@ -122,7 +127,7 @@ export function Sidebar() {
         .select('id')
         .or(`status.eq.pending,status.eq.assigned,and(status.neq.completed,created_at.gte.${sevenDaysAgo.toISOString()})`)
 
-      if (feedback) {
+      if (feedback && typeof window !== 'undefined') {
         const seenIds = JSON.parse(localStorage.getItem('seen_feedback_ids') || '[]')
         const newSeenIds = [...new Set([...seenIds, ...feedback.map(f => f.id)])]
         localStorage.setItem('seen_feedback_ids', JSON.stringify(newSeenIds))
@@ -144,7 +149,7 @@ export function Sidebar() {
         .in('status', ['pending', 'confirmed'])
         .gte('start_time', new Date().toISOString())
 
-      if (sessions) {
+      if (sessions && typeof window !== 'undefined') {
         const seenIds = JSON.parse(localStorage.getItem('seen_session_ids') || '[]')
         const newSeenIds = [...new Set([...seenIds, ...sessions.map(s => s.id)])]
         localStorage.setItem('seen_session_ids', JSON.stringify(newSeenIds))
