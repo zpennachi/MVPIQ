@@ -107,14 +107,24 @@ export async function createCalendarEvent(
       },
     })
 
-    // Extract Meet link from response
-    const meetLink =
-      response.data.conferenceData?.entryPoints?.find(
+    // Extract Meet link if not already extracted
+    if (!meetLink) {
+      meetLink = response.data.conferenceData?.entryPoints?.find(
         (ep: any) => ep.entryPointType === 'video'
       )?.uri || ''
+    }
 
     if (!response.data.id) {
       throw new Error('Failed to create calendar event: no event ID returned')
+    }
+    
+    // If we still don't have a Meet link, log a warning but don't fail
+    if (!meetLink) {
+      logger.warn('Calendar event created but no Meet link generated', {
+        eventId: response.data.id,
+        calendarId,
+        hint: 'Calendar might not support Google Meet, or service account lacks permissions'
+      })
     }
 
     logger.info('Google Calendar event created', {
