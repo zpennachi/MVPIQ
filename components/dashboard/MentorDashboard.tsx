@@ -115,16 +115,6 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
       return
     }
 
-    // User data should already be loaded from the join query (same as PlayerDashboard does for mentors)
-    if (!session.user || !session.user.email) {
-      console.error('No user data in session:', session)
-      alert('Cannot cancel: User information not found. Please refresh the page and try again.')
-      return
-    }
-
-    const userEmail = session.user.email
-    const finalUserName = session.user.full_name || session.user.email || 'User'
-
     try {
       // Cancel session via API (handles Google Calendar deletion)
       const cancelResponse = await fetch('/api/calendar/cancel', {
@@ -139,70 +129,46 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
       }
 
       // Grant credit to user for cancelled session
-      try {
-        console.log('💰 Attempting to grant credit to user:', session.user.id)
-        const creditResponse = await fetch('/api/credits/grant', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: session.user.id,
-            sourceSessionId: sessionId,
-            reason: 'mentor_cancellation',
-          }),
-        })
-
-        if (!creditResponse.ok) {
-          const errorData = await creditResponse.json().catch(() => ({ error: 'Unknown error' }))
-          console.error('❌ Failed to grant credit:', errorData)
-          if (errorData.details?.includes('does not exist')) {
-            alert('⚠️ Credits table not found. Please run the SQL migration: supabase/session-credits-schema.sql')
-          }
-        } else {
-          const creditData = await creditResponse.json()
-          console.log('✅ Credit granted successfully:', creditData)
+      if (session.user?.id) {
+        try {
+          await fetch('/api/credits/grant', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: session.user.id,
+              sourceSessionId: sessionId,
+              reason: 'mentor_cancellation',
+            }),
+          })
+        } catch (creditError) {
+          console.error('Error granting credit:', creditError)
         }
-      } catch (creditError) {
-        console.error('❌ Exception granting credit:', creditError)
-        // Don't fail the cancellation if credit grant fails
       }
 
-      // Generate reschedule link (one-time use, secure)
-      const rescheduleToken = crypto.randomUUID()
-      const rescheduleLink = `${window.location.origin}/dashboard/calendar?reschedule=${rescheduleToken}&session=${sessionId}`
-
-      // Send cancellation email with reschedule link
-      try {
-        console.log('Sending cancellation email to:', userEmail)
-        const emailResponse = await fetch('/api/notifications/email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'session_cancelled',
-            email: userEmail,
-            data: {
-              mentorName: profile?.full_name || profile?.email || 'Mentor',
-              userName: finalUserName,
-              startTime: session.start_time,
-              rescheduleLink: rescheduleLink,
-            },
-          }),
-        })
-
-        if (!emailResponse.ok) {
-          const errorData = await emailResponse.json()
-          console.error('Failed to send cancellation email:', errorData)
-          throw new Error('Failed to send cancellation email')
-        } else {
-          console.log('Cancellation email sent successfully to:', userEmail)
+      // Send cancellation email
+      if (session.user?.email) {
+        try {
+          await fetch('/api/notifications/email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'session_cancelled',
+              email: session.user.email,
+              data: {
+                mentorName: profile?.full_name || profile?.email || 'Mentor',
+                userName: session.user.full_name || session.user.email || 'User',
+                startTime: session.start_time,
+              },
+            }),
+          })
+        } catch (emailError) {
+          console.error('Error sending cancellation email:', emailError)
         }
-      } catch (emailError) {
-        console.error('Error sending cancellation email:', emailError)
-        throw emailError // Re-throw so user knows email failed
       }
 
       // Reload sessions
       loadUpcomingSessions()
-      alert('Session cancelled. The user has been notified via email with a reschedule link.')
+      alert('Session cancelled. The user has been notified via email.')
     } catch (error: any) {
       console.error('Error cancelling session:', error)
       alert(error.message || 'Failed to cancel session')
