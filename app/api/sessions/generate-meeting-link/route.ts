@@ -92,16 +92,25 @@ export async function POST(request: NextRequest) {
       meetingLink = meetLink
       googleEventId = eventId
 
-      logger.info('Google Calendar event created immediately', { sessionId, eventId, meetLink })
+      logger.info('Google Calendar event created immediately', { 
+        sessionId, 
+        eventId, 
+        meetLink,
+        hasMeetLink: !!meetLink,
+      })
     } catch (calendarError: any) {
       // Log detailed error for debugging
       const errorMessage = calendarError?.message || 'Unknown error'
       logger.error('Failed to create Google Calendar event immediately', calendarError, { 
         sessionId,
         errorMessage,
+        errorCode: calendarError?.code,
+        errorStack: calendarError?.stack,
         hint: errorMessage.includes('not configured') 
-          ? 'Google service account not configured. See GOOGLE_CALENDAR_SETUP.md'
-          : 'Check service account credentials and calendar permissions'
+          ? 'Google OAuth or service account not configured. See GOOGLE_CALENDAR_SETUP.md'
+          : errorMessage.includes('OAuth') 
+          ? 'OAuth tokens may be invalid or expired. Try reconnecting calendar in settings.'
+          : 'Check OAuth tokens or service account credentials and calendar permissions'
       })
       // Continue without calendar event - don't fail the booking
     }

@@ -71,14 +71,24 @@ async function getOAuthClient(): Promise<{ client: any; calendarId: string } | n
     const supabase = await createClient()
     
     // Find admin user with connected Google Calendar
-    const { data: adminProfile } = await supabase
+    const { data: adminProfile, error: profileError } = await supabase
       .from('profiles')
       .select('id, google_calendar_connected, google_calendar_id, google_calendar_access_token, google_calendar_refresh_token, google_calendar_token_expires_at')
       .eq('role', 'admin')
       .eq('google_calendar_connected', true)
       .single()
 
+    if (profileError) {
+      logger.warn('No admin profile with connected calendar found', profileError)
+      return null
+    }
+
     if (!adminProfile?.google_calendar_access_token || !adminProfile?.google_calendar_refresh_token) {
+      logger.warn('OAuth tokens missing in admin profile', {
+        hasAccessToken: !!adminProfile?.google_calendar_access_token,
+        hasRefreshToken: !!adminProfile?.google_calendar_refresh_token,
+        isConnected: adminProfile?.google_calendar_connected,
+      })
       return null
     }
 
@@ -185,14 +195,27 @@ export async function createCalendarEvent(
   const oauthClient = await getOAuthClient()
   
   if (oauthClient) {
-    logger.info('Using OAuth client for calendar event creation (supports Meet links)')
+    logger.info('Using OAuth client for calendar event creation (supports Meet links)', {
+      calendarId: oauthClient.calendarId,
+    })
     try {
       const { client: calendar, calendarId } = oauthClient
-      return await createEventWithMeetLink(calendar, calendarId, event, 'oauth')
+      const result = await createEventWithMeetLink(calendar, calendarId, event, 'oauth')
+      logger.info('Successfully created calendar event with OAuth', {
+        eventId: result.eventId,
+        hasMeetLink: !!result.meetLink,
+        meetLink: result.meetLink ? 'generated' : 'not generated',
+      })
+      return result
     } catch (error: any) {
-      logger.warn('Failed to create event with OAuth, falling back to service account', error)
+      logger.error('Failed to create event with OAuth, falling back to service account', error, {
+        errorMessage: error.message,
+        errorCode: error.code,
+      })
       // Fall through to service account
     }
+  } else {
+    logger.info('OAuth client not available, will use service account')
   }
 
   // Fallback to service account
