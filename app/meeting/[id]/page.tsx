@@ -14,11 +14,25 @@ export default function MeetingPage() {
   const [session, setSession] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isMentor, setIsMentor] = useState(false)
+  const [otherParty, setOtherParty] = useState<any>(null)
   const supabase = createClient()
 
   useEffect(() => {
     loadSession()
   }, [meetingId])
+
+  useEffect(() => {
+    if (session) {
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) {
+          const userIsMentor = user.id === session.mentor_id
+          setIsMentor(userIsMentor)
+          setOtherParty(userIsMentor ? session.user : session.mentor)
+        }
+      })
+    }
+  }, [session])
 
   const loadSession = async () => {
     try {
@@ -90,22 +104,6 @@ export default function MeetingPage() {
       </div>
     )
   }
-
-  // Determine if current user is mentor or student
-  const [isMentor, setIsMentor] = useState(false)
-  const [otherParty, setOtherParty] = useState<any>(null)
-
-  useEffect(() => {
-    if (session) {
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        if (user) {
-          const userIsMentor = user.id === session.mentor_id
-          setIsMentor(userIsMentor)
-          setOtherParty(userIsMentor ? session.user : session.mentor)
-        }
-      })
-    }
-  }, [session])
 
   return (
     <div className="min-h-screen bg-black dotted-bg p-4 sm:p-8">
