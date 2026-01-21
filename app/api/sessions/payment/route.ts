@@ -5,6 +5,9 @@ import { env } from '@/lib/env'
 import { logger } from '@/lib/logger'
 import Stripe from 'stripe'
 
+// Lazy initialization to avoid build-time errors
+let stripe: Stripe | null = null
+
 export const dynamic = 'force-dynamic'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
@@ -341,6 +344,7 @@ export async function POST(request: NextRequest) {
     }
 
     // PRODUCTION: Create Stripe checkout session
+    const stripe = getStripe()
     const checkoutSession = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
