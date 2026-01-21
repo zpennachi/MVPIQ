@@ -22,6 +22,7 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
   const [profile, setProfile] = useState<{ full_name: string | null; email: string; profile_photo_url: string | null } | null>(null)
   const [upcomingSessions, setUpcomingSessions] = useState<(BookedSession & { user?: Profile })[]>([])
   const [loadingSessions, setLoadingSessions] = useState(false)
+  const [viewedSubmissionIds, setViewedSubmissionIds] = useState<Set<string>>(new Set())
   const supabase = createClient()
 
   useEffect(() => {
@@ -36,6 +37,16 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
     loadProfile()
   }, [mentorId])
 
+  // Load viewed submission IDs from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const viewed = localStorage.getItem(`viewed_submissions_${mentorId}`)
+      if (viewed) {
+        setViewedSubmissionIds(new Set(JSON.parse(viewed)))
+      }
+    }
+  }, [mentorId])
+
   useEffect(() => {
     loadSubmissions()
   }, [mentorId])
@@ -43,6 +54,29 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
   useEffect(() => {
     loadUpcomingSessions()
   }, [mentorId])
+
+  // Mark submission as viewed when displayed on dashboard
+  useEffect(() => {
+    if (submissions.length > 0 && viewedSubmissionIds.size >= 0) {
+      // Mark all displayed submissions as viewed
+      const displayedSubmissionIds = newSubmissions.slice(0, 3).map(s => s.id)
+      const newViewed = new Set(viewedSubmissionIds)
+      let hasNew = false
+      
+      displayedSubmissionIds.forEach(id => {
+        if (!newViewed.has(id)) {
+          newViewed.add(id)
+          hasNew = true
+        }
+      })
+
+      if (hasNew && typeof window !== 'undefined') {
+        setViewedSubmissionIds(newViewed)
+        localStorage.setItem(`viewed_submissions_${mentorId}`, JSON.stringify(Array.from(newViewed)))
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [submissions, mentorId])
 
   const loadSubmissions = async () => {
     setLoading(true)
@@ -241,6 +275,13 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
 
   const handleSelectSubmission = (submission: FeedbackSubmission) => {
     setSelectedSubmission(submission)
+    // Mark as viewed when selected
+    const newViewed = new Set(viewedSubmissionIds)
+    newViewed.add(submission.id)
+    setViewedSubmissionIds(newViewed)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`viewed_submissions_${mentorId}`, JSON.stringify(Array.from(newViewed)))
+    }
   }
 
   const handleCloseFeedback = () => {
@@ -259,10 +300,16 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
   // Consider feedback "new" if:
   // - Status is pending or assigned, OR
   // - Created within last 7 days (even if in progress)
+  // AND it hasn't been viewed yet
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
   
   const newSubmissions = submissions.filter(s => {
+    // Exclude if already viewed
+    if (viewedSubmissionIds.has(s.id)) {
+      return false
+    }
+    
     const isPendingOrAssigned = s.status === 'pending' || s.status === 'assigned'
     const isRecent = new Date(s.created_at) >= sevenDaysAgo
     return isPendingOrAssigned || isRecent
