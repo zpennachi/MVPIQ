@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { generateMeetingLink } from '@/lib/meeting'
 import Stripe from 'stripe'
 import { env, isStripeConfigured } from '@/lib/env'
 import { logger } from '@/lib/logger'
@@ -212,6 +213,9 @@ export async function POST(request: NextRequest) {
             break
           }
 
+          // Generate meeting link
+          const meetingLink = generateMeetingLink(sessionId)
+          
           // Update session status
           await supabase
             .from('booked_sessions')
@@ -219,6 +223,7 @@ export async function POST(request: NextRequest) {
               payment_status: 'completed',
               status: 'confirmed',
               payment_intent_id: session.id,
+              meeting_link: meetingLink,
             })
             .eq('id', sessionId)
 

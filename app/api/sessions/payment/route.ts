@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { generateMeetingLink } from '@/lib/meeting'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
@@ -171,19 +172,33 @@ export async function POST(request: NextRequest) {
 
     // If using credit, skip payment processing
     if (useCredit) {
-      // Credit already applied in BookSession component
-      // Just send confirmation emails
+      // Generate meeting link
+      const meetingLink = generateMeetingLink(session.id)
+      
+      // Update session with meeting link
+      await supabase
+        .from('booked_sessions')
+        .update({
+          meeting_link: meetingLink,
+        })
+        .eq('id', sessionId)
+      
+      // Send confirmation emails
       await sendConfirmationEmails(session, request.nextUrl.origin)
       
       return NextResponse.json({
         success: true,
         creditUsed: true,
         message: 'Session confirmed using credit',
+        meetingLink,
       })
     }
 
     // Check if dev mode (no Stripe key)
     if (!process.env.STRIPE_SECRET_KEY || process.env.NODE_ENV === 'development') {
+      // Generate meeting link
+      const meetingLink = generateMeetingLink(session.id)
+      
       // Dev mode: Skip payment
       await supabase
         .from('booked_sessions')
@@ -191,6 +206,7 @@ export async function POST(request: NextRequest) {
           payment_status: 'completed',
           status: 'confirmed',
           payment_intent_id: `dev_${Date.now()}`,
+          meeting_link: meetingLink,
         })
         .eq('id', sessionId)
 
@@ -201,6 +217,7 @@ export async function POST(request: NextRequest) {
         success: true,
         devMode: true,
         message: 'Session confirmed (dev mode - payment skipped)',
+        meetingLink,
       })
     }
 
