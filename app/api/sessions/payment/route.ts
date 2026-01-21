@@ -5,14 +5,23 @@ import { env } from '@/lib/env'
 import { logger } from '@/lib/logger'
 import Stripe from 'stripe'
 
+export const dynamic = 'force-dynamic'
+
 // Lazy initialization to avoid build-time errors
 let stripe: Stripe | null = null
 
-export const dynamic = 'force-dynamic'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-06-20' as Stripe.LatestApiVersion,
-})
+function getStripe(): Stripe {
+  if (!stripe) {
+    const stripeKey = process.env.STRIPE_SECRET_KEY
+    if (!stripeKey) {
+      throw new Error('STRIPE_SECRET_KEY is not configured')
+    }
+    stripe = new Stripe(stripeKey, {
+      apiVersion: '2024-06-20' as Stripe.LatestApiVersion,
+    })
+  }
+  return stripe
+}
 
 // Helper function to create Google Calendar event with Meet link
 async function createGoogleCalendarEvent(session: any): Promise<{ meetLink: string; eventId?: string } | null> {
