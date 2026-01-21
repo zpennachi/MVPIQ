@@ -272,6 +272,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if dev mode FIRST (before trying to use Stripe)
+    const isDevMode = !process.env.STRIPE_SECRET_KEY || process.env.NODE_ENV === 'development'
+    
+    logger.info('Payment route called', { sessionId, isDevMode, hasStripeKey: !!process.env.STRIPE_SECRET_KEY })
+
     // Create Google Calendar event with Meet link (if mentor has connected calendar)
     // Only generate if not already created (preserve existing meeting link)
     let meetingLink: string | null = session.meeting_link || null
@@ -327,11 +332,6 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Check if dev mode (no Stripe key or explicitly in development)
-    const isDevMode = !process.env.STRIPE_SECRET_KEY || process.env.NODE_ENV === 'development'
-    
-    logger.info('Payment route called', { sessionId, isDevMode, hasStripeKey: !!process.env.STRIPE_SECRET_KEY })
-    
     if (isDevMode) {
       // Dev mode: Skip payment
       await supabase
