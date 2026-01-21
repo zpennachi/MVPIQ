@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { SubmissionList } from '@/components/feedback/SubmissionList'
 import { FeedbackForm } from '@/components/feedback/FeedbackForm'
@@ -27,7 +27,7 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
   const [connectingCalendar, setConnectingCalendar] = useState(false)
   const supabase = createClient()
 
-  const connectGoogleCalendar = async () => {
+  const connectGoogleCalendar = useCallback(async () => {
     if (connectingCalendar) return
     
     setConnectingCalendar(true)
@@ -47,7 +47,7 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
       console.error('Error connecting calendar:', error)
       setConnectingCalendar(false)
     }
-  }
+  }, [connectingCalendar])
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -67,7 +67,7 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
       }
     }
     loadProfile()
-  }, [mentorId, connectingCalendar])
+  }, [mentorId, connectingCalendar, connectGoogleCalendar, supabase])
 
   // Load viewed submission IDs from localStorage
   useEffect(() => {
