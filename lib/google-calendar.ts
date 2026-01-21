@@ -67,9 +67,14 @@ export async function createCalendarEvent(
   calendarId: string,
   eventData: CalendarEventData
 ): Promise<CalendarEventResult> {
+  // Fallback if Google Calendar not configured
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REDIRECT_URI) {
+    throw new Error('Google Calendar integration is not configured')
+  }
+
   const oauth2Client = new google.auth.OAuth2(
-    env.GOOGLE_CLIENT_ID!,
-    env.GOOGLE_CLIENT_SECRET!,
+    env.GOOGLE_CLIENT_ID,
+    env.GOOGLE_CLIENT_SECRET,
     env.GOOGLE_REDIRECT_URI
   )
 
@@ -149,9 +154,14 @@ export async function deleteCalendarEvent(
   calendarId: string,
   eventId: string
 ): Promise<void> {
+  // Fallback if Google Calendar not configured
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REDIRECT_URI) {
+    throw new Error('Google Calendar integration is not configured')
+  }
+
   const oauth2Client = new google.auth.OAuth2(
-    env.GOOGLE_CLIENT_ID!,
-    env.GOOGLE_CLIENT_SECRET!,
+    env.GOOGLE_CLIENT_ID,
+    env.GOOGLE_CLIENT_SECRET,
     env.GOOGLE_REDIRECT_URI
   )
 
@@ -203,9 +213,14 @@ export async function getAvailableSlots(
   endDate: Date,
   durationMinutes: number = 60
 ): Promise<Array<{ start: Date; end: Date }>> {
+  // Fallback if Google Calendar not configured - return empty array
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REDIRECT_URI) {
+    return []
+  }
+
   const oauth2Client = new google.auth.OAuth2(
-    env.GOOGLE_CLIENT_ID!,
-    env.GOOGLE_CLIENT_SECRET!,
+    env.GOOGLE_CLIENT_ID,
+    env.GOOGLE_CLIENT_SECRET,
     env.GOOGLE_REDIRECT_URI
   )
 
@@ -261,4 +276,67 @@ export async function getAvailableSlots(
   }
 
   return availableSlots
+}
+
+/**
+ * Exchange OAuth code for access and refresh tokens
+ */
+export async function exchangeCodeForTokens(
+  config: {
+    clientId: string
+    clientSecret: string
+    redirectUri: string
+  },
+  code: string
+): Promise<{ accessToken: string; refreshToken: string }> {
+  const oauth2Client = new google.auth.OAuth2(
+    config.clientId,
+    config.clientSecret,
+    config.redirectUri
+  )
+
+  const { tokens } = await oauth2Client.getToken(code)
+
+  if (!tokens.access_token) {
+    throw new Error('Failed to get access token')
+  }
+
+  if (!tokens.refresh_token) {
+    throw new Error('Failed to get refresh token')
+  }
+
+  return {
+    accessToken: tokens.access_token,
+    refreshToken: tokens.refresh_token,
+  }
+}
+
+/**
+ * Get the primary calendar ID for a user
+ */
+export async function getPrimaryCalendarId(accessToken: string): Promise<string> {
+  // Fallback if Google Calendar not configured
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REDIRECT_URI) {
+    return 'primary'
+  }
+
+  const oauth2Client = new google.auth.OAuth2(
+    env.GOOGLE_CLIENT_ID,
+    env.GOOGLE_CLIENT_SECRET,
+    env.GOOGLE_REDIRECT_URI
+  )
+
+  oauth2Client.setCredentials({
+    access_token: accessToken,
+  })
+
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client })
+
+  // Get calendar list to find primary calendar
+  const response = await calendar.calendarList.list()
+
+  // Find primary calendar
+  const primaryCalendar = response.data.items?.find(cal => cal.primary === true)
+
+  return primaryCalendar?.id || 'primary'
 }
