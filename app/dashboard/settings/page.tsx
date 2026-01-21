@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { User, Mail, Phone, Save, X, Upload, Camera } from 'lucide-react'
+import { User, Mail, Phone, Save, X, Upload, Camera, Calendar, CheckCircle, AlertCircle } from 'lucide-react'
 import { useDropzone } from 'react-dropzone'
 import type { Profile } from '@/types/database'
 
@@ -15,6 +15,7 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [connectingCalendar, setConnectingCalendar] = useState(false)
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -65,6 +66,26 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadProfile()
+    
+    // Check for OAuth callback messages in URL
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const calendarError = params.get('calendar_error')
+      const calendarConnected = params.get('calendar_connected')
+      
+      if (calendarError) {
+        setError(`Calendar connection failed: ${calendarError}`)
+        // Clean URL
+        window.history.replaceState({}, '', window.location.pathname)
+      } else if (calendarConnected === 'true') {
+        setSuccess(true)
+        setTimeout(() => setSuccess(false), 5000)
+        // Reload profile to get updated calendar status
+        loadProfile()
+        // Clean URL
+        window.history.replaceState({}, '', window.location.pathname)
+      }
+    }
   }, [])
 
   const loadProfile = async () => {
@@ -85,13 +106,14 @@ export default function SettingsPage() {
       if (error) throw error
 
       if (data) {
-        setProfile(data as Profile)
+        const profileData = data as Profile
+        setProfile(profileData)
         setFormData({
-          full_name: data.full_name || '',
-          email: data.email || '',
-          phone_number: (data as any).phone_number || '',
+          full_name: profileData.full_name || '',
+          email: profileData.email || '',
+          phone_number: profileData.phone_number || '',
         })
-        setCurrentPhotoUrl((data as any).profile_photo_url || null)
+        setCurrentPhotoUrl(profileData.profile_photo_url || null)
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load profile')
@@ -343,6 +365,75 @@ export default function SettingsPage() {
               Add your phone number for important notifications
             </p>
           </div>
+
+          {/* Google Calendar Connection (for mentors) */}
+          {profile?.role === 'mentor' && (
+            <div className="border-t border-[#272727] pt-6 mt-6">
+              <label className="block text-sm font-medium text-[#d9d9d9] mb-3">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Google Calendar Integration
+                </div>
+              </label>
+              
+              {profile.google_calendar_connected ? (
+                <div className="bg-green-900/20 border border-green-800 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-400" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-green-400">Calendar Connected</p>
+                      <p className="text-xs text-[#d9d9d9]/70 mt-1">
+                        Your Google Calendar is connected. Sessions will automatically sync to your calendar.
+                      </p>
+                      {profile.google_calendar_id && (
+                        <p className="text-xs text-[#d9d9d9]/50 mt-1">
+                          Calendar ID: {profile.google_calendar_id}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-[#272727]/50 border border-[#272727] rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-[#ffc700] mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-[#d9d9d9] mb-2">Connect Your Calendar</p>
+                      <p className="text-xs text-[#d9d9d9]/70 mb-4">
+                        Connect your Google Calendar to automatically sync sessions, create events, and generate Google Meet links.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setConnectingCalendar(true)
+                          setError(null)
+                          try {
+                            const response = await fetch('/api/calendar/connect')
+                            const data = await response.json()
+                            
+                            if (!response.ok) {
+                              throw new Error(data.error || 'Failed to connect calendar')
+                            }
+                            
+                            // Redirect to Google OAuth
+                            window.location.href = data.authUrl
+                          } catch (err: any) {
+                            setError(err.message || 'Failed to connect calendar')
+                            setConnectingCalendar(false)
+                          }
+                        }}
+                        disabled={connectingCalendar}
+                        className="px-4 py-2 bg-[#ffc700] text-black rounded-md hover:bg-[#e6b300] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 active:scale-95 font-medium text-sm flex items-center gap-2"
+                      >
+                        <Calendar className="w-4 h-4" />
+                        {connectingCalendar ? 'Connecting...' : 'Connect Google Calendar'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <button

@@ -30,6 +30,11 @@ const envSchema = z.object({
   GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().email().optional(),
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().optional(),
   GOOGLE_CALENDAR_ID: z.string().optional().default('primary'),
+  
+  // Google OAuth (for calendar integration)
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_REDIRECT_URI: z.string().url().optional(),
 })
 
 type Env = z.infer<typeof envSchema>
@@ -58,6 +63,9 @@ function getEnv(): Env {
       GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
       GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
       GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID,
+      GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+      GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+      GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI,
     })
     return cachedEnv
   } catch (error) {
@@ -84,6 +92,9 @@ function getEnv(): Env {
           GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
           GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
           GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID || 'primary',
+          GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+          GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+          GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI,
         } as Env
         return cachedEnv
       }

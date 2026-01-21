@@ -161,8 +161,50 @@ export function BookSession({ userId, userRole }: BookSessionProps) {
       const weekEnd = addDays(weekStart, 7)
       console.log('Loading slots for mentor:', mentorId, 'Week:', weekStart.toISOString(), 'to', weekEnd.toISOString())
       
-      // Load ALL active slots (not filtered by date) so we can expand recurring slots
-      // Recurring slots might have started before this week but still apply to this week
+      // First, check if mentor has Google Calendar connected
+      const { data: mentor } = await supabase
+        .from('profiles')
+        .select('id, google_calendar_connected')
+        .eq('id', mentorId)
+        .single()
+      
+      // If mentor has Google Calendar connected, use Google Calendar availability
+      if (mentor?.google_calendar_connected) {
+        try {
+          const response = await fetch(
+            `/api/calendar/availability?mentorId=${mentorId}&startDate=${weekStart.toISOString()}&endDate=${weekEnd.toISOString()}&duration=60`
+          )
+          
+          if (response.ok) {
+            const { availableSlots } = await response.json()
+            
+            // Convert to ExpandedSlot format
+            const expandedSlots: ExpandedSlot[] = availableSlots.map((slot: any) => ({
+              originalSlotId: 'google-calendar', // Special ID for Google Calendar slots
+              start_time: slot.start_time,
+              end_time: slot.end_time,
+              duration_minutes: 60,
+              isRecurring: false,
+              recurringPattern: null,
+            }))
+            
+            // Update mentor with Google Calendar slots
+            setMentors(prev => prev.map(m => 
+              m.mentor.id === mentorId 
+                ? { ...m, slots: [], expandedSlots } 
+                : m
+            ))
+            
+            setLoadingSlots(false)
+            return
+          }
+        } catch (error) {
+          console.error('Error loading Google Calendar availability:', error)
+          // Fall through to old system
+        }
+      }
+      
+      // Fallback: Load from availability_slots table (old system)
       const { data: slots, error: slotsError } = await supabase
         .from('availability_slots')
         .select('*')
@@ -172,43 +214,26 @@ export function BookSession({ userId, userRole }: BookSessionProps) {
 
       if (slotsError) {
         console.error('Error loading mentor slots:', slotsError)
-        // Update mentor with empty slots on error
         setMentors(prev => prev.map(m => 
           m.mentor.id === mentorId ? { ...m, slots: [] } : m
         ))
         return
       }
 
-      console.log('Found slots (before expansion):', slots?.length || 0, slots)
-      if (slots && slots.length > 0) {
-        console.log('Slot details:', slots.map(s => ({
-          id: s.id,
-          is_recurring: s.is_recurring,
-          recurring_pattern: s.recurring_pattern,
-          start_time: s.start_time,
-          mentor_id: s.mentor_id
-        })))
-      }
-
       if (!slots || slots.length === 0) {
-        // Update mentor with empty slots
         setMentors(prev => prev.map(m => 
           m.mentor.id === mentorId ? { ...m, slots: [], expandedSlots: [] } : m
         ))
-        console.log('No slots found for mentor:', mentorId)
         return
       }
 
-      // Expand recurring slots for this week - this will generate instances for daily/weekly/monthly patterns
-      console.log('Expanding slots for week:', weekStart.toISOString(), 'to', weekEnd.toISOString())
+      // Expand recurring slots
       const expanded = expandRecurringSlots(slots, weekStart, weekEnd)
-      console.log('Expanded slots for week:', expanded.length, expanded)
 
-      // Get all original slot IDs (including recurring ones)
+      // Check which slots are already booked
       const originalSlotIds = [...new Set(expanded.map(s => s.originalSlotId))]
       
-      // Check which slots are already booked (check by original slot ID and specific time)
-      const { data: bookings, error: bookingsError } = await supabase
+      const { data: bookings } = await supabase
         .from('booked_sessions')
         .select('availability_slot_id, start_time')
         .in('availability_slot_id', originalSlotIds)
@@ -216,49 +241,20 @@ export function BookSession({ userId, userRole }: BookSessionProps) {
         .gte('start_time', weekStart.toISOString())
         .lt('start_time', weekEnd.toISOString())
 
-      if (bookingsError) {
-        console.error('Error loading bookings:', bookingsError)
-      }
-
-      // Create a set of booked slot times (slot ID + start time)
       const bookedSlotTimes = new Set(
         bookings?.map(b => `${b.availability_slot_id}-${parseISO(b.start_time).toISOString()}`) || []
       )
 
-      // Filter out booked slots
       const availableExpandedSlots = expanded.filter(slot => {
         const slotTimeKey = `${slot.originalSlotId}-${parseISO(slot.start_time).toISOString()}`
         return !bookedSlotTimes.has(slotTimeKey)
       })
       
-      console.log('Available expanded slots after filtering:', availableExpandedSlots.length)
-      
-      // Update mentors state with both original and expanded slots
-      // Only update if there's an actual change to prevent infinite loops
-      setMentors(prev => {
-        const existingMentor = prev.find(m => m.mentor.id === mentorId)
-        
-        // Check if update is needed (prevent unnecessary re-renders)
-        if (existingMentor) {
-          const slotsChanged = existingMentor.slots.length !== slots.length ||
-            existingMentor.slots.some((s, i) => s.id !== slots[i]?.id)
-          const expandedChanged = existingMentor.expandedSlots?.length !== availableExpandedSlots.length ||
-            existingMentor.expandedSlots?.some((s, i) => s.start_time !== availableExpandedSlots[i]?.start_time)
-          
-          if (!slotsChanged && !expandedChanged) {
-            console.log('No changes detected, skipping state update to prevent loop')
-            return prev // Return previous state to prevent re-render
-          }
-        }
-        
-        const updated = prev.map(m => 
-          m.mentor.id === mentorId 
-            ? { ...m, slots: slots as AvailabilitySlot[], expandedSlots: availableExpandedSlots } 
-            : m
-        )
-        console.log('Updated mentors state:', updated.map(m => ({ id: m.mentor.id, originalSlots: m.slots.length, expandedSlots: m.expandedSlots?.length || 0 })))
-        return updated
-      })
+      setMentors(prev => prev.map(m => 
+        m.mentor.id === mentorId 
+          ? { ...m, slots: slots as AvailabilitySlot[], expandedSlots: availableExpandedSlots } 
+          : m
+      ))
     } catch (error) {
       console.error('Error in loadMentorSlots:', error)
     } finally {

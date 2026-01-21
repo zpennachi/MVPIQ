@@ -8,7 +8,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 
 // Helper function to send confirmation emails
 // Generate a real Google Meet link using Google Calendar API
-async function generateMeetingLink(session: any): Promise<string> {
+// Uses mentor's connected Google Calendar if available, otherwise falls back to service account
+async function generateMeetingLink(session: any): Promise<{ meetLink: string; googleEventId?: string }> {
   // Check if Google Calendar API is configured
   const googleServiceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
   const googlePrivateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
@@ -80,8 +81,8 @@ async function generateMeetingLink(session: any): Promise<string> {
       )?.uri
 
       if (meetLink) {
-        console.log('✅ Generated real Google Meet link:', meetLink)
-        return meetLink
+        console.log('✅ Generated real Google Meet link via service account:', meetLink)
+        return { meetLink, googleEventId: response.data.id || undefined }
       }
     } catch (error) {
       console.error('❌ Error generating Google Meet link via Calendar API:', error)
@@ -89,16 +90,17 @@ async function generateMeetingLink(session: any): Promise<string> {
     }
   }
 
-  // Fallback: Generate a link to create a new Meet (requires manual creation)
-  // This opens Google Meet creation page with pre-filled date/time
+  // Final fallback: Generate a link to create a new Meet (requires manual creation)
   const startTime = new Date(session.start_time)
   const endTime = new Date(session.end_time)
   const dateStr = startTime.toISOString().slice(0, 10).replace(/-/g, '')
   const startStr = startTime.toTimeString().slice(0, 5).replace(':', '')
   const endStr = endTime.toTimeString().slice(0, 5).replace(':', '')
   
-  // Note: This creates a calendar link that will prompt to create a Meet
-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&dates=${dateStr}T${startStr}00Z%2F${dateStr}T${endStr}00Z&text=1-on-1%20Session&details=Scheduled%20via%20MVP-IQ`
+  // This creates a calendar link that will prompt to create a Meet
+  return {
+    meetLink: `https://calendar.google.com/calendar/render?action=TEMPLATE&dates=${dateStr}T${startStr}00Z%2F${dateStr}T${endStr}00Z&text=1-on-1%20Session&details=Scheduled%20via%20MVP-IQ`,
+  }
 }
 
 async function sendConfirmationEmails(session: any, origin: string) {
@@ -265,16 +267,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate meeting link (async now)
-    const meetingLink = await generateMeetingLink(session)
+    const { meetLink, googleEventId } = await generateMeetingLink(session)
 
     // If using credit, skip payment processing
     if (useCredit) {
       // Credit already applied in BookSession component
-      // Update session with meeting link
+      // Update session with meeting link and Google event ID
       await supabase
         .from('booked_sessions')
         .update({
-          meeting_link: meetingLink,
+          meeting_link: meetLink,
+          ...(googleEventId && { google_event_id: googleEventId }),
         })
         .eq('id', sessionId)
       
@@ -285,7 +288,7 @@ export async function POST(request: NextRequest) {
         success: true,
         creditUsed: true,
         message: 'Session confirmed using credit',
-        meetingLink,
+        meetingLink: meetLink,
       })
     }
 
@@ -298,7 +301,8 @@ export async function POST(request: NextRequest) {
           payment_status: 'completed',
           status: 'confirmed',
           payment_intent_id: `dev_${Date.now()}`,
-          meeting_link: meetingLink,
+          meeting_link: meetLink,
+          ...(googleEventId && { google_event_id: googleEventId }),
         })
         .eq('id', sessionId)
 
@@ -309,7 +313,7 @@ export async function POST(request: NextRequest) {
         success: true,
         devMode: true,
         message: 'Session confirmed (dev mode - payment skipped)',
-        meetingLink,
+        meetingLink: meetLink,
       })
     }
 
@@ -346,7 +350,8 @@ export async function POST(request: NextRequest) {
       .update({
         payment_intent_id: checkoutSession.id,
         payment_status: 'processing',
-        meeting_link: meetingLink,
+        meeting_link: meetLink,
+        ...(googleEventId && { google_event_id: googleEventId }),
       })
       .eq('id', sessionId)
 

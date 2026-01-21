@@ -212,8 +212,63 @@ export async function POST(request: NextRequest) {
             break
           }
 
-          // Generate meeting link using same function as payment route
-          const meetingLink = await (async () => {
+          // Generate meeting link - check if mentor has connected calendar first
+          const { data: mentor } = await supabase
+            .from('profiles')
+            .select('id, email, full_name, google_calendar_id, google_calendar_access_token, google_calendar_refresh_token, google_calendar_connected')
+            .eq('id', existingSession.mentor_id)
+            .single()
+
+          const meetingLinkResult = await (async () => {
+            // Try OAuth first if mentor has connected
+            if (mentor?.google_calendar_connected && mentor.google_calendar_access_token && mentor.google_calendar_id) {
+              try {
+                const { createCalendarEvent, refreshAccessToken } = await import('@/lib/google-calendar')
+                const { env } = await import('@/lib/env')
+                
+                let accessToken = mentor.google_calendar_access_token
+                
+                try {
+                  if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && mentor.google_calendar_refresh_token) {
+                    accessToken = await refreshAccessToken(
+                      {
+                        clientId: env.GOOGLE_CLIENT_ID,
+                        clientSecret: env.GOOGLE_CLIENT_SECRET,
+                        redirectUri: env.GOOGLE_REDIRECT_URI || '',
+                      },
+                      mentor.google_calendar_refresh_token
+                    )
+                  }
+                } catch (refreshError) {
+                  console.error('Error refreshing token:', refreshError)
+                }
+                
+                const [userResult] = await Promise.all([
+                  supabase.from('profiles').select('email, full_name').eq('id', existingSession.user_id).maybeSingle(),
+                ])
+                
+                const { eventId, meetLink } = await createCalendarEvent(
+                  accessToken,
+                  mentor.google_calendar_id,
+                  {
+                    summary: `1-on-1 Session: ${userResult.data?.full_name || 'User'} with ${mentor.full_name || 'Mentor'}`,
+                    startTime: new Date(existingSession.start_time),
+                    endTime: new Date(existingSession.end_time || new Date(new Date(existingSession.start_time).getTime() + 60 * 60 * 1000)),
+                    mentorEmail: mentor.email,
+                    userEmail: userResult.data?.email || '',
+                    mentorName: mentor.full_name || 'Mentor',
+                    userName: userResult.data?.full_name || 'User',
+                  }
+                )
+                
+                return { meetLink: meetLink || '', googleEventId: eventId }
+              } catch (error) {
+                console.error('Error with OAuth calendar:', error)
+                // Fall through
+              }
+            }
+            
+            // Fallback to service account
             const googleServiceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
             const googlePrivateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
             const googleCalendarId = process.env.GOOGLE_CALENDAR_ID || 'primary'
@@ -267,19 +322,23 @@ export async function POST(request: NextRequest) {
                   (ep: any) => ep.entryPointType === 'video'
                 )?.uri
 
-                if (meetLink) return meetLink
+                if (meetLink) {
+                  return { meetLink, googleEventId: response.data.id || undefined }
+                }
               } catch (error) {
                 console.error('Error generating Google Meet link:', error)
               }
             }
 
-            // Fallback
+            // Final fallback
             const startTime = new Date(existingSession.start_time)
             const endTime = new Date(existingSession.end_time || new Date(startTime.getTime() + 60 * 60 * 1000))
             const dateStr = startTime.toISOString().slice(0, 10).replace(/-/g, '')
             const startStr = startTime.toTimeString().slice(0, 5).replace(':', '')
             const endStr = endTime.toTimeString().slice(0, 5).replace(':', '')
-            return `https://calendar.google.com/calendar/render?action=TEMPLATE&dates=${dateStr}T${startStr}00Z%2F${dateStr}T${endStr}00Z&text=1-on-1%20Session&details=Scheduled%20via%20MVP-IQ`
+            return {
+              meetLink: `https://calendar.google.com/calendar/render?action=TEMPLATE&dates=${dateStr}T${startStr}00Z%2F${dateStr}T${endStr}00Z&text=1-on-1%20Session&details=Scheduled%20via%20MVP-IQ`,
+            }
           })()
 
           // Update session status with meeting link
@@ -289,7 +348,8 @@ export async function POST(request: NextRequest) {
               payment_status: 'completed',
               status: 'confirmed',
               payment_intent_id: session.id,
-              meeting_link: meetingLink,
+              meeting_link: meetingLinkResult.meetLink,
+              ...(meetingLinkResult.googleEventId && { google_event_id: meetingLinkResult.googleEventId }),
             })
             .eq('id', sessionId)
 
@@ -332,12 +392,12 @@ export async function POST(request: NextRequest) {
                   {
                     type: 'session_confirmation' as const,
                     recipient: userEmail,
-                    data: {
-                      sessionId,
-                      mentorName,
-                      startTime: existingSession.start_time,
-                      meetingLink: updatedSession?.meeting_link,
-                    },
+                      data: {
+                        sessionId,
+                        mentorName,
+                        startTime: existingSession.start_time,
+                        meetingLink: meetingLinkResult.meetLink,
+                      },
                   },
                 ]
               : []),
@@ -346,12 +406,12 @@ export async function POST(request: NextRequest) {
                   {
                     type: 'session_booking_notification' as const,
                     recipient: mentorEmail,
-                    data: {
-                      sessionId,
-                      userName,
-                      startTime: existingSession.start_time,
-                      meetingLink: updatedSession?.meeting_link,
-                    },
+                      data: {
+                        sessionId,
+                        userName,
+                        startTime: existingSession.start_time,
+                        meetingLink: meetingLinkResult.meetLink,
+                      },
                   },
                 ]
               : []),

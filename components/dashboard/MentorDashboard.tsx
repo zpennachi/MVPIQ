@@ -151,14 +151,17 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
     const finalUserName = session.user.full_name || session.user.email || 'User'
 
     try {
+      // Cancel session via API (handles Google Calendar deletion)
+      const cancelResponse = await fetch('/api/calendar/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      })
 
-      // Update session status
-      const { error: updateError } = await supabase
-        .from('booked_sessions')
-        .update({ status: 'cancelled' })
-        .eq('id', sessionId)
-
-      if (updateError) throw updateError
+      if (!cancelResponse.ok) {
+        const errorData = await cancelResponse.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(errorData.error || 'Failed to cancel session')
+      }
 
       // Grant credit to user for cancelled session
       try {

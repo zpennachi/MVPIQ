@@ -322,13 +322,17 @@ export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
                             }
 
                             try {
-                              // Update session status
-                              const { error: updateError } = await supabase
-                                .from('booked_sessions')
-                                .update({ status: 'cancelled' })
-                                .eq('id', apt.id)
+                              // Cancel session via API (handles Google Calendar deletion)
+                              const cancelResponse = await fetch('/api/calendar/cancel', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ sessionId: apt.id }),
+                              })
 
-                              if (updateError) throw updateError
+                              if (!cancelResponse.ok) {
+                                const errorData = await cancelResponse.json().catch(() => ({ error: 'Unknown error' }))
+                                throw new Error(errorData.error || 'Failed to cancel session')
+                              }
 
                               // Grant credit to user for cancelled session
                               if (apt.user?.id) {
