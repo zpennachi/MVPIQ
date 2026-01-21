@@ -70,10 +70,7 @@ export async function createCalendarEvent(
     const calendar = getCalendarClient()
     const calendarId = getServiceAccountCalendarId()
 
-    // Create calendar event with Google Meet
-    // Note: Service accounts can't add attendees without Domain-Wide Delegation,
-    // but we can still create the event and generate a Meet link.
-    // The description will include the participant emails instead.
+    // Create a simple calendar event first (without conference data)
     const event = {
       summary: eventData.summary,
       description: `${eventData.description || 'Scheduled mentoring session via MVP-IQ'}\n\nParticipants:\n- Mentor: ${eventData.mentorEmail}\n- Student: ${eventData.userEmail}`,
@@ -85,30 +82,63 @@ export async function createCalendarEvent(
         dateTime: eventData.endTime.toISOString(),
         timeZone: 'UTC',
       },
-      // Removed attendees - service accounts can't invite without Domain-Wide Delegation
-      // The Meet link will still work for anyone who has it
-      conferenceData: {
-        createRequest: {
-          requestId: `mvpiq-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-          conferenceSolutionKey: {
-            type: 'eventHangout',
-          },
-        },
-      },
-      reminders: {
-        useDefault: false,
-        overrides: [
-          { method: 'email', minutes: 24 * 60 }, // 1 day before
-          { method: 'popup', minutes: 15 }, // 15 minutes before
-        ],
-      },
     }
 
-    const response = await calendar.events.insert({
+    // First, create the event without conference data
+    let response = await calendar.events.insert({
       calendarId,
-      conferenceDataVersion: 1,
       requestBody: event,
     })
+
+    // Then, patch it to add the Google Meet link
+    // Use the correct conference solution type
+    const eventId = response.data.id
+    if (eventId) {
+      try {
+        response = await calendar.events.patch({
+          calendarId,
+          eventId,
+          conferenceDataVersion: 1,
+          requestBody: {
+            conferenceData: {
+              createRequest: {
+                requestId: `mvpiq-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+                conferenceSolutionKey: {
+                  type: 'hangoutsMeet',
+                },
+              },
+            },
+          },
+        })
+      } catch (patchError: any) {
+        // If patching fails, try creating with conference data in one go using the correct format
+        logger.warn('Failed to patch conference data, trying alternative method', patchError)
+        
+        // Delete the event we just created
+        try {
+          await calendar.events.delete({ calendarId, eventId })
+        } catch (deleteError) {
+          // Ignore delete errors
+        }
+
+        // Try creating with conference data using minimal format
+        response = await calendar.events.insert({
+          calendarId,
+          conferenceDataVersion: 1,
+          requestBody: {
+            ...event,
+            conferenceData: {
+              createRequest: {
+                requestId: `mvpiq-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+                conferenceSolutionKey: {
+                  type: 'hangoutsMeet',
+                },
+              },
+            },
+          },
+        })
+      }
+    }
 
     // Extract Meet link from response
     const meetLink =
