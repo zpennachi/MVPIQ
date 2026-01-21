@@ -12,16 +12,21 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: NextRequest) {
   try {
-    const { sessionId } = await request.json()
+    const body = await request.json()
+    const { sessionId } = body
 
     if (!sessionId) {
+      logger.error('Missing sessionId in request', undefined, { body })
       return NextResponse.json({ error: 'sessionId is required' }, { status: 400 })
     }
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    logger.info('Generate meeting link called', { sessionId })
 
-    if (!user) {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      logger.error('Auth error in generate-meeting-link', authError, { sessionId })
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -149,10 +154,16 @@ export async function POST(request: NextRequest) {
       googleEventId,
     })
   } catch (error: any) {
-    logger.error('Error generating meeting link', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to generate meeting link' },
-      { status: 500 }
-    )
+    logger.error('Error generating meeting link', error, { 
+      message: error.message,
+      stack: error.stack,
+      name: error.name 
+    })
+    // Return success even if meeting link generation fails - it will be retried in payment route
+    return NextResponse.json({
+      success: false,
+      error: error.message || 'Failed to generate meeting link',
+      meetingLink: null,
+    }, { status: 200 }) // Return 200 so booking can continue
   }
 }

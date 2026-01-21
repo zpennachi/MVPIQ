@@ -288,24 +288,15 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
         throw new Error(sessionError.message || 'Failed to create booking. Please try again.')
       }
 
-      // Generate meeting link immediately (before payment)
-      try {
-        const meetingLinkResponse = await fetch('/api/sessions/generate-meeting-link', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId: session.id }),
-        })
-        
-        if (meetingLinkResponse.ok) {
-          const meetingLinkData = await meetingLinkResponse.json()
-          console.log('✅ Meeting link generated immediately:', meetingLinkData.meetingLink)
-        } else {
-          console.warn('⚠️ Failed to generate meeting link immediately, will try again during payment')
-        }
-      } catch (meetingLinkError) {
-        console.warn('⚠️ Error generating meeting link immediately:', meetingLinkError)
-        // Continue with booking - meeting link will be generated during payment if needed
-      }
+      // Generate meeting link immediately (before payment) - but don't block on it
+      // Fire and forget - it will be retried in payment route if it fails
+      fetch('/api/sessions/generate-meeting-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id }),
+      }).catch((err) => {
+        console.warn('⚠️ Meeting link generation failed (non-blocking):', err)
+      })
 
       // Check if user has available credits
       if (availableCredits > 0) {
