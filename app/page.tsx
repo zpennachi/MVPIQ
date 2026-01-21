@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation'
 import { ScrollToAnchor } from '@/components/homepage/ScrollToAnchor'
 import { DynamicHomepage } from '@/components/homepage/DynamicHomepage'
 
+export const dynamic = 'force-dynamic'
+
 export default async function Home() {
   try {
     const supabase = await createClient()

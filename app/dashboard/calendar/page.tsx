@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { BookSession } from '@/components/calendar/BookSession'
 import { MentorAvailability } from '@/components/calendar/MentorAvailability'
 
+export const dynamic = 'force-dynamic'
+
 export default async function CalendarPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { OneOnOnesClient } from './OneOnOnesClient'
 
+export const dynamic = 'force-dynamic'
+
 export default async function OneOnOnesPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

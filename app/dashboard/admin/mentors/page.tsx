@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { MentorManagement } from '@/components/admin/MentorManagement'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminMentorsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
