@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
         description: 'This is a test event to verify the service account is working. You can delete this.',
         startTime: testStartTime,
         endTime: testEndTime,
-        mentorEmail: 'test@example.com',
+        mentorEmail: env.GOOGLE_SERVICE_ACCOUNT_EMAIL || 'test@example.com',
         userEmail: 'test@example.com',
         mentorName: 'Test Mentor',
         userName: 'Test User',

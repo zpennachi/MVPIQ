@@ -71,9 +71,12 @@ export async function createCalendarEvent(
     const calendarId = getServiceAccountCalendarId()
 
     // Create calendar event with Google Meet
+    // Note: Service accounts can't add attendees without Domain-Wide Delegation,
+    // but we can still create the event and generate a Meet link.
+    // The description will include the participant emails instead.
     const event = {
       summary: eventData.summary,
-      description: eventData.description || `Scheduled mentoring session via MVP-IQ`,
+      description: `${eventData.description || 'Scheduled mentoring session via MVP-IQ'}\n\nParticipants:\n- Mentor: ${eventData.mentorEmail}\n- Student: ${eventData.userEmail}`,
       start: {
         dateTime: eventData.startTime.toISOString(),
         timeZone: 'UTC',
@@ -82,10 +85,8 @@ export async function createCalendarEvent(
         dateTime: eventData.endTime.toISOString(),
         timeZone: 'UTC',
       },
-      attendees: [
-        { email: eventData.mentorEmail },
-        { email: eventData.userEmail },
-      ],
+      // Removed attendees - service accounts can't invite without Domain-Wide Delegation
+      // The Meet link will still work for anyone who has it
       conferenceData: {
         createRequest: {
           requestId: `mvpiq-${Date.now()}-${Math.random().toString(36).substring(7)}`,
