@@ -55,39 +55,6 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
     loadUpcomingSessions()
   }, [mentorId])
 
-  // Mark displayed submissions as viewed
-  useEffect(() => {
-    if (submissions.length > 0 && viewedSubmissionIds.size >= 0) {
-      const sevenDaysAgo = new Date()
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-      
-      const newSubs = submissions.filter(s => {
-        if (viewedSubmissionIds.has(s.id)) return false
-        const isPendingOrAssigned = s.status === 'pending' || s.status === 'assigned'
-        const isRecent = new Date(s.created_at) >= sevenDaysAgo
-        return isPendingOrAssigned || isRecent
-      })
-      
-      // Mark first 3 displayed submissions as viewed
-      const displayedIds = newSubs.slice(0, 3).map(s => s.id)
-      const newViewed = new Set(viewedSubmissionIds)
-      let hasNew = false
-      
-      displayedIds.forEach(id => {
-        if (!newViewed.has(id)) {
-          newViewed.add(id)
-          hasNew = true
-        }
-      })
-
-      if (hasNew && typeof window !== 'undefined') {
-        setViewedSubmissionIds(newViewed)
-        localStorage.setItem(`viewed_submissions_${mentorId}`, JSON.stringify(Array.from(newViewed)))
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submissions, mentorId])
-
   const loadSubmissions = async () => {
     setLoading(true)
     
@@ -279,19 +246,21 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
   }
 
   const handleFeedbackSubmitted = () => {
+    // Mark submission as viewed when feedback is provided
+    if (selectedSubmission?.id) {
+      const newViewed = new Set(viewedSubmissionIds)
+      newViewed.add(selectedSubmission.id)
+      setViewedSubmissionIds(newViewed)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`viewed_submissions_${mentorId}`, JSON.stringify(Array.from(newViewed)))
+      }
+    }
     loadSubmissions() // This will refresh and remove completed submissions from "New Submissions"
     setSelectedSubmission(null) // Close modal after submission
   }
 
   const handleSelectSubmission = (submission: FeedbackSubmission) => {
     setSelectedSubmission(submission)
-    // Mark as viewed when selected
-    const newViewed = new Set(viewedSubmissionIds)
-    newViewed.add(submission.id)
-    setViewedSubmissionIds(newViewed)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(`viewed_submissions_${mentorId}`, JSON.stringify(Array.from(newViewed)))
-    }
   }
 
   const handleCloseFeedback = () => {
