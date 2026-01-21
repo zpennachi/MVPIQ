@@ -277,7 +277,7 @@ export function Sidebar() {
                   <Link
                     href="/dashboard/one-on-ones?tab=book"
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${
-                      pathname === '/dashboard/one-on-ones' && !pathname.includes('tab=appointments')
+                      pathname === '/dashboard/one-on-ones' && searchParams?.get('tab') !== 'appointments'
                         ? 'bg-[#272727] text-[#ffc700]'
                         : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                     }`}
@@ -287,7 +287,7 @@ export function Sidebar() {
                   <Link
                     href="/dashboard/one-on-ones?tab=appointments"
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm relative ${
-                      pathname === '/dashboard/one-on-ones' && pathname.includes('tab=appointments')
+                      pathname === '/dashboard/one-on-ones' && searchParams?.get('tab') === 'appointments'
                         ? 'bg-[#272727] text-[#ffc700]'
                         : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                     }`}
@@ -456,7 +456,7 @@ export function Sidebar() {
                   <Link
                     href="/dashboard/one-on-ones?tab=book"
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${
-                      pathname === '/dashboard/one-on-ones' && !pathname.includes('tab=appointments')
+                      pathname === '/dashboard/one-on-ones' && searchParams?.get('tab') !== 'appointments'
                         ? 'bg-[#272727] text-[#ffc700]'
                         : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                     }`}
@@ -466,7 +466,7 @@ export function Sidebar() {
                   <Link
                     href="/dashboard/one-on-ones?tab=appointments"
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm relative ${
-                      pathname === '/dashboard/one-on-ones' && pathname.includes('tab=appointments')
+                      pathname === '/dashboard/one-on-ones' && searchParams?.get('tab') === 'appointments'
                         ? 'bg-[#272727] text-[#ffc700]'
                         : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                     }`}
