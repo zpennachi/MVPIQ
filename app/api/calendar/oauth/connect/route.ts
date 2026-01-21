@@ -49,13 +49,14 @@ export async function GET(request: NextRequest) {
       redirectUri
     )
 
-    // Generate auth URL with calendar scopes
+    // Generate auth URL with calendar and Gmail scopes
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: 'offline',
       prompt: 'consent', // Force consent to get refresh token
       scope: [
         'https://www.googleapis.com/auth/calendar',
         'https://www.googleapis.com/auth/calendar.events',
+        'https://www.googleapis.com/auth/gmail.send', // Gmail send permission
       ],
       state: user.id, // Pass user ID in state to verify on callback
     })

@@ -1,24 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Resend } from 'resend'
-import { env, isResendConfigured } from '@/lib/env'
+import { sendGmailEmail } from '@/lib/gmail'
+import { env } from '@/lib/env'
 import { emailNotificationSchema } from '@/lib/validations'
 import { handleApiError, ValidationError } from '@/lib/errors'
 import { logger } from '@/lib/logger'
-
-const resend = isResendConfigured() ? new Resend(env.RESEND_API_KEY!) : null
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { type, email, data } = emailNotificationSchema.parse(body)
 
-    if (!isResendConfigured() || !resend) {
-      logger.warn('Resend API key not configured', { type, email })
-      return NextResponse.json(
-        { error: 'Email service not configured', warning: 'RESEND_API_KEY not set' },
-        { status: 503 }
-      )
-    }
+    // Gmail is now the email service (no need to check configuration)
 
     logger.info('Sending email notification', { type, recipient: email })
 
@@ -278,29 +270,39 @@ export async function POST(request: NextRequest) {
         )
     }
 
-    // Send email via Resend
-    const { data: emailData, error: emailError } = await resend.emails.send({
-      from: env.RESEND_FROM_EMAIL,
+    // Send email via Gmail API
+    // Try to get mentorId from data if available (for mentor-specific emails)
+    const mentorId = (data as any)?.mentorId as string | undefined
+    
+    const result = await sendGmailEmail({
+      from: 'mvpweb@gmail.com',
       to: email,
       subject,
       html,
+      mentorId,
     })
 
-    if (emailError) {
-      logger.error('Resend API error', emailError, { type, recipient: email })
-      throw new ValidationError(`Failed to send email: ${emailError.message}`, emailError)
+    if (!result.success) {
+      logger.error('Gmail API error', undefined, { 
+        type, 
+        recipient: email, 
+        error: result.error,
+        mentorId,
+      })
+      throw new ValidationError(`Failed to send email: ${result.error}`, new Error(result.error || 'Unknown error'))
     }
 
-    logger.info('Email sent successfully', {
+    logger.info('Email sent successfully via Gmail', {
       type,
       recipient: email,
-      emailId: emailData?.id,
+      messageId: result.messageId,
+      mentorId,
     })
 
     return NextResponse.json({
       success: true,
       message: 'Email sent successfully',
-      emailId: emailData?.id,
+      emailId: result.messageId,
     })
   } catch (error) {
     return handleApiError(error)

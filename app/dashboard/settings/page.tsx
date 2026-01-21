@@ -413,8 +413,8 @@ export default function SettingsPage() {
               </label>
               <p className="text-sm text-[#d9d9d9]/70 mb-4">
                 {profile?.role === 'mentor' 
-                  ? 'Connect your Google Calendar to enable Google Meet link generation for your sessions. When users book appointments with you, Meet links will be automatically created in your calendar.'
-                  : 'Connect your Google Calendar to enable Google Meet link generation for all sessions. This allows the system to automatically create Meet links when users book appointments.'}
+                  ? 'Connect your Google account to enable Google Meet link generation for your sessions and email notifications. When users book appointments with you, Meet links will be automatically created in your calendar and emails will be sent from mvpweb@gmail.com.'
+                  : 'Connect your Google account to enable Google Meet link generation for all sessions and email notifications. This allows the system to automatically create Meet links when users book appointments and send emails from mvpweb@gmail.com.'}
               </p>
               {calendarConnected ? (
                 <div className="flex items-center gap-3 p-4 bg-green-900/20 border border-green-800 rounded-md">

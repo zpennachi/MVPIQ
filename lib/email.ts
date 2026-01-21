@@ -3,7 +3,7 @@
  * Replaces duplicated email sending logic across the codebase
  */
 
-import { env, isResendConfigured } from './env'
+import { env } from './env'
 import { logger } from './logger'
 import { emailNotificationSchema, type EmailType } from './validations'
 
@@ -25,13 +25,7 @@ export async function sendEmail(
   recipient: string,
   data?: EmailData
 ): Promise<SendEmailResult> {
-  if (!isResendConfigured()) {
-    logger.warn('Resend not configured, email not sent', { type, recipient })
-    return {
-      success: false,
-      error: 'Email service not configured',
-    }
-  }
+  // Gmail is now the email service (no configuration check needed)
 
   try {
     const response = await fetch(`${env.NEXT_PUBLIC_APP_URL}/api/notifications/email`, {

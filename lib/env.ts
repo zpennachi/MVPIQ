@@ -16,9 +16,8 @@ const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
   
-  // Resend (optional)
-  RESEND_API_KEY: z.string().optional(),
-  RESEND_FROM_EMAIL: z.string().email().optional().default('onboarding@resend.dev'),
+  // Gmail (uses OAuth, no separate API key needed)
+  // GMAIL_FROM_EMAIL is hardcoded to mvpweb@gmail.com in lib/gmail.ts
   
   // App
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
@@ -51,8 +50,7 @@ function getEnv(): Env {
       STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
       STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
-      RESEND_API_KEY: process.env.RESEND_API_KEY,
-      RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
+      // Gmail uses OAuth, no env vars needed
       NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
       CRON_SECRET: process.env.CRON_SECRET,
       GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
@@ -77,8 +75,7 @@ function getEnv(): Env {
           STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
           STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
-          RESEND_API_KEY: process.env.RESEND_API_KEY,
-          RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+      // Gmail uses OAuth, no env vars needed
           NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
           CRON_SECRET: process.env.CRON_SECRET || 'your-secret-key',
           GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
@@ -110,8 +107,5 @@ export const isStripeConfigured = (): boolean => {
   return !!validatedEnv.STRIPE_SECRET_KEY && !!validatedEnv.STRIPE_WEBHOOK_SECRET
 }
 
-// Helper to check if Resend is configured
-export const isResendConfigured = (): boolean => {
-  const validatedEnv = getEnv()
-  return !!validatedEnv.RESEND_API_KEY
-}
+// Gmail uses OAuth, no configuration check needed
+// OAuth connection is checked at runtime in lib/gmail.ts
