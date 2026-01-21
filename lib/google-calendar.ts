@@ -89,29 +89,63 @@ export async function createCalendarEvent(
     }
 
     // Create event with Google Meet
-    // The conference type must match what the calendar supports
-    // Try with minimal conference data structure
-    const response = await calendar.events.insert({
-      calendarId,
-      conferenceDataVersion: 1,
-      requestBody: {
-        ...event,
-        conferenceData: {
-          createRequest: {
-            requestId: `mvpiq-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-            conferenceSolutionKey: {
-              type: 'hangoutsMeet',
+    // Try different approaches to create Meet link
+    let response
+    let meetLink = ''
+    
+    // First, try creating event with conference data using the standard format
+    try {
+      response = await calendar.events.insert({
+        calendarId,
+        conferenceDataVersion: 1,
+        requestBody: {
+          ...event,
+          conferenceData: {
+            createRequest: {
+              requestId: `mvpiq-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+              conferenceSolutionKey: {
+                type: 'hangoutsMeet',
+              },
             },
           },
         },
-      },
-    })
-
-    // Extract Meet link if not already extracted
-    if (!meetLink) {
+      })
+      
+      // Extract Meet link
       meetLink = response.data.conferenceData?.entryPoints?.find(
         (ep: any) => ep.entryPointType === 'video'
       )?.uri || ''
+    } catch (error: any) {
+      // If that fails with "Invalid conference type", try without specifying type
+      if (error.message?.includes('conference type') || error.code === 400) {
+        logger.warn('Failed with hangoutsMeet type, trying without explicit type', { error: error.message })
+        
+        try {
+          // Try with just the createRequest, let Google decide the type
+          response = await calendar.events.insert({
+            calendarId,
+            conferenceDataVersion: 1,
+            requestBody: {
+              ...event,
+              conferenceData: {
+                createRequest: {
+                  requestId: `mvpiq-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+                },
+              },
+            },
+          })
+          
+          meetLink = response.data.conferenceData?.entryPoints?.find(
+            (ep: any) => ep.entryPointType === 'video'
+          )?.uri || ''
+        } catch (error2: any) {
+          // If that also fails, create event without conference data and log the issue
+          logger.error('Failed to create event with conference data', error2, { calendarId })
+          throw new Error(`Cannot create Google Meet link: ${error2.message || 'Unknown error'}. Make sure the calendar supports Google Meet and is shared with the service account.`)
+        }
+      } else {
+        throw error
+      }
     }
 
     if (!response.data.id) {
