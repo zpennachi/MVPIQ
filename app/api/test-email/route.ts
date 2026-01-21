@@ -28,11 +28,11 @@ export async function GET(request: NextRequest) {
 
     // Get query params
     const searchParams = request.nextUrl.searchParams
-    const toEmail = searchParams.get('to') || null
-    const customSubject = searchParams.get('subject') || null
+    const toEmail = searchParams.get('to')
+    const customSubject = searchParams.get('subject')
 
     // Get admin email if no 'to' specified
-    let recipientEmail = toEmail
+    let recipientEmail: string | null = toEmail
     if (!recipientEmail) {
       const { data: adminProfile } = await supabase
         .from('profiles')
@@ -52,6 +52,14 @@ export async function GET(request: NextRequest) {
           { status: 400 }
         )
       }
+    }
+
+    // TypeScript guard - recipientEmail should never be null here, but just in case
+    if (!recipientEmail) {
+      return NextResponse.json(
+        { error: 'Recipient email is required' },
+        { status: 400 }
+      )
     }
 
     // Check if admin has OAuth tokens
