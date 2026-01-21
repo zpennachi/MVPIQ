@@ -290,6 +290,14 @@ export async function POST(request: NextRequest) {
       logger.error('Failed to create Google Calendar event', calendarError, { sessionId })
       // Continue without calendar event - don't fail the booking
     }
+    
+    // In dev mode, if no meeting link was generated, create a placeholder for testing
+    const isDevMode = !process.env.STRIPE_SECRET_KEY || process.env.NODE_ENV === 'development'
+    if (isDevMode && !meetingLink) {
+      // Generate a placeholder meeting link for dev/testing
+      meetingLink = `https://meet.google.com/dev-test-${sessionId.substring(0, 8)}`
+      logger.info('Generated placeholder meeting link for dev mode', { sessionId, meetingLink })
+    }
 
     // If using credit, skip payment processing
     if (useCredit) {
