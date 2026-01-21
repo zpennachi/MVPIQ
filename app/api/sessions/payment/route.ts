@@ -273,30 +273,29 @@ export async function POST(request: NextRequest) {
     }
 
     // Create Google Calendar event with Meet link (if mentor has connected calendar)
-    let meetingLink: string | null = null
-    let googleEventId: string | undefined = undefined
+    // Only generate if not already created (preserve existing meeting link)
+    let meetingLink: string | null = session.meeting_link || null
+    let googleEventId: string | undefined = session.google_event_id || undefined
     
-    try {
-      const calendarEvent = await createGoogleCalendarEvent(session)
-      meetingLink = calendarEvent?.meetLink || null
-      googleEventId = calendarEvent?.eventId
-      
-      if (meetingLink) {
-        logger.info('Google Meet link generated', { sessionId, meetingLink, googleEventId })
-      } else {
-        logger.warn('No meeting link generated - mentor may not have Google Calendar connected', { sessionId, mentorId: session.mentor_id })
+    // Only try to generate if we don't already have a meeting link
+    if (!meetingLink) {
+      try {
+        const calendarEvent = await createGoogleCalendarEvent(session)
+        meetingLink = calendarEvent?.meetLink || null
+        googleEventId = calendarEvent?.eventId
+        
+        if (meetingLink) {
+          logger.info('Google Meet link generated in payment route', { sessionId, meetingLink, googleEventId })
+        } else {
+          logger.warn('No meeting link generated - mentor may not have Google Calendar connected', { sessionId, mentorId: session.mentor_id })
+        }
+      } catch (calendarError: any) {
+        logger.error('Failed to create Google Calendar event in payment route', calendarError, { sessionId })
+        // Continue without calendar event - don't fail the booking
+        // Keep existing meeting link if it exists
       }
-    } catch (calendarError: any) {
-      logger.error('Failed to create Google Calendar event', calendarError, { sessionId })
-      // Continue without calendar event - don't fail the booking
-    }
-    
-    // In dev mode, if no meeting link was generated, create a placeholder for testing
-    const isDevMode = !process.env.STRIPE_SECRET_KEY || process.env.NODE_ENV === 'development'
-    if (isDevMode && !meetingLink) {
-      // Generate a placeholder meeting link for dev/testing
-      meetingLink = `https://meet.google.com/dev-test-${sessionId.substring(0, 8)}`
-      logger.info('Generated placeholder meeting link for dev mode', { sessionId, meetingLink })
+    } else {
+      logger.info('Using existing meeting link', { sessionId, meetingLink })
     }
 
     // If using credit, skip payment processing
