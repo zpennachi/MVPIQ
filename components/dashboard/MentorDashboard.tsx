@@ -55,29 +55,6 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
     loadUpcomingSessions()
   }, [mentorId])
 
-  // Mark submission as viewed when displayed on dashboard
-  useEffect(() => {
-    if (submissions.length > 0 && viewedSubmissionIds.size >= 0) {
-      // Mark all displayed submissions as viewed
-      const displayedSubmissionIds = newSubmissions.slice(0, 3).map(s => s.id)
-      const newViewed = new Set(viewedSubmissionIds)
-      let hasNew = false
-      
-      displayedSubmissionIds.forEach(id => {
-        if (!newViewed.has(id)) {
-          newViewed.add(id)
-          hasNew = true
-        }
-      })
-
-      if (hasNew && typeof window !== 'undefined') {
-        setViewedSubmissionIds(newViewed)
-        localStorage.setItem(`viewed_submissions_${mentorId}`, JSON.stringify(Array.from(newViewed)))
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submissions, mentorId])
-
   const loadSubmissions = async () => {
     setLoading(true)
     
