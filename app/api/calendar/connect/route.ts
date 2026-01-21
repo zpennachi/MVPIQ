@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getAuthUrl } from '@/lib/google-calendar'
 import { env } from '@/lib/env'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * GET /api/calendar/connect
  * Returns Google OAuth URL for mentor to connect their calendar

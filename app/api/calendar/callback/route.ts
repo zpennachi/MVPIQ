@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { exchangeCodeForTokens, getPrimaryCalendarId } from '@/lib/google-calendar'
 import { env } from '@/lib/env'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * GET /api/calendar/callback
  * Handles Google OAuth callback and stores tokens

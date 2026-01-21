@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getAvailableSlots, refreshAccessToken } from '@/lib/google-calendar'
 import { env } from '@/lib/env'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * GET /api/calendar/availability
  * Get available time slots for a mentor using Google Calendar Free/Busy API

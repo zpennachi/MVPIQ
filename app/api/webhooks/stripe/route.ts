@@ -7,6 +7,8 @@ import { logger } from '@/lib/logger'
 import { handleApiError, ValidationError, NotFoundError } from '@/lib/errors'
 import { sendEmails } from '@/lib/email'
 
+export const dynamic = 'force-dynamic'
+
 // Lazy initialization to avoid build-time errors
 let stripe: Stripe | null = null
 let webhookSecret: string | null = null

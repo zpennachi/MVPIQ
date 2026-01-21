@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { deleteCalendarEvent, refreshAccessToken } from '@/lib/google-calendar'
 import { env } from '@/lib/env'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * POST /api/calendar/cancel
  * Cancel a session and delete the Google Calendar event
