@@ -26,6 +26,13 @@ function getStripe(): Stripe {
 // Helper function to create Google Calendar event with Meet link using OAuth
 async function createGoogleCalendarEvent(session: any): Promise<{ meetLink: string; eventId?: string } | null> {
   try {
+    logger.info('createGoogleCalendarEvent called', { 
+      sessionId: session.id,
+      mentorId: session.mentor_id,
+      userId: session.user_id,
+      startTime: session.start_time,
+    })
+    
     const supabase = await createClient()
     
     // Get mentor and user details
@@ -46,9 +53,24 @@ async function createGoogleCalendarEvent(session: any): Promise<{ meetLink: stri
     const user = userResult.data
 
     if (!mentor || !user) {
-      logger.warn('Mentor or user not found', { mentorId: session.mentor_id, userId: session.user_id })
+      logger.warn('Mentor or user not found', { 
+        mentorId: session.mentor_id, 
+        userId: session.user_id,
+        mentorFound: !!mentor,
+        userFound: !!user,
+        mentorError: mentorResult.error?.message,
+        userError: userResult.error?.message,
+      })
       return null
     }
+
+    logger.info('Calling createCalendarEvent', {
+      sessionId: session.id,
+      mentorEmail: mentor.email,
+      userEmail: user.email,
+      startTime: session.start_time,
+      endTime: session.end_time,
+    })
 
     // Create calendar event using OAuth
     const { eventId, meetLink } = await createCalendarEvent({
@@ -62,11 +84,22 @@ async function createGoogleCalendarEvent(session: any): Promise<{ meetLink: stri
       userName: user.full_name || 'Student',
     })
 
-    logger.info('Google Calendar event created', { sessionId: session.id, eventId, meetLink })
+    logger.info('✅ Google Calendar event created successfully', { 
+      sessionId: session.id, 
+      eventId, 
+      meetLink,
+      hasMeetLink: !!meetLink,
+      meetLinkLength: meetLink?.length || 0,
+    })
 
     return { meetLink, eventId }
   } catch (error: any) {
-    logger.error('Failed to create Google Calendar event', error, { sessionId: session.id })
+    logger.error('❌ Failed to create Google Calendar event', error, { 
+      sessionId: session.id,
+      errorMessage: error?.message,
+      errorCode: error?.code,
+      errorStack: error?.stack,
+    })
     return null
   }
 }
