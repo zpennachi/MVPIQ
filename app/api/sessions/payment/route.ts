@@ -334,23 +334,43 @@ export async function POST(request: NextRequest) {
 
     if (isDevMode) {
       // Dev mode: Skip payment
-      await supabase
+      logger.info('Updating session to confirmed in dev mode', { sessionId, meetingLink, googleEventId })
+      
+      const updateData: any = {
+        payment_status: 'completed',
+        status: 'confirmed',
+        payment_intent_id: `dev_${Date.now()}`,
+      }
+      
+      if (meetingLink) {
+        updateData.meeting_link = meetingLink
+      }
+      
+      if (googleEventId) {
+        updateData.google_event_id = googleEventId
+      }
+      
+      const { data: updatedSession, error: updateError } = await supabase
         .from('booked_sessions')
-        .update({
-          payment_status: 'completed',
-          status: 'confirmed',
-          payment_intent_id: `dev_${Date.now()}`,
-          meeting_link: meetingLink,
-          ...(googleEventId && { google_event_id: googleEventId }),
-        })
+        .update(updateData)
         .eq('id', sessionId)
-
-      // Reload session to get updated meeting_link before sending emails
-      const { data: updatedSession } = await supabase
-        .from('booked_sessions')
-        .select('*')
-        .eq('id', sessionId)
+        .select()
         .single()
+
+      if (updateError) {
+        logger.error('Failed to update session status in dev mode', updateError, { sessionId })
+        return NextResponse.json(
+          { error: `Failed to update session: ${updateError.message}` },
+          { status: 500 }
+        )
+      }
+
+      logger.info('Session updated successfully in dev mode', { 
+        sessionId, 
+        status: updatedSession?.status,
+        payment_status: updatedSession?.payment_status,
+        meeting_link: updatedSession?.meeting_link 
+      })
       
       // Send confirmation emails with updated session data (includes meeting_link)
       await sendConfirmationEmails(updatedSession || session, request.nextUrl.origin)
@@ -359,7 +379,8 @@ export async function POST(request: NextRequest) {
         success: true,
         devMode: true,
         message: 'Session confirmed (dev mode - payment skipped)',
-        meetingLink,
+        meetingLink: updatedSession?.meeting_link || meetingLink,
+        sessionStatus: updatedSession?.status,
       })
     }
 
