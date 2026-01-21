@@ -108,20 +108,36 @@ GOOGLE_CALENDAR_ID=web@mvpiq.com
 - Check server logs for detailed error messages
 
 ### Meet links not generating
-**This is the most common issue!** Meet links require:
-1. **The calendar owner must have Google Meet enabled** - Regular Gmail accounts have this by default, but check:
-   - Go to Google Calendar → Settings → General
-   - Look for "Google Meet" section - it should be enabled
-   - If using Google Workspace, ensure the account has a Meet license
-2. **The calendar must support conferencing** - Some calendars (like resource calendars) don't support Meet
-3. **Service account limitations** - Service accounts can create Meet links, but:
-   - The calendar must be shared with the service account
-   - The calendar owner's account must have Meet enabled
-   - If Meet links still don't generate, you may need to use **Domain-Wide Delegation** with impersonation (advanced setup)
-4. **Check the event in Google Calendar UI** - Sometimes the Meet link exists in the UI even if the API doesn't return it immediately
-   - Open the calendar event manually
-   - If you see a Meet link there, the issue is with API response timing
-   - The code will retry fetching the event multiple times to get the link
+**⚠️ CRITICAL LIMITATION:** Service accounts **CANNOT** create Meet links on regular Gmail accounts (`@gmail.com`). This is a Google API limitation.
+
+**Why this happens:**
+- Service accounts can only create Meet links when using **Domain-Wide Delegation** with **impersonation**
+- Domain-Wide Delegation is only available for **Google Workspace** accounts, not regular Gmail
+- Regular Gmail accounts (`@gmail.com`) cannot use domain-wide delegation
+
+**Solutions:**
+
+**Option 1: Use Google Workspace Account (Recommended for Production)**
+1. Get a Google Workspace account (paid, ~$6/month per user)
+2. Set up domain-wide delegation in Google Workspace Admin Console
+3. Configure the service account to impersonate a Workspace user
+4. This allows Meet links to be created
+
+**Option 2: Use Calendar Owner's OAuth Token (Simpler, Free)**
+1. Instead of service account, use the calendar owner's OAuth token
+2. The calendar owner (`mvpiqweb@gmail.com`) connects their Google account once
+3. Store their OAuth token
+4. Use their token to create events with Meet links
+5. This works with regular Gmail accounts!
+
+**Option 3: Manual Meet Link Generation**
+- Create events without Meet links via service account
+- Manually add Meet links later (not ideal for automation)
+
+**If you're using a regular Gmail account:**
+- ✅ Events will be created successfully
+- ❌ Meet links will NOT be generated
+- ✅ You'll need to switch to Option 2 (OAuth) or Option 1 (Workspace)
 
 ## Benefits of Service Account Approach
 
