@@ -1,9 +1,8 @@
 /**
  * Google Calendar Integration Utilities
  * 
- * Uses a single service account (web@mvpiq.com) to generate all Google Meet links
- * for sessions. This simplifies setup and removes the need for mentors to connect
- * their own Google accounts.
+ * Uses OAuth authentication to generate Google Meet links for sessions.
+ * Requires an admin user to connect their Google Calendar via OAuth.
  */
 
 import { google } from 'googleapis'
@@ -25,41 +24,6 @@ export interface CalendarEventData {
 export interface CalendarEventResult {
   eventId: string
   meetLink: string
-}
-
-/**
- * Get authenticated Google Calendar client using service account
- */
-function getCalendarClient() {
-  // Fallback if service account not configured
-  if (!env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
-    throw new Error('Google Calendar service account is not configured. Please set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY')
-  }
-
-  // Parse the private key (handle newlines)
-  const privateKey = env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\\n/g, '\n')
-
-  const auth = new google.auth.JWT({
-    email: env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    key: privateKey,
-    scopes: [
-      'https://www.googleapis.com/auth/calendar',
-      'https://www.googleapis.com/auth/calendar.events',
-    ],
-  })
-
-  return google.calendar({ version: 'v3', auth })
-}
-
-/**
- * Get calendar ID
- * If GOOGLE_CALENDAR_ID is set, use that (should be a calendar shared with the service account)
- * Otherwise, use 'primary' (the service account's own calendar)
- */
-function getServiceAccountCalendarId(): string {
-  // Use the shared calendar if specified, otherwise use service account's primary
-  // The shared calendar should be the one you shared with the service account email
-  return env.GOOGLE_CALENDAR_ID || 'primary'
 }
 
 /**
@@ -246,47 +210,35 @@ export async function createCalendarEvent(
     },
   }
 
-  // Try OAuth first (for Meet links with Gmail accounts)
+  // OAuth is required - no fallback to service account
   const oauthClient = await getOAuthClient()
   
-  if (oauthClient) {
-    logger.info('Using OAuth client for calendar event creation (supports Meet links)', {
-      calendarId: oauthClient.calendarId,
+  if (!oauthClient) {
+    const errorMessage = 'OAuth is not configured. Please connect Google Calendar in settings as an admin user.'
+    logger.error('❌ OAuth client not available', undefined, {
+      hint: errorMessage,
+      requiredEnvVars: {
+        GOOGLE_CLIENT_ID: !!env.GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET: !!env.GOOGLE_CLIENT_SECRET,
+      },
     })
-    try {
-      const { client: calendar, calendarId } = oauthClient
-      const result = await createEventWithMeetLink(calendar, calendarId, event, 'oauth')
-      logger.info('✅ Successfully created calendar event with OAuth', {
-        eventId: result.eventId,
-        hasMeetLink: !!result.meetLink,
-        meetLink: result.meetLink || 'NOT GENERATED',
-      })
-      return result
-    } catch (error: any) {
-      logger.error('❌ Failed to create event with OAuth, falling back to service account', error, {
-        errorMessage: error.message,
-        errorCode: error.code,
-        hint: 'OAuth failed but tokens are preserved. Will try service account as fallback.',
-      })
-      // Fall through to service account - don't throw, preserve tokens
-    }
-  } else {
-    logger.info('OAuth client not available, will use service account')
+    throw new Error(errorMessage)
   }
 
-  // Fallback to service account
-  logger.info('Using service account for calendar event creation')
-  try {
-    const calendar = getCalendarClient()
-    const calendarId = getServiceAccountCalendarId()
-    return await createEventWithMeetLink(calendar, calendarId, event, 'service_account')
-  } catch (error: any) {
-    logger.error('Failed to create Google Calendar event', error, {
-      summary: eventData.summary,
-      startTime: eventData.startTime,
-    })
-    throw error
-  }
+  logger.info('Using OAuth client for calendar event creation', {
+    calendarId: oauthClient.calendarId,
+  })
+  
+  const { client: calendar, calendarId } = oauthClient
+  const result = await createEventWithMeetLink(calendar, calendarId, event, 'oauth')
+  
+  logger.info('✅ Successfully created calendar event with OAuth', {
+    eventId: result.eventId,
+    hasMeetLink: !!result.meetLink,
+    meetLink: result.meetLink || 'NOT GENERATED',
+  })
+  
+  return result
 }
 
 /**
@@ -296,7 +248,7 @@ async function createEventWithMeetLink(
   calendar: any,
   calendarId: string,
   event: any,
-  authType: 'oauth' | 'service_account'
+  authType: 'oauth'
 ): Promise<CalendarEventResult> {
   let response: any
   let meetLink = ''
@@ -388,12 +340,11 @@ async function createEventWithMeetLink(
         logger.error('Meet link not generated - possible causes:', {
           eventId: response.data.id,
           calendarId,
-          serviceAccountEmail: env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
           possibleCauses: [
             'Calendar owner may not have Google Meet enabled/licensed',
-            'Service account may need domain-wide delegation with impersonation',
             'Calendar may not support Google Meet',
             'Meet link creation may be asynchronous - try fetching event again later',
+            'OAuth token may not have sufficient permissions',
           ],
           conferenceData: response.data.conferenceData,
         })
@@ -468,9 +419,16 @@ async function createEventWithMeetLink(
  * Delete a Google Calendar event
  */
 export async function deleteCalendarEvent(eventId: string): Promise<void> {
+  const oauthClient = await getOAuthClient()
+  
+  if (!oauthClient) {
+    const errorMessage = 'OAuth is not configured. Cannot delete calendar event.'
+    logger.error('❌ OAuth client not available for deletion', undefined, { eventId })
+    throw new Error(errorMessage)
+  }
+
   try {
-    const calendar = getCalendarClient()
-    const calendarId = getServiceAccountCalendarId()
+    const { client: calendar, calendarId } = oauthClient
 
     await calendar.events.delete({
       calendarId,
@@ -484,47 +442,46 @@ export async function deleteCalendarEvent(eventId: string): Promise<void> {
   }
 }
 
-// Legacy functions kept for backward compatibility but deprecated
-// These are no longer used but kept to avoid breaking existing code
+// Legacy functions - deprecated, kept for backward compatibility
 
 /**
- * @deprecated Use createCalendarEvent directly with service account
+ * @deprecated OAuth is now required. Use createCalendarEvent directly.
  */
 export async function refreshAccessToken(): Promise<string> {
-  throw new Error('refreshAccessToken is deprecated. Service account authentication is used instead.')
+  throw new Error('refreshAccessToken is deprecated. OAuth authentication is required.')
 }
 
 /**
- * @deprecated No longer needed with service account - always uses service account calendar
+ * @deprecated OAuth is now required. Calendar ID comes from OAuth connection.
  */
 export function getCalendarId(calendarId?: string | null): string {
-  return getServiceAccountCalendarId()
+  return calendarId || 'primary'
 }
 
 /**
- * @deprecated No longer needed with service account
+ * @deprecated OAuth is now required. Use /api/calendar/oauth/connect instead.
  */
 export function getAuthUrl(): string {
-  throw new Error('getAuthUrl is deprecated. Service account authentication is used instead.')
+  throw new Error('getAuthUrl is deprecated. Use /api/calendar/oauth/connect instead.')
 }
 
 /**
- * @deprecated No longer needed with service account
+ * @deprecated Not used - availability is managed in MVPIQ database.
  */
 export async function getAvailableSlots(): Promise<Array<{ start: Date; end: Date }>> {
   return []
 }
 
 /**
- * @deprecated No longer needed with service account
+ * @deprecated OAuth is now required. Use /api/calendar/oauth/callback instead.
  */
 export async function exchangeCodeForTokens(): Promise<{ accessToken: string; refreshToken: string }> {
-  throw new Error('exchangeCodeForTokens is deprecated. Service account authentication is used instead.')
+  throw new Error('exchangeCodeForTokens is deprecated. Use /api/calendar/oauth/callback instead.')
 }
 
 /**
- * @deprecated No longer needed with service account
+ * @deprecated OAuth is now required. Calendar ID comes from OAuth connection.
  */
 export async function getPrimaryCalendarId(): Promise<string> {
-  return getServiceAccountCalendarId()
+  return 'primary'
 }

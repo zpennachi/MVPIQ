@@ -26,12 +26,7 @@ const envSchema = z.object({
   // Cron (optional)
   CRON_SECRET: z.string().optional().default('your-secret-key'),
   
-  // Google Calendar API (optional - for real Meet links)
-  GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().email().optional(),
-  GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().optional(),
-  GOOGLE_CALENDAR_ID: z.string().optional().default('primary'),
-  
-  // Google OAuth (for calendar integration)
+  // Google OAuth (required for calendar integration and Meet links)
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().url().optional(),
@@ -60,9 +55,6 @@ function getEnv(): Env {
       RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
       NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
       CRON_SECRET: process.env.CRON_SECRET,
-      GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
-      GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID,
       GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
       GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
       GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI,
@@ -89,9 +81,6 @@ function getEnv(): Env {
           RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
           NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
           CRON_SECRET: process.env.CRON_SECRET || 'your-secret-key',
-          GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-          GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
-          GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID || 'primary',
           GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
           GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
           GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI,

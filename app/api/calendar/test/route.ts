@@ -8,26 +8,22 @@ export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/calendar/test
- * Test endpoint to verify Google Calendar service account is configured correctly
+ * Test endpoint to verify Google Calendar OAuth is configured correctly
  */
 export async function GET(request: NextRequest) {
   try {
-    // Check if environment variables are set
-    const hasEmail = !!env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-    const hasKey = !!env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
-    const calendarId = env.GOOGLE_CALENDAR_ID || 'primary'
+    // Check if OAuth environment variables are set
+    const hasOAuthEnv = !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET)
 
-    if (!hasEmail || !hasKey) {
+    if (!hasOAuthEnv) {
       return NextResponse.json({
         success: false,
-        error: 'Service account not configured',
+        error: 'OAuth not configured',
         details: {
-          hasEmail,
-          hasKey,
-          emailValue: hasEmail ? env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.substring(0, 20) + '...' : 'NOT SET',
-          keyLength: hasKey ? env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.length : 0,
+          hasClientId: !!env.GOOGLE_CLIENT_ID,
+          hasClientSecret: !!env.GOOGLE_CLIENT_SECRET,
         },
-        message: 'Please set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY in Vercel environment variables',
+        message: 'Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Vercel environment variables, then connect Google Calendar in settings.',
       }, { status: 400 })
     }
 
@@ -45,7 +41,6 @@ export async function GET(request: NextRequest) {
     ) || null
 
     const hasOAuth = !!adminProfile && !!adminProfile.google_calendar_access_token && !!adminProfile.google_calendar_refresh_token
-    const hasOAuthEnv = !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET)
     
     // Log diagnostic info
     logger.info('OAuth status check', {
@@ -77,42 +72,49 @@ export async function GET(request: NextRequest) {
     const testEndTime = new Date(testStartTime)
     testEndTime.setHours(testEndTime.getHours() + 1)
 
+    if (!hasOAuth) {
+      return NextResponse.json({
+        success: false,
+        error: 'OAuth not connected',
+        details: {
+          hasOAuthEnv,
+          totalAdmins: adminProfiles?.length || 0,
+          adminsWithTokens: adminProfiles?.filter(p => p.google_calendar_access_token && p.google_calendar_refresh_token).length || 0,
+        },
+        message: 'OAuth environment variables are set, but no admin has connected their Google Calendar. Please go to /dashboard/settings and connect Google Calendar.',
+        troubleshooting: [
+          '1. Make sure you have an admin account (check totalAdmins above)',
+          '2. Go to /dashboard/settings as an admin user',
+          '3. Click "Connect Google Calendar"',
+          '4. Complete the OAuth flow',
+          '5. Run this test again',
+        ],
+      }, { status: 400 })
+    }
+
     try {
       const result = await createCalendarEvent({
-        summary: 'MVPIQ Service Account Test Event',
-        description: 'This is a test event to verify the service account is working. You can delete this.',
+        summary: 'MVPIQ OAuth Test Event',
+        description: 'This is a test event to verify OAuth is working. You can delete this.',
         startTime: testStartTime,
         endTime: testEndTime,
-        mentorEmail: env.GOOGLE_SERVICE_ACCOUNT_EMAIL || 'test@example.com',
+        mentorEmail: adminProfile?.email || 'test@example.com',
         userEmail: 'test@example.com',
         mentorName: 'Test Mentor',
         userName: 'Test User',
       })
 
-      // IMPORTANT: Service accounts cannot create Meet links on regular Gmail accounts
-      // They require Google Workspace with domain-wide delegation
-      const isGmailAccount = calendarId.includes('@gmail.com')
-      const meetLinkIssue = !result.meetLink && isGmailAccount
-        ? 'Service accounts cannot create Meet links on regular Gmail accounts. You need either: (1) Google Workspace account with domain-wide delegation, or (2) Use the calendar owner\'s OAuth token instead.'
-        : !result.meetLink
-        ? 'Meet link not generated. Check Vercel logs for details.'
-        : null
-
       return NextResponse.json({
         success: true,
         message: result.meetLink 
-          ? (hasOAuth ? 'OAuth is configured correctly and Meet link was generated!' : 'Service account is configured correctly and Meet link was generated!')
-          : hasOAuth 
-          ? 'OAuth is configured but Meet link was not generated. Check Vercel logs for details.'
-          : 'Service account is configured correctly, but Meet link was not generated.',
+          ? 'OAuth is configured correctly and Meet link was generated!'
+          : 'OAuth is configured but Meet link was not generated. Check Vercel logs for details.',
         details: {
           eventId: result.eventId,
           meetLink: result.meetLink || 'NOT GENERATED',
-          calendarId: hasOAuth ? (adminProfile?.google_calendar_id || 'primary') : calendarId,
-          email: hasOAuth ? adminProfile?.email : (env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.substring(0, 30) + '...'),
-          authMethod: hasOAuth ? 'OAuth' : 'Service Account',
-          isGmailAccount,
-          limitation: meetLinkIssue,
+          calendarId: adminProfile?.google_calendar_id || 'primary',
+          email: adminProfile?.email,
+          authMethod: 'OAuth',
           oAuthStatus: {
             connected: !!adminProfile?.google_calendar_connected,
             hasAccessToken: !!adminProfile?.google_calendar_access_token,
@@ -123,18 +125,19 @@ export async function GET(request: NextRequest) {
             adminId: adminProfile?.id,
             calendarId: adminProfile?.google_calendar_id,
             expiresAt: adminProfile?.google_calendar_token_expires_at,
-            // Diagnostic info
             totalAdmins: adminProfiles?.length || 0,
             adminsWithTokens: adminProfiles?.filter(p => p.google_calendar_access_token && p.google_calendar_refresh_token).length || 0,
           },
         },
         note: result.meetLink 
           ? 'A test event was created in your calendar with a Meet link. You can delete it.'
-          : meetLinkIssue || 'A test event was created but no Meet link was generated.',
+          : 'A test event was created but no Meet link was generated. Check Vercel logs for details.',
         troubleshooting: !result.meetLink ? [
-          '⚠️ IMPORTANT: Service accounts cannot create Meet links on regular Gmail accounts',
-          '✅ Solution 1: Use Google Workspace account with domain-wide delegation (advanced)',
-          '✅ Solution 2: Use calendar owner\'s OAuth token instead of service account (simpler)',
+          '⚠️ Meet link not generated - possible causes:',
+          '1. Calendar owner may not have Google Meet enabled/licensed',
+          '2. Calendar may not support Google Meet',
+          '3. OAuth token may not have sufficient permissions',
+          '4. Meet link creation may be asynchronous - try fetching event again later',
           '📖 See HOW_TO_CHECK_VERCEL_LOGS.md for how to view detailed error logs',
         ] : undefined,
       })
@@ -147,15 +150,14 @@ export async function GET(request: NextRequest) {
         details: {
           message: createError?.message || 'Unknown error',
           code: createError?.code,
-          calendarId,
-          email: env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.substring(0, 30) + '...',
+          adminEmail: adminProfile?.email,
+          calendarId: adminProfile?.google_calendar_id,
         },
         commonIssues: [
-          'Service account email might be incorrect',
-          'Private key might be malformed (check for proper BEGIN/END markers)',
-          'Calendar might not be shared with the service account',
-          'Google Calendar API might not be enabled',
-          'Service account might not have proper permissions',
+          'OAuth tokens may be expired or invalid - try reconnecting in settings',
+          'Google Calendar API may not be enabled',
+          'OAuth token may not have sufficient permissions',
+          'Calendar may not be accessible',
         ],
       }, { status: 500 })
     }
