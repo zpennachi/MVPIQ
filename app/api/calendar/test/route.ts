@@ -35,12 +35,12 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient()
     const { data: adminProfile } = await supabase
       .from('profiles')
-      .select('id, email, google_calendar_connected, google_calendar_id, google_calendar_access_token IS NOT NULL as has_access_token, google_calendar_refresh_token IS NOT NULL as has_refresh_token')
+      .select('id, email, google_calendar_connected, google_calendar_id, google_calendar_access_token, google_calendar_refresh_token')
       .eq('role', 'admin')
       .eq('google_calendar_connected', true)
       .single()
 
-    const hasOAuth = !!adminProfile && adminProfile.has_access_token && adminProfile.has_refresh_token
+    const hasOAuth = !!adminProfile && !!adminProfile.google_calendar_access_token && !!adminProfile.google_calendar_refresh_token
     const hasOAuthEnv = !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET)
 
     // Try to create a test event (1 hour from now)
@@ -86,10 +86,13 @@ export async function GET(request: NextRequest) {
           isGmailAccount,
           limitation: meetLinkIssue,
           oAuthStatus: {
-            connected: hasOAuth,
+            connected: !!adminProfile?.google_calendar_connected,
+            hasAccessToken: !!adminProfile?.google_calendar_access_token,
+            hasRefreshToken: !!adminProfile?.google_calendar_refresh_token,
             hasTokens: hasOAuth,
             hasEnvVars: hasOAuthEnv,
             adminEmail: adminProfile?.email,
+            calendarId: adminProfile?.google_calendar_id,
           },
         },
         note: result.meetLink 
