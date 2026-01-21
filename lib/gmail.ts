@@ -15,7 +15,6 @@ export interface GmailSendOptions {
   subject: string
   html: string
   from?: string // Optional, defaults to mvpweb@gmail.com
-  mentorId?: string // Optional: if provided, use this mentor's OAuth tokens
 }
 
 export interface GmailSendResult {
@@ -25,43 +24,52 @@ export interface GmailSendResult {
 }
 
 /**
- * Get OAuth client for Gmail (reuses same tokens as Calendar)
+ * Get OAuth client for Gmail using admin account
+ * All emails are sent from mvpweb@gmail.com using a single admin's OAuth tokens
  * Returns null if no OAuth tokens are available
  */
-async function getGmailOAuthClient(userId?: string): Promise<{ client: any } | null> {
+async function getGmailOAuthClient(): Promise<{ client: any } | null> {
   try {
     const supabase = await createClient()
     
-    let profileQuery = supabase
+    // Always use admin account for sending emails (centralized email management)
+    const { data: adminProfiles, error: profileError } = await supabase
       .from('profiles')
       .select('id, email, google_calendar_access_token, google_calendar_refresh_token, google_calendar_token_expires_at')
+      .eq('role', 'admin')
     
-    // If userId provided, get that specific user's tokens (for mentors)
-    if (userId) {
-      const { data: profile, error: profileError } = await profileQuery
-        .eq('id', userId)
-        .single()
-      
-      if (profileError || !profile) {
-        logger.warn('User profile not found for Gmail OAuth', { 
-          userId,
-          error: profileError?.message || 'Profile not found',
-        })
-        return null
-      }
-      
-      if (!profile.google_calendar_access_token || !profile.google_calendar_refresh_token) {
-        logger.warn('OAuth tokens missing for user', {
-          userId,
-          email: profile.email,
-          hasAccessToken: !!profile.google_calendar_access_token,
-          hasRefreshToken: !!profile.google_calendar_refresh_token,
-        })
-        return null
-      }
-      
-      // Use this user's tokens
-      const userProfile = profile
+    if (profileError) {
+      logger.warn('Error fetching admin profiles for Gmail', { 
+        error: profileError.message || 'Unknown error',
+        code: profileError.code,
+      })
+      return null
+    }
+
+    const adminProfile = adminProfiles?.find(p => 
+      p.google_calendar_access_token && 
+      p.google_calendar_refresh_token
+    ) || null
+
+    if (!adminProfile) {
+      logger.warn('No admin profile with OAuth tokens found for Gmail', {
+        totalAdmins: adminProfiles?.length || 0,
+        adminsWithTokens: adminProfiles?.filter(p => p.google_calendar_access_token && p.google_calendar_refresh_token).length || 0,
+      })
+      return null
+    }
+
+    if (!adminProfile.google_calendar_access_token || !adminProfile.google_calendar_refresh_token) {
+      logger.warn('OAuth tokens missing in admin profile for Gmail', {
+        adminId: adminProfile.id,
+        hasAccessToken: !!adminProfile.google_calendar_access_token,
+        hasRefreshToken: !!adminProfile.google_calendar_refresh_token,
+      })
+      return null
+    }
+
+    // Use admin's tokens
+    const userProfile = adminProfile
       
       // Check if token is expired and refresh if needed
       let accessToken = userProfile.google_calendar_access_token
@@ -284,21 +292,19 @@ async function getGmailOAuthClient(userId?: string): Promise<{ client: any } | n
 
 /**
  * Send an email via Gmail API
+ * All emails are sent from mvpweb@gmail.com using admin's OAuth tokens
  */
 export async function sendGmailEmail(options: GmailSendOptions): Promise<GmailSendResult> {
   try {
     const fromEmail = options.from || 'mvpweb@gmail.com'
     
-    // Use mentor's OAuth tokens if mentorId provided, otherwise fallback to admin
-    const oauthClient = await getGmailOAuthClient(options.mentorId)
+    // Always use admin's OAuth tokens for centralized email sending
+    const oauthClient = await getGmailOAuthClient()
     
     if (!oauthClient) {
-      const errorMessage = options.mentorId 
-        ? `Mentor has not connected their Google account. Please ask the mentor to connect their Google account in settings.`
-        : 'Gmail OAuth is not configured. Please connect Google account in settings.'
+      const errorMessage = 'Gmail OAuth is not configured. Please connect Google account in settings as an admin user.'
       logger.error('❌ Gmail OAuth client not available', undefined, {
         hint: errorMessage,
-        mentorId: options.mentorId,
         to: options.to,
       })
       return {
@@ -341,7 +347,6 @@ export async function sendGmailEmail(options: GmailSendOptions): Promise<GmailSe
       to: options.to,
       subject: options.subject,
       from: fromEmail,
-      mentorId: options.mentorId,
     })
 
     return {
@@ -352,7 +357,6 @@ export async function sendGmailEmail(options: GmailSendOptions): Promise<GmailSe
     logger.error('Failed to send email via Gmail API', error, {
       to: options.to,
       subject: options.subject,
-      mentorId: options.mentorId,
       errorMessage: error?.message,
       errorCode: error?.code,
     })

@@ -270,16 +270,12 @@ export async function POST(request: NextRequest) {
         )
     }
 
-    // Send email via Gmail API
-    // Try to get mentorId from data if available (for mentor-specific emails)
-    const mentorId = (data as any)?.mentorId as string | undefined
-    
+    // Send email via Gmail API (all emails from mvpweb@gmail.com)
     const result = await sendGmailEmail({
       from: 'mvpweb@gmail.com',
       to: email,
       subject,
       html,
-      mentorId,
     })
 
     if (!result.success) {
@@ -287,7 +283,6 @@ export async function POST(request: NextRequest) {
         type, 
         recipient: email, 
         error: result.error,
-        mentorId,
       })
       throw new ValidationError(`Failed to send email: ${result.error}`, new Error(result.error || 'Unknown error'))
     }
@@ -296,7 +291,6 @@ export async function POST(request: NextRequest) {
       type,
       recipient: email,
       messageId: result.messageId,
-      mentorId,
     })
 
     return NextResponse.json({
