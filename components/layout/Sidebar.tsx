@@ -385,7 +385,7 @@ export function Sidebar() {
                   <Link
                     href="/dashboard/one-on-ones?tab=availability"
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${
-                      pathname === '/dashboard/one-on-ones' && !pathname.includes('tab=upcoming')
+                      pathname === '/dashboard/one-on-ones' && searchParams?.get('tab') !== 'upcoming'
                         ? 'bg-[#272727] text-[#ffc700]'
                         : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                     }`}
@@ -395,7 +395,7 @@ export function Sidebar() {
                   <Link
                     href="/dashboard/one-on-ones?tab=upcoming"
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${
-                      pathname === '/dashboard/one-on-ones' && pathname.includes('tab=upcoming')
+                      pathname === '/dashboard/one-on-ones' && searchParams?.get('tab') === 'upcoming'
                         ? 'bg-[#272727] text-[#ffc700]'
                         : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                     }`}
