@@ -7,6 +7,8 @@ import { User, Mail, Save, X, Upload, Camera, Calendar, CheckCircle, AlertCircle
 import { useDropzone } from 'react-dropzone'
 import type { Profile } from '@/types/database'
 
+export const dynamic = 'force-dynamic'
+
 export default function SettingsPage() {
   const router = useRouter()
   const supabase = createClient()
