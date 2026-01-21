@@ -139,11 +139,11 @@ export async function createCalendarEvent(
           } else {
             logger.warn('Meet link still not available after fetching', {
               eventId: response.data.id,
-              hasConferenceData: !!fetchedEvent.data.conferenceData,
+              hasConferenceData: !!(fetchedEvent.data as any).conferenceData,
             })
           }
         } catch (fetchError: any) {
-          logger.warn('Failed to fetch event for Meet link', fetchError, { eventId: response.data.id })
+          logger.warn('Failed to fetch event for Meet link', { error: fetchError, eventId: response.data.id })
         }
       }
       
