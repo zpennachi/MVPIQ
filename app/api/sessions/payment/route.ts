@@ -170,6 +170,7 @@ async function sendConfirmationEmails(session: any, origin: string) {
               sessionId: session.id,
               userName: userName,
               startTime: session.start_time,
+              meetingLink: session.meeting_link,
             },
           }),
         })

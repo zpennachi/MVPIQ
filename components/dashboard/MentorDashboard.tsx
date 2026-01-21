@@ -419,6 +419,17 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
                         <p className="text-sm text-[#d9d9d9]">
                           {format(new Date(session.start_time), 'h:mm a')} - {format(new Date(session.end_time), 'h:mm a')}
                         </p>
+                        {session.meeting_link && (
+                          <a
+                            href={session.meeting_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 mt-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition"
+                          >
+                            <Calendar className="w-4 h-4" />
+                            Join Meeting
+                          </a>
+                        )}
                         <span className={`inline-block mt-2 px-2 py-1 rounded text-xs font-medium ${
                           session.status === 'confirmed'
                             ? 'bg-green-900/30 text-green-400 border border-green-800'
