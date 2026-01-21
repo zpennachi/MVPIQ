@@ -128,10 +128,9 @@ export async function createCalendarEvent(
           const fetchedEvent = await calendar.events.get({
             calendarId,
             eventId: response.data.id,
-            conferenceDataVersion: 1,
           })
           
-          meetLink = fetchedEvent.data.conferenceData?.entryPoints?.find(
+          meetLink = (fetchedEvent.data as any).conferenceData?.entryPoints?.find(
             (ep: any) => ep.entryPointType === 'video'
           )?.uri || ''
           
