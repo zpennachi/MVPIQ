@@ -51,9 +51,13 @@ function getCalendarClient() {
 }
 
 /**
- * Get calendar ID (defaults to service account's primary calendar)
+ * Get calendar ID
+ * If GOOGLE_CALENDAR_ID is set, use that (should be a calendar shared with the service account)
+ * Otherwise, use 'primary' (the service account's own calendar)
  */
 function getServiceAccountCalendarId(): string {
+  // Use the shared calendar if specified, otherwise use service account's primary
+  // The shared calendar should be the one you shared with the service account email
   return env.GOOGLE_CALENDAR_ID || 'primary'
 }
 
@@ -85,45 +89,23 @@ export async function createCalendarEvent(
     }
 
     // Create event with Google Meet
-    // Try without conferenceDataVersion first, then with it if needed
-    let response
-    try {
-      response = await calendar.events.insert({
-        calendarId,
-        requestBody: {
-          ...event,
-          conferenceData: {
-            createRequest: {
-              requestId: `mvpiq-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-              conferenceSolutionKey: {
-                type: 'hangoutsMeet',
-              },
+    // The conference type must match what the calendar supports
+    // Try with minimal conference data structure
+    const response = await calendar.events.insert({
+      calendarId,
+      conferenceDataVersion: 1,
+      requestBody: {
+        ...event,
+        conferenceData: {
+          createRequest: {
+            requestId: `mvpiq-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+            conferenceSolutionKey: {
+              type: 'hangoutsMeet',
             },
           },
         },
-      })
-    } catch (error: any) {
-      // If that fails, try with conferenceDataVersion
-      if (error.message?.includes('conference') || error.code === 400) {
-        response = await calendar.events.insert({
-          calendarId,
-          conferenceDataVersion: 1,
-          requestBody: {
-            ...event,
-            conferenceData: {
-              createRequest: {
-                requestId: `mvpiq-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-                conferenceSolutionKey: {
-                  type: 'hangoutsMeet',
-                },
-              },
-            },
-          },
-        })
-      } else {
-        throw error
-      }
-    }
+      },
+    })
 
     // Extract Meet link from response
     const meetLink =

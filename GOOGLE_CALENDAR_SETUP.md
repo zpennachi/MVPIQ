@@ -43,13 +43,17 @@ This guide will walk you through setting up Google Calendar integration using a 
 
 ## Step 5: Share Calendar with Service Account
 
-1. Open Google Calendar (using the account you want to use, e.g., `web@mvpiq.com`)
-2. Go to **Settings** → **Settings for my calendars** → Select your calendar
-3. Scroll to **"Share with specific people"**
-4. Click **"Add people"**
-5. Enter the service account email (found in the JSON file, looks like `mvpiq-calendar-service@project-id.iam.gserviceaccount.com`)
-6. Give it **"Make changes to events"** permission
-7. Click **"Send"**
+**IMPORTANT**: You need to share a calendar that supports Google Meet (not the service account's own calendar).
+
+1. Open Google Calendar using the account you want to use (e.g., `web@mvpiq.com`)
+2. Go to **Settings** → **Settings for my calendars** → Select your calendar (or create a new one)
+3. **Make sure this calendar has Google Meet enabled** (it should by default for regular Google accounts)
+4. Scroll to **"Share with specific people"**
+5. Click **"Add people"**
+6. Enter the service account email (found in the JSON file, looks like `mvpiq-calendar-service@project-id.iam.gserviceaccount.com`)
+7. Give it **"Make changes to events"** permission
+8. Click **"Send"**
+9. **Copy the calendar ID** - this is usually the email address of the calendar owner (e.g., `web@mvpiq.com`) or you can find it in the calendar settings URL
 
 ## Step 6: Extract Credentials from JSON
 
@@ -66,8 +70,14 @@ Add these to your `.env` file (or Vercel environment variables):
 # Google Calendar Service Account
 GOOGLE_SERVICE_ACCOUNT_EMAIL=your-service-account@project-id.iam.gserviceaccount.com
 GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour private key here\n-----END PRIVATE KEY-----\n"
-GOOGLE_CALENDAR_ID=primary
+GOOGLE_CALENDAR_ID=web@mvpiq.com
 ```
+
+**Important Notes:**
+- `GOOGLE_CALENDAR_ID` should be the **email address of the calendar owner** (the account whose calendar you shared with the service account)
+- This is usually `web@mvpiq.com` or whatever email you used in Step 5
+- Do NOT use `primary` - use the actual email address of the calendar owner
+- The calendar must be shared with the service account and have Google Meet enabled
 
 **Important Notes:**
 - The `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` should include the entire key with newlines (`\n`)
