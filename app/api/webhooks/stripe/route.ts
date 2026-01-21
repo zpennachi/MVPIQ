@@ -284,7 +284,7 @@ export async function POST(request: NextRequest) {
               meetingLink = calendarResult.meetLink
               googleEventId = calendarResult.eventId
 
-              logger.info('Google Calendar event created in webhook', { sessionId, eventId: googleEventId, meetLink })
+              logger.info('Google Calendar event created in webhook', { sessionId, eventId: googleEventId, meetingLink })
             } catch (calendarError: any) {
               logger.error('Failed to create Google Calendar event in webhook', calendarError, { sessionId })
               // Continue without calendar event - don't fail the payment
