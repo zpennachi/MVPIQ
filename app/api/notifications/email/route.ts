@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
             <p>Your 1-on-1 session has been confirmed!</p>
             <p><strong>Mentor:</strong> ${(data.mentorName as string) || 'Professional Athlete'}</p>
             <p><strong>Scheduled Time:</strong> ${new Date(data.startTime as string).toLocaleString()}</p>
-            <p>You'll receive meeting details closer to the session date.</p>
+            ${(data.meetingLink as string) ? `<p><strong>Meeting Link:</strong> <a href="${data.meetingLink as string}" style="color: #FFD700; text-decoration: underline;">${data.meetingLink as string}</a></p>` : ''}
             <p><a href="${env.NEXT_PUBLIC_APP_URL}/dashboard" style="background: #FFD700; color: #000; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">View Session</a></p>
           </div>
         `
@@ -205,6 +205,7 @@ export async function POST(request: NextRequest) {
             <p>You have a new 1-on-1 session booking!</p>
             <p><strong>Client:</strong> ${(data.userName as string) || 'User'}</p>
             <p><strong>Scheduled Time:</strong> ${new Date(data.startTime as string).toLocaleString()}</p>
+            ${(data.meetingLink as string) ? `<p><strong>Meeting Link:</strong> <a href="${data.meetingLink as string}" style="color: #FFD700; text-decoration: underline;">${data.meetingLink as string}</a></p>` : ''}
             <p><a href="${env.NEXT_PUBLIC_APP_URL}/dashboard" style="background: #FFD700; color: #000; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">View Booking</a></p>
           </div>
         `

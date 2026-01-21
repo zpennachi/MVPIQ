@@ -212,13 +212,26 @@ export async function POST(request: NextRequest) {
             break
           }
 
-          // Update session status
+          // Generate meeting link
+          const generateMeetingLink = (): string => {
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+            let meetingId = ''
+            for (let i = 0; i < 12; i++) {
+              meetingId += chars.charAt(Math.floor(Math.random() * chars.length))
+            }
+            const formattedId = `${meetingId.slice(0, 3)}-${meetingId.slice(3, 7)}-${meetingId.slice(7, 10)}`
+            return `https://meet.google.com/${formattedId}`
+          }
+          const meetingLink = generateMeetingLink()
+
+          // Update session status with meeting link
           await supabase
             .from('booked_sessions')
             .update({
               payment_status: 'completed',
               status: 'confirmed',
               payment_intent_id: session.id,
+              meeting_link: meetingLink,
             })
             .eq('id', sessionId)
 
@@ -247,6 +260,13 @@ export async function POST(request: NextRequest) {
             mentorId: existingSession.mentor_id,
           })
 
+          // Get the updated session to include meeting link
+          const { data: updatedSession } = await supabase
+            .from('booked_sessions')
+            .select('meeting_link')
+            .eq('id', sessionId)
+            .single()
+
           // Send emails using centralized utility
           const emailResults = await sendEmails([
             ...(userEmail
@@ -258,6 +278,7 @@ export async function POST(request: NextRequest) {
                       sessionId,
                       mentorName,
                       startTime: existingSession.start_time,
+                      meetingLink: updatedSession?.meeting_link,
                     },
                   },
                 ]
@@ -271,6 +292,7 @@ export async function POST(request: NextRequest) {
                       sessionId,
                       userName,
                       startTime: existingSession.start_time,
+                      meetingLink: updatedSession?.meeting_link,
                     },
                   },
                 ]

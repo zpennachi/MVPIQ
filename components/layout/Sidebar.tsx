@@ -16,6 +16,8 @@ export function Sidebar() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [hasPaid, setHasPaid] = useState(false)
+  const [newFeedbackCount, setNewFeedbackCount] = useState(0)
+  const [newSessionsCount, setNewSessionsCount] = useState(0)
   const supabase = createClient()
 
   useEffect(() => {
@@ -46,11 +48,112 @@ export function Sidebar() {
             // Non-players have access
             setHasPaid(true)
           }
+
+          // Load notification counts for mentors
+          if (data.role === 'mentor') {
+            loadNotificationCounts(user.id)
+          }
         }
       }
     }
     getUser()
   }, [])
+
+  // Reload notification counts when navigating to/from relevant pages
+  useEffect(() => {
+    if (profile?.role === 'mentor' && user) {
+      // Mark as seen when viewing feedback page
+      if (pathname === '/dashboard/feedback') {
+        markFeedbackAsSeen()
+      }
+      // Mark as seen when viewing one-on-ones page
+      if (pathname === '/dashboard/one-on-ones') {
+        markSessionsAsSeen()
+      }
+      // Reload counts periodically and on navigation
+      const interval = setInterval(() => {
+        loadNotificationCounts(user.id)
+      }, 30000) // Every 30 seconds
+      loadNotificationCounts(user.id)
+      return () => clearInterval(interval)
+    }
+  }, [pathname, profile?.role, user])
+
+  const loadNotificationCounts = async (mentorId: string) => {
+    try {
+      // Check for new feedback (pending/assigned or created within 7 days)
+      const sevenDaysAgo = new Date()
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+      
+      const { data: feedback } = await supabase
+        .from('feedback_submissions')
+        .select('id, status, created_at')
+        .or(`status.eq.pending,status.eq.assigned,and(status.neq.completed,created_at.gte.${sevenDaysAgo.toISOString()})`)
+
+      // Get seen feedback IDs from localStorage
+      const seenFeedbackIds = JSON.parse(localStorage.getItem('seen_feedback_ids') || '[]')
+      const unseenFeedback = feedback?.filter(f => !seenFeedbackIds.includes(f.id)) || []
+      setNewFeedbackCount(unseenFeedback.length)
+
+      // Check for new sessions (pending or confirmed, upcoming)
+      const { data: sessions } = await supabase
+        .from('booked_sessions')
+        .select('id, status, created_at')
+        .eq('mentor_id', mentorId)
+        .in('status', ['pending', 'confirmed'])
+        .gte('start_time', new Date().toISOString())
+
+      // Get seen session IDs from localStorage
+      const seenSessionIds = JSON.parse(localStorage.getItem('seen_session_ids') || '[]')
+      const unseenSessions = sessions?.filter(s => !seenSessionIds.includes(s.id)) || []
+      setNewSessionsCount(unseenSessions.length)
+    } catch (error) {
+      console.error('Error loading notification counts:', error)
+    }
+  }
+
+  const markFeedbackAsSeen = async () => {
+    try {
+      const sevenDaysAgo = new Date()
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+      
+      const { data: feedback } = await supabase
+        .from('feedback_submissions')
+        .select('id')
+        .or(`status.eq.pending,status.eq.assigned,and(status.neq.completed,created_at.gte.${sevenDaysAgo.toISOString()})`)
+
+      if (feedback) {
+        const seenIds = JSON.parse(localStorage.getItem('seen_feedback_ids') || '[]')
+        const newSeenIds = [...new Set([...seenIds, ...feedback.map(f => f.id)])]
+        localStorage.setItem('seen_feedback_ids', JSON.stringify(newSeenIds))
+        setNewFeedbackCount(0)
+      }
+    } catch (error) {
+      console.error('Error marking feedback as seen:', error)
+    }
+  }
+
+  const markSessionsAsSeen = async () => {
+    try {
+      if (!user) return
+      
+      const { data: sessions } = await supabase
+        .from('booked_sessions')
+        .select('id')
+        .eq('mentor_id', user.id)
+        .in('status', ['pending', 'confirmed'])
+        .gte('start_time', new Date().toISOString())
+
+      if (sessions) {
+        const seenIds = JSON.parse(localStorage.getItem('seen_session_ids') || '[]')
+        const newSeenIds = [...new Set([...seenIds, ...sessions.map(s => s.id)])]
+        localStorage.setItem('seen_session_ids', JSON.stringify(newSeenIds))
+        setNewSessionsCount(0)
+      }
+    } catch (error) {
+      console.error('Error marking sessions as seen:', error)
+    }
+  }
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -119,7 +222,7 @@ export function Sidebar() {
           <>
             <Link
               href="/dashboard/feedback"
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 relative ${
                 isActive('/dashboard/feedback')
                   ? 'bg-[#ffc700] text-black'
                   : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
@@ -127,10 +230,15 @@ export function Sidebar() {
             >
               <MessageSquare className="w-5 h-5" />
               <span className="font-medium">Feedback</span>
+              {newFeedbackCount > 0 && (
+                <span className="absolute right-2 top-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {newFeedbackCount > 9 ? '9+' : newFeedbackCount}
+                </span>
+              )}
             </Link>
             <Link
               href="/dashboard/one-on-ones"
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 relative ${
                 isActive('/dashboard/one-on-ones')
                   ? 'bg-[#ffc700] text-black'
                   : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
@@ -138,6 +246,11 @@ export function Sidebar() {
             >
               <Calendar className="w-5 h-5" />
               <span className="font-medium">One-on-Ones</span>
+              {newSessionsCount > 0 && (
+                <span className="absolute right-2 top-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {newSessionsCount > 9 ? '9+' : newSessionsCount}
+                </span>
+              )}
             </Link>
           </>
         )}

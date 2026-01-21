@@ -7,6 +7,19 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 })
 
 // Helper function to send confirmation emails
+// Generate a meeting link (Google Meet format)
+function generateMeetingLink(): string {
+  // Generate a random meeting ID (12 characters, alphanumeric)
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+  let meetingId = ''
+  for (let i = 0; i < 12; i++) {
+    meetingId += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  // Format: abc-defg-hij (3-4-3 format)
+  const formattedId = `${meetingId.slice(0, 3)}-${meetingId.slice(3, 7)}-${meetingId.slice(7, 10)}`
+  return `https://meet.google.com/${formattedId}`
+}
+
 async function sendConfirmationEmails(session: any, origin: string) {
   console.log('📧 Starting email notifications for session:', session.id)
   try {
@@ -46,6 +59,7 @@ async function sendConfirmationEmails(session: any, origin: string) {
               sessionId: session.id,
               mentorName: mentorName,
               startTime: session.start_time,
+              meetingLink: session.meeting_link,
             },
           }),
         })
@@ -169,9 +183,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Generate meeting link
+    const meetingLink = generateMeetingLink()
+
     // If using credit, skip payment processing
     if (useCredit) {
       // Credit already applied in BookSession component
+      // Update session with meeting link
+      await supabase
+        .from('booked_sessions')
+        .update({
+          meeting_link: meetingLink,
+        })
+        .eq('id', sessionId)
+      
       // Just send confirmation emails
       await sendConfirmationEmails(session, request.nextUrl.origin)
       
@@ -179,6 +204,7 @@ export async function POST(request: NextRequest) {
         success: true,
         creditUsed: true,
         message: 'Session confirmed using credit',
+        meetingLink,
       })
     }
 
@@ -191,6 +217,7 @@ export async function POST(request: NextRequest) {
           payment_status: 'completed',
           status: 'confirmed',
           payment_intent_id: `dev_${Date.now()}`,
+          meeting_link: meetingLink,
         })
         .eq('id', sessionId)
 
@@ -201,6 +228,7 @@ export async function POST(request: NextRequest) {
         success: true,
         devMode: true,
         message: 'Session confirmed (dev mode - payment skipped)',
+        meetingLink,
       })
     }
 
@@ -231,12 +259,13 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Update session with payment intent
+    // Update session with payment intent and meeting link
     await supabase
       .from('booked_sessions')
       .update({
         payment_intent_id: checkoutSession.id,
         payment_status: 'processing',
+        meeting_link: meetingLink,
       })
       .eq('id', sessionId)
 

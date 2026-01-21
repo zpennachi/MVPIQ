@@ -358,6 +358,10 @@ export function BookSession({ userId, userRole }: BookSessionProps) {
           setSelectedSlot(null)
           // Refresh credit count immediately
           await checkCredits()
+          // Immediately refresh slots to prevent double-booking
+          if (selectedMentor) {
+            await loadMentorSlots(selectedMentor.id)
+          }
           loadMentors()
           return
         } else {
@@ -392,6 +396,10 @@ export function BookSession({ userId, userRole }: BookSessionProps) {
         alert('✅ Dev Mode: Session booked! Payment skipped.')
         setShowPaymentModal(false)
         setSelectedSlot(null)
+        // Immediately refresh slots to prevent double-booking
+        if (selectedMentor) {
+          await loadMentorSlots(selectedMentor.id)
+        }
         loadMentors()
       }
     } catch (error: any) {
