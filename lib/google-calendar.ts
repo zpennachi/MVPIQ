@@ -235,30 +235,61 @@ export async function createCalendarEvent(
   }
 
   // Try OAuth first (for Meet links with Gmail accounts)
-  const oauthClient = await getOAuthClient()
+  // Check if OAuth tokens exist before trying to get client
+  const supabase = await createClient()
+  const { data: oauthCheck } = await supabase
+    .from('profiles')
+    .select('id, google_calendar_connected, google_calendar_access_token, google_calendar_refresh_token')
+    .eq('role', 'admin')
+    .eq('google_calendar_connected', true)
+    .not('google_calendar_access_token', 'is', null)
+    .not('google_calendar_refresh_token', 'is', null)
+    .maybeSingle()
   
-  if (oauthClient) {
-    logger.info('Using OAuth client for calendar event creation (supports Meet links)', {
-      calendarId: oauthClient.calendarId,
+  const hasOAuthTokens = !!oauthCheck?.google_calendar_access_token && !!oauthCheck?.google_calendar_refresh_token
+  
+  if (hasOAuthTokens) {
+    logger.info('OAuth tokens found in database, attempting to use OAuth client', {
+      adminId: oauthCheck?.id,
+      hasAccessToken: !!oauthCheck?.google_calendar_access_token,
+      hasRefreshToken: !!oauthCheck?.google_calendar_refresh_token,
     })
-    try {
-      const { client: calendar, calendarId } = oauthClient
-      const result = await createEventWithMeetLink(calendar, calendarId, event, 'oauth')
-      logger.info('Successfully created calendar event with OAuth', {
-        eventId: result.eventId,
-        hasMeetLink: !!result.meetLink,
-        meetLink: result.meetLink ? 'generated' : 'not generated',
+    
+    const oauthClient = await getOAuthClient()
+    
+    if (oauthClient) {
+      logger.info('Using OAuth client for calendar event creation (supports Meet links)', {
+        calendarId: oauthClient.calendarId,
       })
-      return result
-    } catch (error: any) {
-      logger.error('Failed to create event with OAuth, falling back to service account', error, {
-        errorMessage: error.message,
-        errorCode: error.code,
+      try {
+        const { client: calendar, calendarId } = oauthClient
+        const result = await createEventWithMeetLink(calendar, calendarId, event, 'oauth')
+        logger.info('Successfully created calendar event with OAuth', {
+          eventId: result.eventId,
+          hasMeetLink: !!result.meetLink,
+          meetLink: result.meetLink ? 'generated' : 'not generated',
+        })
+        return result
+      } catch (error: any) {
+        logger.error('Failed to create event with OAuth', error, {
+          errorMessage: error.message,
+          errorCode: error.code,
+          errorStack: error.stack,
+          hint: 'OAuth tokens exist but event creation failed. This might indicate invalid tokens or API permissions issue.',
+        })
+        // Don't fall through - throw the error so caller knows OAuth failed
+        throw new Error(`OAuth event creation failed: ${error.message || 'Unknown error'}. Please check OAuth tokens in settings.`)
+      }
+    } else {
+      logger.warn('OAuth tokens exist in database but getOAuthClient() returned null', {
+        adminId: oauthCheck?.id,
+        hint: 'Token refresh may have failed. Check Vercel logs for details.',
       })
-      // Fall through to service account
+      // Don't fall through to service account - OAuth should work if tokens exist
+      throw new Error('OAuth tokens exist but could not create OAuth client. Please reconnect calendar in settings.')
     }
   } else {
-    logger.info('OAuth client not available, will use service account')
+    logger.info('No OAuth tokens found in database, will use service account')
   }
 
   // Fallback to service account
