@@ -94,7 +94,15 @@ export async function POST(request: NextRequest) {
 
       logger.info('Google Calendar event created immediately', { sessionId, eventId, meetLink })
     } catch (calendarError: any) {
-      logger.error('Failed to create Google Calendar event immediately', calendarError, { sessionId })
+      // Log detailed error for debugging
+      const errorMessage = calendarError?.message || 'Unknown error'
+      logger.error('Failed to create Google Calendar event immediately', calendarError, { 
+        sessionId,
+        errorMessage,
+        hint: errorMessage.includes('not configured') 
+          ? 'Google service account not configured. See GOOGLE_CALENDAR_SETUP.md'
+          : 'Check service account credentials and calendar permissions'
+      })
       // Continue without calendar event - don't fail the booking
     }
 

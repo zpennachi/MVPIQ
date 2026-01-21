@@ -259,7 +259,15 @@ export async function POST(request: NextRequest) {
           logger.warn('No meeting link generated - service account may not be configured', { sessionId, mentorId: session.mentor_id })
         }
       } catch (calendarError: any) {
-        logger.error('Failed to create Google Calendar event in payment route', calendarError, { sessionId })
+        // Log detailed error for debugging
+        const errorMessage = calendarError?.message || 'Unknown error'
+        logger.error('Failed to create Google Calendar event in payment route', calendarError, { 
+          sessionId,
+          errorMessage,
+          hint: errorMessage.includes('not configured') 
+            ? 'Google service account not configured. See GOOGLE_CALENDAR_SETUP.md'
+            : 'Check service account credentials and calendar permissions'
+        })
         // Continue without calendar event - don't fail the booking
         // Keep existing meeting link if it exists
       }
