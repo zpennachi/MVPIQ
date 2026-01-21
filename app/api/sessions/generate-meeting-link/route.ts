@@ -26,13 +26,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Get session details
-    const { data: session } = await supabase
+    const { data: session, error: sessionError } = await supabase
       .from('booked_sessions')
-      .select('*, mentor:profiles!booked_sessions_mentor_id_fkey(*)')
+      .select('*')
       .eq('id', sessionId)
       .single()
 
-    if (!session) {
+    if (sessionError || !session) {
+      logger.error('Session not found or error fetching session', sessionError, { sessionId })
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     }
 
@@ -41,7 +42,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    const mentor = (session as any).mentor
+    // Get mentor profile separately
+    const { data: mentor, error: mentorError } = await supabase
+      .from('profiles')
+      .select('id, email, full_name, google_calendar_connected, google_calendar_access_token, google_calendar_refresh_token, google_calendar_id, google_calendar_token_expires_at')
+      .eq('id', session.mentor_id)
+      .single()
+
+    if (mentorError || !mentor) {
+      logger.error('Mentor not found', mentorError, { mentorId: session.mentor_id })
+      return NextResponse.json({ error: 'Mentor not found' }, { status: 404 })
+    }
 
     // Generate Google Calendar event with Meet link (if mentor has connected calendar)
     let meetingLink: string | null = null

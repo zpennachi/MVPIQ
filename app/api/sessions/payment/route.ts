@@ -327,8 +327,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Check if dev mode (no Stripe key)
-    if (!process.env.STRIPE_SECRET_KEY || process.env.NODE_ENV === 'development') {
+    // Check if dev mode (no Stripe key or explicitly in development)
+    const isDevMode = !process.env.STRIPE_SECRET_KEY || process.env.NODE_ENV === 'development'
+    
+    logger.info('Payment route called', { sessionId, isDevMode, hasStripeKey: !!process.env.STRIPE_SECRET_KEY })
+    
+    if (isDevMode) {
       // Dev mode: Skip payment
       await supabase
         .from('booked_sessions')
