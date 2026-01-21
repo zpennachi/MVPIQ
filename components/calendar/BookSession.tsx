@@ -379,8 +379,27 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
         window.location.href = data.checkoutUrl
       } else if (data.devMode) {
         // Dev mode: Payment skipped
-        console.log('✅ Dev mode confirmed, session should be confirmed')
-        alert('✅ Dev Mode: Session booked! Payment skipped.')
+        console.log('✅ Dev mode confirmed, session should be confirmed', data)
+        
+        // Wait a moment for database to update, then verify
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // Verify the session was actually updated
+        const { data: verifySession } = await supabase
+          .from('booked_sessions')
+          .select('status, payment_status, meeting_link')
+          .eq('id', session.id)
+          .single()
+        
+        console.log('🔍 Verified session status:', verifySession)
+        
+        if (verifySession?.status !== 'confirmed') {
+          console.error('❌ Session status was NOT updated to confirmed!', verifySession)
+          alert('⚠️ Session created but status update may have failed. Please refresh the page.')
+        } else {
+          alert('✅ Dev Mode: Session booked and confirmed!')
+        }
+        
         setShowPaymentModal(false)
         setSelectedSlot(null)
         // Immediately refresh slots to prevent double-booking
@@ -391,7 +410,7 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
         // Trigger callback to refresh appointments
         onBookingSuccess?.()
       } else {
-        console.warn('⚠️ Payment route returned but no checkoutUrl or devMode flag')
+        console.warn('⚠️ Payment route returned but no checkoutUrl or devMode flag', data)
       }
     } catch (error: any) {
       alert('Failed to book session: ' + error.message)
