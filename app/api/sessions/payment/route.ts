@@ -326,14 +326,34 @@ export async function POST(request: NextRequest) {
 
     // If using credit, skip payment processing
     if (useCredit) {
+      logger.info('Updating session with meeting link (credit flow)', {
+        sessionId,
+        meetingLink,
+        hasMeetingLink: !!meetingLink,
+        meetingLinkLength: meetingLink?.length || 0,
+        googleEventId,
+      })
+      
       // Update session with meeting link and calendar event ID
-      await supabase
+      const { error: updateError, data: updateData } = await supabase
         .from('booked_sessions')
         .update({
           meeting_link: meetingLink,
           ...(googleEventId && { google_event_id: googleEventId }),
         })
         .eq('id', sessionId)
+        .select('meeting_link, google_event_id')
+        .single()
+      
+      if (updateError) {
+        logger.error('Failed to update session with meeting link (credit flow)', updateError, { sessionId })
+      } else {
+        logger.info('Session updated successfully (credit flow)', {
+          sessionId,
+          storedMeetingLink: updateData?.meeting_link,
+          hasStoredMeetingLink: !!updateData?.meeting_link,
+        })
+      }
       
       // Reload session to get updated meeting_link before sending emails
       const { data: updatedSession } = await supabase
@@ -342,6 +362,12 @@ export async function POST(request: NextRequest) {
         .eq('id', sessionId)
         .single()
       
+      logger.info('Reloaded session after update (credit flow)', {
+        sessionId,
+        meetingLink: updatedSession?.meeting_link,
+        hasMeetingLink: !!updatedSession?.meeting_link,
+      })
+      
       // Send confirmation emails with updated session data (includes meeting_link)
       await sendConfirmationEmails(updatedSession || session, request.nextUrl.origin)
       
@@ -349,7 +375,7 @@ export async function POST(request: NextRequest) {
         success: true,
         creditUsed: true,
         message: 'Session confirmed using credit',
-        meetingLink,
+        meetingLink: updatedSession?.meeting_link || meetingLink,
       })
     }
 
@@ -371,6 +397,13 @@ export async function POST(request: NextRequest) {
       if (googleEventId) {
         updateData.google_event_id = googleEventId
       }
+      
+      logger.info('Updating session in dev mode', {
+        sessionId,
+        updateDataKeys: Object.keys(updateData),
+        meetingLinkInUpdate: updateData.meeting_link,
+        hasMeetingLinkInUpdate: !!updateData.meeting_link,
+      })
       
       let { data: updatedSession, error: updateError } = await supabase
         .from('booked_sessions')
@@ -402,14 +435,16 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      logger.info('Session updated successfully in dev mode', { 
+      logger.info('✅ Session updated successfully in dev mode', { 
         sessionId, 
         status: updatedSession?.status,
         payment_status: updatedSession?.payment_status,
         meeting_link: updatedSession?.meeting_link,
         hasMeetingLink: !!updatedSession?.meeting_link,
         meetingLinkLength: updatedSession?.meeting_link?.length || 0,
-        googleEventId: updatedSession?.google_event_id
+        googleEventId: updatedSession?.google_event_id,
+        meetingLinkFromUpdate: meetingLink,
+        meetingLinkMatches: updatedSession?.meeting_link === meetingLink,
       })
       
       // Send confirmation emails with updated session data (includes meeting_link)
