@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { User, Mail, Phone, Save, X, Upload, Camera, Calendar, CheckCircle, AlertCircle } from 'lucide-react'
+import { User, Mail, Save, X, Upload, Camera, Calendar, CheckCircle, AlertCircle, Users } from 'lucide-react'
 import { useDropzone } from 'react-dropzone'
 import type { Profile } from '@/types/database'
 
@@ -16,10 +16,13 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState(false)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [connectingCalendar, setConnectingCalendar] = useState(false)
+  const [teams, setTeams] = useState<{ id: string; name: string }[]>([])
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null)
+  const [teamNameEdit, setTeamNameEdit] = useState('')
   const [formData, setFormData] = useState({
-    full_name: '',
+    first_name: '',
+    last_name: '',
     email: '',
-    phone_number: '',
   })
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
@@ -108,12 +111,29 @@ export default function SettingsPage() {
       if (data) {
         const profileData = data as Profile
         setProfile(profileData)
+        // Split full_name into first and last
+        const nameParts = (profileData.full_name || '').split(' ')
+        const firstName = nameParts[0] || ''
+        const lastName = nameParts.slice(1).join(' ') || ''
+        
         setFormData({
-          full_name: profileData.full_name || '',
+          first_name: firstName,
+          last_name: lastName,
           email: profileData.email || '',
-          phone_number: profileData.phone_number || '',
         })
         setCurrentPhotoUrl(profileData.profile_photo_url || null)
+
+        // Load teams if coach
+        if (profileData.role === 'coach') {
+          const { data: teamsData } = await supabase
+            .from('teams')
+            .select('id, name')
+            .eq('coach_id', user.id)
+          
+          if (teamsData) {
+            setTeams(teamsData as { id: string; name: string }[])
+          }
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load profile')
@@ -179,12 +199,14 @@ export default function SettingsPage() {
         }
       }
 
+      // Combine first and last name
+      const fullName = `${formData.first_name} ${formData.last_name}`.trim() || null
+
       // Update profile
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
-          full_name: formData.full_name || null,
-          phone_number: formData.phone_number || null,
+          full_name: fullName,
           profile_photo_url: photoUrl,
         })
         .eq('id', user.id)
@@ -315,16 +337,35 @@ export default function SettingsPage() {
             <label className="block text-sm font-medium text-[#d9d9d9] mb-2">
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4" />
-                Full Name
+                Name
               </div>
             </label>
-            <input
-              type="text"
-              value={formData.full_name}
-              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-              className="w-full px-3 py-2.5 text-base border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700] transition-all duration-300 touch-manipulation placeholder:text-[#d9d9d9]/50"
-              placeholder="Enter your full name"
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#d9d9d9] mb-2">
+                    First Name
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.first_name}
+                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                    className="w-full px-3 py-2.5 text-base border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700] transition-all duration-300 touch-manipulation placeholder:text-[#d9d9d9]/50"
+                    placeholder="First name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#d9d9d9] mb-2">
+                    Last Name
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.last_name}
+                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                    className="w-full px-3 py-2.5 text-base border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700] transition-all duration-300 touch-manipulation placeholder:text-[#d9d9d9]/50"
+                    placeholder="Last name"
+                  />
+                </div>
+              </div>
           </div>
 
           <div>
@@ -347,24 +388,83 @@ export default function SettingsPage() {
             </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-[#d9d9d9] mb-2">
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4" />
-                Phone Number (Optional)
+
+          {/* Team Name Editing (for coaches) */}
+          {profile?.role === 'coach' && teams.length > 0 && (
+            <div className="border-t border-[#272727] pt-6 mt-6">
+              <label className="block text-sm font-medium text-[#d9d9d9] mb-3">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Team Name
+                </div>
+              </label>
+              <div className="space-y-3">
+                {teams.map((team) => (
+                  <div key={team.id} className="flex items-center gap-3">
+                    {editingTeamId === team.id ? (
+                      <>
+                        <input
+                          type="text"
+                          value={teamNameEdit}
+                          onChange={(e) => setTeamNameEdit(e.target.value)}
+                          className="flex-1 px-3 py-2.5 text-base border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700] transition-all duration-300"
+                          placeholder="Team name"
+                        />
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const { error } = await supabase
+                                .from('teams')
+                                .update({ name: teamNameEdit })
+                                .eq('id', team.id)
+                              
+                              if (error) throw error
+                              
+                              setTeams(teams.map(t => t.id === team.id ? { ...t, name: teamNameEdit } : t))
+                              setEditingTeamId(null)
+                              setTeamNameEdit('')
+                            } catch (err: any) {
+                              setError(err.message || 'Failed to update team name')
+                            }
+                          }}
+                          className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingTeamId(null)
+                            setTeamNameEdit('')
+                          }}
+                          className="px-3 py-2 bg-[#272727] text-[#d9d9d9] rounded-md hover:bg-[#272727]/80 transition"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex-1 px-3 py-2.5 bg-[#272727] rounded-md text-[#d9d9d9]">
+                          {team.name}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingTeamId(team.id)
+                            setTeamNameEdit(team.name)
+                          }}
+                          className="px-3 py-2 bg-[#ffc700] text-black rounded-md hover:bg-[#e6b300] transition"
+                        >
+                          Edit
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ))}
               </div>
-            </label>
-            <input
-              type="tel"
-              value={formData.phone_number}
-              onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
-              className="w-full px-3 py-2.5 text-base border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700] transition-all duration-300 touch-manipulation placeholder:text-[#d9d9d9]/50"
-              placeholder="(555) 123-4567"
-            />
-            <p className="text-xs text-[#d9d9d9]/70 mt-1">
-              Add your phone number for important notifications
-            </p>
-          </div>
+            </div>
+          )}
 
           {/* Google Calendar Connection (for mentors) */}
           {profile?.role === 'mentor' && (

@@ -226,16 +226,15 @@ export function MentorAvailability({ mentorId }: MentorAvailabilityProps) {
           })}
         </div>
 
-        {/* Mobile: Horizontal scrollable */}
-        <div className="md:hidden overflow-x-auto pb-4 -mx-4 px-4" style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'thin' }}>
-          <div className="flex gap-3 min-w-max">
-            {weekDays.map((day) => {
-              const daySlots = getSlotsForDay(day)
-              return (
-                <div
-                  key={day.toISOString()}
-                  className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 min-w-[160px] w-[160px] flex-shrink-0"
-                >
+        {/* Mobile: Vertical stack and scrollable */}
+        <div className="md:hidden space-y-3 max-h-[600px] overflow-y-auto">
+          {weekDays.map((day) => {
+            const daySlots = getSlotsForDay(day)
+            return (
+              <div
+                key={day.toISOString()}
+                className="border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+              >
                   <div className="font-semibold text-sm text-gray-900 dark:text-white mb-2">
                     {format(day, 'EEE')}
                   </div>
@@ -278,7 +277,6 @@ export function MentorAvailability({ mentorId }: MentorAvailabilityProps) {
                 </div>
               )
             })}
-          </div>
         </div>
       </div>
 

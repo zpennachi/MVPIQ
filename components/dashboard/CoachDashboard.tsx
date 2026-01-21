@@ -167,40 +167,6 @@ export function CoachDashboard({ coachId }: CoachDashboardProps) {
         </p>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-black border border-[#272727] rounded-lg p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-[#d9d9d9]">Teams</p>
-            <Users className="w-5 h-5 sm:w-6 sm:h-6 text-[#ffc700]" />
-          </div>
-          <p className="text-2xl sm:text-3xl font-bold text-white">{teams.length}</p>
-        </div>
-
-        <div className="bg-black border border-[#272727] rounded-lg p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-[#d9d9d9]">Videos</p>
-            <Film className="w-5 h-5 sm:w-6 sm:h-6 text-[#ffc700]" />
-          </div>
-          <p className="text-2xl sm:text-3xl font-bold text-white">{videos.length}</p>
-        </div>
-
-        <div className="bg-black border border-[#272727] rounded-lg p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-[#d9d9d9]">Pending</p>
-            <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-[#ffc700]" />
-          </div>
-          <p className="text-2xl sm:text-3xl font-bold text-[#ffc700]">{pendingCount}</p>
-        </div>
-
-        <div className="bg-black border border-[#272727] rounded-lg p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-[#d9d9d9]">Completed</p>
-            <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
-          </div>
-          <p className="text-2xl sm:text-3xl font-bold text-green-400">{completedCount}</p>
-        </div>
-      </div>
 
       <div className="border-b border-[#272727] overflow-x-auto">
         <nav className="-mb-px flex space-x-4 sm:space-x-8 min-w-max">

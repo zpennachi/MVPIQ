@@ -12,6 +12,7 @@ interface SubmissionListProps {
   userRole: 'player' | 'mentor' | 'coach'
   onUpdate?: () => void
   onSelectSubmission?: (submission: FeedbackSubmission) => void
+  onViewFeedback?: (submissionId: string) => void
 }
 
 export function SubmissionList({
@@ -19,6 +20,7 @@ export function SubmissionList({
   userRole,
   onUpdate,
   onSelectSubmission,
+  onViewFeedback,
 }: SubmissionListProps) {
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; title: string } | null>(null)
 
@@ -108,7 +110,11 @@ export function SubmissionList({
                 )}
 
                 {submission.feedback_text && (
-                  <div className="mt-4 p-4 bg-green-900/20 border border-green-800 rounded">
+                  <div 
+                    className="mt-4 p-4 bg-green-900/20 border border-green-800 rounded"
+                    onMouseEnter={() => onViewFeedback?.(submission.id)}
+                    onClick={() => onViewFeedback?.(submission.id)}
+                  >
                     <p className="text-sm font-medium text-green-400 mb-2">
                       Professional Feedback:
                     </p>

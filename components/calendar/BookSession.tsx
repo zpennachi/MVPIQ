@@ -10,6 +10,7 @@ import { expandRecurringSlots, type ExpandedSlot } from '@/lib/calendar/recurrin
 interface BookSessionProps {
   userId: string
   userRole: 'player' | 'coach' | 'admin'
+  onBookingSuccess?: () => void
 }
 
 type MentorWithSlots = {
@@ -18,7 +19,7 @@ type MentorWithSlots = {
   expandedSlots?: ExpandedSlot[]
 }
 
-export function BookSession({ userId, userRole }: BookSessionProps) {
+export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionProps) {
   const [mentors, setMentors] = useState<MentorWithSlots[]>([])
   const [selectedMentor, setSelectedMentor] = useState<Profile | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<ExpandedSlot | null>(null)
@@ -359,6 +360,8 @@ export function BookSession({ userId, userRole }: BookSessionProps) {
             await loadMentorSlots(selectedMentor.id)
           }
           loadMentors()
+          // Trigger callback to refresh appointments
+          onBookingSuccess?.()
           return
         } else {
           // Credit use failed, fall through to payment
@@ -397,6 +400,8 @@ export function BookSession({ userId, userRole }: BookSessionProps) {
           await loadMentorSlots(selectedMentor.id)
         }
         loadMentors()
+        // Trigger callback to refresh appointments
+        onBookingSuccess?.()
       }
     } catch (error: any) {
       alert('Failed to book session: ' + error.message)
@@ -452,28 +457,49 @@ export function BookSession({ userId, userRole }: BookSessionProps) {
               Select a Mentor
             </h2>
             <div className="flex flex-wrap gap-2">
-              {mentors.map(({ mentor, slots }) => (
-                <button
-                  key={mentor.id}
-                  onClick={async () => {
-                    console.log('Mentor clicked:', mentor.full_name || mentor.email)
-                    setSelectedMentor(mentor)
-                    // Load slots for this mentor
-                    await loadMentorSlots(mentor.id)
-                    console.log('Slots loaded for mentor:', mentor.id)
-                  }}
-                  className={`px-3 sm:px-4 py-2 text-sm sm:text-base rounded-md transition touch-manipulation ${
-                    selectedMentor?.id === mentor.id
-                      ? 'bg-yellow-500 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  {mentor.full_name || mentor.email}
-                  {slots.length > 0 && (
-                    <span className="ml-2 text-xs opacity-75">({slots.length})</span>
-                  )}
-                </button>
-              ))}
+              {mentors.map(({ mentor, slots }) => {
+                const getInitials = (name: string | null) => {
+                  if (!name) return 'M'
+                  const parts = name.split(' ')
+                  if (parts.length >= 2) {
+                    return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+                  }
+                  return name[0].toUpperCase()
+                }
+
+                return (
+                  <button
+                    key={mentor.id}
+                    onClick={async () => {
+                      console.log('Mentor clicked:', mentor.full_name || mentor.email)
+                      setSelectedMentor(mentor)
+                      // Load slots for this mentor
+                      await loadMentorSlots(mentor.id)
+                      console.log('Slots loaded for mentor:', mentor.id)
+                    }}
+                    className={`flex items-center gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base rounded-md transition touch-manipulation ${
+                      selectedMentor?.id === mentor.id
+                        ? 'bg-yellow-500 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {mentor.profile_photo_url ? (
+                      <img
+                        src={mentor.profile_photo_url}
+                        alt={mentor.full_name || mentor.email}
+                        className="w-6 h-6 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-6 h-6 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-bold text-yellow-600 dark:text-yellow-400">
+                          {getInitials(mentor.full_name)}
+                        </span>
+                      </div>
+                    )}
+                    <span>{mentor.full_name || mentor.email}</span>
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -553,16 +579,15 @@ export function BookSession({ userId, userRole }: BookSessionProps) {
                 })}
               </div>
 
-              {/* Mobile: Horizontal scrollable */}
-              <div className="md:hidden overflow-x-auto pb-4 -mx-4 px-4" style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'thin' }}>
-                <div className="flex gap-3 min-w-max">
-                  {weekDays.map((day) => {
-                    const daySlots = getSlotsForDay(day, selectedMentorData?.expandedSlots || [])
-                    return (
-                      <div
-                        key={day.toISOString()}
-                        className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 min-w-[160px] w-[160px] flex-shrink-0"
-                      >
+              {/* Mobile: Vertical stack and scrollable */}
+              <div className="md:hidden space-y-3 max-h-[600px] overflow-y-auto">
+                {weekDays.map((day) => {
+                  const daySlots = getSlotsForDay(day, selectedMentorData?.expandedSlots || [])
+                  return (
+                    <div
+                      key={day.toISOString()}
+                      className="border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                    >
                         <div className="font-semibold text-sm text-gray-900 dark:text-white mb-2">
                           {format(day, 'EEE')}
                         </div>
@@ -598,7 +623,6 @@ export function BookSession({ userId, userRole }: BookSessionProps) {
                       </div>
                     )
                   })}
-                </div>
               </div>
             </div>
           ) : selectedMentor ? (
@@ -619,10 +643,28 @@ export function BookSession({ userId, userRole }: BookSessionProps) {
             </h3>
             <div className="space-y-4 mb-6">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Mentor</p>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {selectedMentor?.full_name || selectedMentor?.email}
-                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Mentor</p>
+                <div className="flex items-center gap-3">
+                  {selectedMentor?.profile_photo_url ? (
+                    <img
+                      src={selectedMentor.profile_photo_url}
+                      alt={selectedMentor.full_name || selectedMentor.email}
+                      className="w-12 h-12 rounded-full object-cover border-2 border-yellow-500"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center border-2 border-yellow-500">
+                      <span className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
+                        {selectedMentor?.full_name ? (selectedMentor.full_name.split(' ').length >= 2 
+                          ? `${selectedMentor.full_name.split(' ')[0][0]}${selectedMentor.full_name.split(' ')[1][0]}`.toUpperCase()
+                          : selectedMentor.full_name[0].toUpperCase())
+                          : 'M'}
+                      </span>
+                    </div>
+                  )}
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {selectedMentor?.full_name || selectedMentor?.email}
+                  </p>
+                </div>
               </div>
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Date & Time</p>

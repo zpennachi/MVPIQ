@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { SubmissionList } from '@/components/feedback/SubmissionList'
 import { CardSkeleton } from '@/components/ui/LoadingSkeleton'
 import type { FeedbackSubmission } from '@/types/database'
-import { MessageSquare, Users, DollarSign, HelpCircle } from 'lucide-react'
+import { MessageSquare, Users, DollarSign, HelpCircle, Video } from 'lucide-react'
 import Link from 'next/link'
 
 interface PlayerDashboardProps {
@@ -20,7 +20,28 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
   const [hasPaid, setHasPaid] = useState(false)
   const [oneOnOnes, setOneOnOnes] = useState<any[]>([])
   const [availableCredits, setAvailableCredits] = useState(0)
+  const [viewedFeedbackIds, setViewedFeedbackIds] = useState<Set<string>>(new Set())
   const supabase = createClient()
+
+  // Load viewed feedback IDs from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const viewed = localStorage.getItem(`viewed_feedback_${userId}`)
+      if (viewed) {
+        setViewedFeedbackIds(new Set(JSON.parse(viewed)))
+      }
+    }
+  }, [userId])
+
+  // Mark feedback as viewed
+  const markFeedbackAsViewed = (submissionId: string) => {
+    const newViewed = new Set(viewedFeedbackIds)
+    newViewed.add(submissionId)
+    setViewedFeedbackIds(newViewed)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`viewed_feedback_${userId}`, JSON.stringify(Array.from(newViewed)))
+    }
+  }
 
   useEffect(() => {
     loadData()
@@ -216,7 +237,7 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
 
       <div className="space-y-6">
           {/* Pending Feedback Requests - Videos submitted waiting for feedback */}
-          {submissions.filter(s => s.status !== 'completed' && s.status !== 'paid').length > 0 && (
+          {submissions.filter(s => s.status !== 'completed').length > 0 && (
             <div className="bg-gradient-to-r from-[#ffc700]/10 to-[#ffc700]/5 border-2 border-[#ffc700]/40 rounded-lg shadow-mvp p-4 sm:p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -233,11 +254,11 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
                 </Link>
               </div>
               <SubmissionList 
-                submissions={submissions.filter(s => s.status !== 'completed' && s.status !== 'paid')} 
+                submissions={submissions.filter(s => s.status !== 'completed')} 
                 userRole="player" 
                 onUpdate={loadData} 
               />
-              {submissions.filter(s => s.status !== 'completed' && s.status !== 'paid').length > 0 && (
+              {submissions.filter(s => s.status !== 'completed').length > 0 && (
                 <div className="mt-4 pt-4 border-t border-[#ffc700]/20">
                   <Link
                     href="/contact"
@@ -252,7 +273,7 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
           )}
 
           {/* New Feedback - Completed feedback they haven't seen yet */}
-          {submissions.filter(s => s.status === 'completed' && s.feedback_text).length > 0 && (
+          {submissions.filter(s => s.status === 'completed' && s.feedback_text && !viewedFeedbackIds.has(s.id)).length > 0 && (
             <div className="bg-gradient-to-r from-green-900/20 to-green-800/10 border-2 border-green-800/40 rounded-lg shadow-mvp p-4 sm:p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -269,9 +290,10 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
                 </Link>
               </div>
               <SubmissionList 
-                submissions={submissions.filter(s => s.status === 'completed' && s.feedback_text).slice(0, 3)} 
+                submissions={submissions.filter(s => s.status === 'completed' && s.feedback_text && !viewedFeedbackIds.has(s.id)).slice(0, 3)} 
                 userRole="player" 
-                onUpdate={loadData} 
+                onUpdate={loadData}
+                onViewFeedback={(submissionId) => markFeedbackAsViewed(submissionId)}
               />
             </div>
           )}
@@ -334,9 +356,18 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
                               minute: '2-digit',
                             })}
                           </p>
-                          <p className="text-xs text-[#d9d9d9]/70 mt-1 capitalize">
-                            Status: <span className="text-white">{session.status}</span>
-                          </p>
+                          {session.meeting_link && (
+                            <a
+                              href={session.meeting_link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 mt-2 px-3 py-1.5 bg-[#ffc700] text-black rounded-md hover:bg-[#e6b300] transition font-medium text-sm"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Video className="w-4 h-4" />
+                              Join Meeting
+                            </a>
+                          )}
                         </div>
                       </div>
                     </div>

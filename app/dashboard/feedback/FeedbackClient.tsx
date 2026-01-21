@@ -1,68 +1,28 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from 'react'
 import { VideoURLSubmission } from '@/components/video/VideoURLSubmission'
 import { SubmissionList } from '@/components/feedback/SubmissionList'
 import type { FeedbackSubmission } from '@/types/database'
-import { MessageSquare, HelpCircle } from 'lucide-react'
-import Link from 'next/link'
 
-interface PlayerFeedbackPageProps {
+interface FeedbackClientProps {
   userId: string
+  submissions: FeedbackSubmission[]
+  onUpdate: () => void
 }
 
-export function PlayerFeedbackPage({ userId }: PlayerFeedbackPageProps) {
-  const [submissions, setSubmissions] = useState<FeedbackSubmission[]>([])
-  const [loading, setLoading] = useState(true)
+export function FeedbackClient({ userId, submissions, onUpdate }: FeedbackClientProps) {
   const [activeTab, setActiveTab] = useState<'submit' | 'my-feedback'>('submit')
-  const supabase = createClient()
 
-  useEffect(() => {
-    loadData()
-  }, [userId])
-
-  const loadData = async () => {
-    setLoading(true)
-    const { data: submissionsData } = await supabase
-      .from('feedback_submissions')
-      .select('*, videos(*)')
-      .eq('player_id', userId)
-      .order('created_at', { ascending: false })
-
-    if (submissionsData) setSubmissions(submissionsData as FeedbackSubmission[])
-    setLoading(false)
-  }
-
-  const handleVideoUploaded = () => {
-    loadData()
-  }
-
-  // Separate under review and completed, show under review first
+  // Separate under review and completed
   const underReview = submissions.filter(s => s.status !== 'completed')
   const completed = submissions.filter(s => s.status === 'completed')
+
+  // Sort: under review first, then completed
   const sortedSubmissions = [...underReview, ...completed]
-
-  const pendingCount = submissions.filter(s => s.status !== 'completed').length
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="h-8 bg-[#272727] rounded w-1/3 animate-pulse"></div>
-        <div className="h-64 bg-[#272727] rounded animate-pulse"></div>
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-6">
-      <div className="dotted-bg-subtle rounded-lg p-4 -m-4 sm:-m-6 lg:-m-8 mb-6">
-        <div className="flex items-center gap-3">
-          <MessageSquare className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-500 dark:text-yellow-400" />
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Feedback</h1>
-        </div>
-      </div>
-
       {/* Tabs */}
       <div className="flex gap-2 border-b border-[#272727]">
         <button
@@ -94,7 +54,7 @@ export function PlayerFeedbackPage({ userId }: PlayerFeedbackPageProps) {
           <VideoURLSubmission
             userId={userId}
             userRole="player"
-            onSubmitted={handleVideoUploaded}
+            onSubmitted={onUpdate}
           />
         </div>
       )}
@@ -111,7 +71,7 @@ export function PlayerFeedbackPage({ userId }: PlayerFeedbackPageProps) {
               <SubmissionList 
                 submissions={underReview} 
                 userRole="player" 
-                onUpdate={loadData} 
+                onUpdate={onUpdate} 
               />
             </div>
           )}
@@ -123,7 +83,7 @@ export function PlayerFeedbackPage({ userId }: PlayerFeedbackPageProps) {
               <SubmissionList 
                 submissions={completed} 
                 userRole="player" 
-                onUpdate={loadData} 
+                onUpdate={onUpdate} 
               />
             </div>
           )}

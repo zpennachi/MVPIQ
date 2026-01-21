@@ -235,7 +235,7 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
   }
 
   const handleFeedbackSubmitted = () => {
-    loadSubmissions()
+    loadSubmissions() // This will refresh and remove completed submissions from "New Submissions"
     setSelectedSubmission(null) // Close modal after submission
   }
 

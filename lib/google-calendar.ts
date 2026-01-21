@@ -140,3 +140,125 @@ export async function createCalendarEvent(
 export function getCalendarId(calendarId?: string | null): string {
   return calendarId || 'primary'
 }
+
+/**
+ * Delete a Google Calendar event
+ */
+export async function deleteCalendarEvent(
+  accessToken: string,
+  calendarId: string,
+  eventId: string
+): Promise<void> {
+  const oauth2Client = new google.auth.OAuth2(
+    env.GOOGLE_CLIENT_ID!,
+    env.GOOGLE_CLIENT_SECRET!,
+    env.GOOGLE_REDIRECT_URI
+  )
+
+  oauth2Client.setCredentials({
+    access_token: accessToken,
+  })
+
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client })
+
+  await calendar.events.delete({
+    calendarId: calendarId || 'primary',
+    eventId: eventId,
+  })
+}
+
+/**
+ * Get Google OAuth authorization URL
+ */
+export function getAuthUrl(config: {
+  clientId: string
+  clientSecret: string
+  redirectUri: string
+}): string {
+  const oauth2Client = new google.auth.OAuth2(
+    config.clientId,
+    config.clientSecret,
+    config.redirectUri
+  )
+
+  const scopes = [
+    'https://www.googleapis.com/auth/calendar',
+    'https://www.googleapis.com/auth/calendar.events',
+  ]
+
+  return oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    scope: scopes,
+  })
+}
+
+/**
+ * Get available time slots from Google Calendar Free/Busy API
+ */
+export async function getAvailableSlots(
+  accessToken: string,
+  calendarId: string,
+  startDate: Date,
+  endDate: Date,
+  durationMinutes: number = 60
+): Promise<Array<{ start: Date; end: Date }>> {
+  const oauth2Client = new google.auth.OAuth2(
+    env.GOOGLE_CLIENT_ID!,
+    env.GOOGLE_CLIENT_SECRET!,
+    env.GOOGLE_REDIRECT_URI
+  )
+
+  oauth2Client.setCredentials({
+    access_token: accessToken,
+  })
+
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client })
+
+  // Get busy times from Google Calendar
+  const freebusyResponse = await calendar.freebusy.query({
+    requestBody: {
+      timeMin: startDate.toISOString(),
+      timeMax: endDate.toISOString(),
+      items: [{ id: calendarId || 'primary' }],
+    },
+  })
+
+  const busyTimes = freebusyResponse.data.calendars?.[calendarId || 'primary']?.busy || []
+
+  // Convert busy times to Date objects
+  const busyRanges = busyTimes.map(busy => ({
+    start: new Date(busy.start || ''),
+    end: new Date(busy.end || ''),
+  }))
+
+  // Generate available slots
+  const availableSlots: Array<{ start: Date; end: Date }> = []
+  const currentTime = new Date(startDate)
+  const endTime = new Date(endDate)
+
+  while (currentTime < endTime) {
+    const slotEnd = new Date(currentTime.getTime() + durationMinutes * 60 * 1000)
+
+    // Check if this slot conflicts with any busy time
+    const isAvailable = !busyRanges.some(busy => {
+      return (
+        (currentTime >= busy.start && currentTime < busy.end) ||
+        (slotEnd > busy.start && slotEnd <= busy.end) ||
+        (currentTime <= busy.start && slotEnd >= busy.end)
+      )
+    })
+
+    if (isAvailable && slotEnd <= endTime) {
+      availableSlots.push({
+        start: new Date(currentTime),
+        end: new Date(slotEnd),
+      })
+    }
+
+    // Move to next 30-minute interval
+    currentTime.setMinutes(currentTime.getMinutes() + 30)
+  }
+
+  return availableSlots
+}
