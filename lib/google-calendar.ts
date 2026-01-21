@@ -115,6 +115,23 @@ export async function createCalendarEvent(
       meetLink = response.data.conferenceData?.entryPoints?.find(
         (ep: any) => ep.entryPointType === 'video'
       )?.uri || ''
+      
+      // Log the full response for debugging
+      logger.info('Calendar event created with conference data', {
+        eventId: response.data.id,
+        hasConferenceData: !!response.data.conferenceData,
+        entryPoints: response.data.conferenceData?.entryPoints,
+        meetLink,
+      })
+      
+      // If no Meet link, log the full conference data structure for debugging
+      if (!meetLink) {
+        logger.warn('Event created but no Meet link in response', {
+          eventId: response.data.id,
+          conferenceData: response.data.conferenceData,
+          calendarId,
+        })
+      }
     } catch (error: any) {
       // If that fails with "Invalid conference type", try without specifying type
       if (error.message?.includes('conference type') || error.code === 400) {
@@ -138,6 +155,12 @@ export async function createCalendarEvent(
           meetLink = response.data.conferenceData?.entryPoints?.find(
             (ep: any) => ep.entryPointType === 'video'
           )?.uri || ''
+          
+          logger.info('Calendar event created with minimal conference data', {
+            eventId: response.data.id,
+            hasConferenceData: !!response.data.conferenceData,
+            meetLink,
+          })
         } catch (error2: any) {
           // If that also fails, create event without conference data and log the issue
           logger.error('Failed to create event with conference data', error2, { calendarId })
