@@ -73,6 +73,35 @@ export default function SettingsPage() {
   useEffect(() => {
     loadProfile()
     
+    // Check for OAuth callback success/error in URL
+    const params = new URLSearchParams(window.location.search)
+    const calendarConnected = params.get('calendar_connected')
+    const calendarError = params.get('calendar_error')
+    
+    if (calendarConnected === 'success') {
+      setSuccess(true)
+      setCalendarConnected(true)
+      // Reload profile to get updated calendar status
+      loadProfile()
+      setTimeout(() => setSuccess(false), 5000)
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+    
+    if (calendarError) {
+      const errorMessages: Record<string, string> = {
+        'oauth_failed': 'OAuth authorization failed. Please try again.',
+        'missing_params': 'Missing OAuth parameters. Please try connecting again.',
+        'unauthorized': 'Unauthorized. Please make sure you are logged in as an admin.',
+        'not_admin': 'Only admins can connect Google Calendar.',
+        'no_tokens': 'Failed to get OAuth tokens. Please try again.',
+        'store_failed': 'Failed to save OAuth tokens. Please check database permissions.',
+        'callback_failed': 'OAuth callback failed. Please try again.',
+      }
+      setError(`Calendar connection failed: ${errorMessages[calendarError] || calendarError}`)
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname)
+    }
   }, [])
 
   const loadProfile = async () => {
