@@ -37,14 +37,17 @@ export function OneOnOnesClient({ userId, userRole }: OneOnOnesClientProps) {
   }, [searchParams, userRole])
 
   const handleBookingSuccess = () => {
-    // Trigger refresh of appointments
-    setRefreshKey(prev => prev + 1)
-    // Switch to appointments tab to show the new booking
-    if (userRole !== 'mentor') {
-      setActiveTab('appointments')
-    } else {
-      setActiveTab('upcoming')
-    }
+    // Wait a moment for database to update, then refresh
+    setTimeout(() => {
+      // Trigger refresh of appointments
+      setRefreshKey(prev => prev + 1)
+      // Switch to appointments tab to show the new booking
+      if (userRole !== 'mentor') {
+        setActiveTab('appointments')
+      } else {
+        setActiveTab('upcoming')
+      }
+    }, 500) // Small delay to ensure database update completes
   }
 
   if (userRole === 'mentor') {
