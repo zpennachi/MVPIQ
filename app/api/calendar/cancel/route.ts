@@ -43,44 +43,62 @@ export async function POST(request: NextRequest) {
     }
 
     // If session has a Google Calendar event, delete it
-    if (session.google_event_id && mentor?.google_calendar_connected && mentor.google_calendar_id && mentor.google_calendar_access_token) {
+    if (session.google_event_id && mentor?.google_calendar_connected && mentor.google_calendar_id) {
       try {
         let accessToken = mentor.google_calendar_access_token
 
-        // Try to refresh token if needed
-        if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && mentor.google_calendar_refresh_token) {
-          try {
-            accessToken = await refreshAccessToken(
-              {
-                clientId: env.GOOGLE_CLIENT_ID,
-                clientSecret: env.GOOGLE_CLIENT_SECRET,
-                redirectUri: env.GOOGLE_REDIRECT_URI || '',
-              },
-              mentor.google_calendar_refresh_token
-            )
+        if (!accessToken && mentor.google_calendar_refresh_token) {
+          // Token might be expired, try to refresh
+          if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REDIRECT_URI) {
+            try {
+              accessToken = await refreshAccessToken(
+                {
+                  clientId: env.GOOGLE_CLIENT_ID,
+                  clientSecret: env.GOOGLE_CLIENT_SECRET,
+                  redirectUri: env.GOOGLE_REDIRECT_URI,
+                },
+                mentor.google_calendar_refresh_token
+              )
 
-            // Update stored token
-            await supabase
-              .from('profiles')
-              .update({ google_calendar_access_token: accessToken })
-              .eq('id', mentor.id)
-          } catch (refreshError) {
-            console.error('Error refreshing token:', refreshError)
+              // Update stored token
+              await supabase
+                .from('profiles')
+                .update({ google_calendar_access_token: accessToken })
+                .eq('id', mentor.id)
+            } catch (refreshError) {
+              console.error('Error refreshing token:', refreshError)
+            }
           }
         }
 
-        // Delete Google Calendar event
-        await deleteCalendarEvent(
-          accessToken,
-          mentor.google_calendar_id,
-          session.google_event_id
-        )
+        if (accessToken) {
+          // Delete Google Calendar event
+          await deleteCalendarEvent(
+            accessToken,
+            mentor.google_calendar_id,
+            session.google_event_id
+          )
 
-        console.log('✅ Deleted Google Calendar event:', session.google_event_id)
-      } catch (error) {
+          console.log('✅ Deleted Google Calendar event:', session.google_event_id)
+        } else {
+          console.warn('⚠️ No access token available to delete Google Calendar event')
+        }
+      } catch (error: any) {
         console.error('❌ Error deleting Google Calendar event:', error)
-        // Don't fail the cancellation if Google Calendar deletion fails
+        // Log the error but don't fail the cancellation
+        console.error('Error details:', {
+          message: error.message,
+          eventId: session.google_event_id,
+          calendarId: mentor.google_calendar_id,
+          mentorId: mentor.id,
+        })
       }
+    } else {
+      console.log('ℹ️ No Google Calendar event to delete:', {
+        hasEventId: !!session.google_event_id,
+        isConnected: mentor?.google_calendar_connected,
+        hasCalendarId: !!mentor?.google_calendar_id,
+      })
     }
 
     // Update session status in database
@@ -90,9 +108,11 @@ export async function POST(request: NextRequest) {
       .eq('id', sessionId)
 
     if (updateError) {
+      console.error('Error updating session status:', updateError)
       return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
 
+    console.log('✅ Session cancelled successfully:', sessionId)
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('Error cancelling session:', error)

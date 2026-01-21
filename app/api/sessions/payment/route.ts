@@ -261,9 +261,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Create Google Calendar event with Meet link (if mentor has connected calendar)
-    const calendarEvent = await createGoogleCalendarEvent(session)
-    const meetingLink = calendarEvent?.meetLink || null
-    const googleEventId = calendarEvent?.eventId
+    let meetingLink: string | null = null
+    let googleEventId: string | undefined = undefined
+    
+    try {
+      const calendarEvent = await createGoogleCalendarEvent(session)
+      meetingLink = calendarEvent?.meetLink || null
+      googleEventId = calendarEvent?.eventId
+      
+      if (meetingLink) {
+        logger.info('Google Meet link generated', { sessionId, meetingLink, googleEventId })
+      } else {
+        logger.warn('No meeting link generated - mentor may not have Google Calendar connected', { sessionId, mentorId: session.mentor_id })
+      }
+    } catch (calendarError: any) {
+      logger.error('Failed to create Google Calendar event', calendarError, { sessionId })
+      // Continue without calendar event - don't fail the booking
+    }
 
     // If using credit, skip payment processing
     if (useCredit) {
@@ -276,8 +290,15 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', sessionId)
       
-      // Send confirmation emails
-      await sendConfirmationEmails(session, request.nextUrl.origin)
+      // Reload session to get updated meeting_link before sending emails
+      const { data: updatedSession } = await supabase
+        .from('booked_sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .single()
+      
+      // Send confirmation emails with updated session data (includes meeting_link)
+      await sendConfirmationEmails(updatedSession || session, request.nextUrl.origin)
       
       return NextResponse.json({
         success: true,
@@ -301,8 +322,15 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', sessionId)
 
-      // Send confirmation emails
-      await sendConfirmationEmails(session, request.nextUrl.origin)
+      // Reload session to get updated meeting_link before sending emails
+      const { data: updatedSession } = await supabase
+        .from('booked_sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .single()
+      
+      // Send confirmation emails with updated session data (includes meeting_link)
+      await sendConfirmationEmails(updatedSession || session, request.nextUrl.origin)
 
       return NextResponse.json({
         success: true,
