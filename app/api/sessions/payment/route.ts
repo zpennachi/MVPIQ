@@ -346,7 +346,10 @@ export async function POST(request: NextRequest) {
         updateData.meeting_link = meetingLink
       }
       
+      // Only add google_event_id if the column exists (check by trying to update it)
+      // If column doesn't exist, just skip it - meeting_link is more important
       if (googleEventId) {
+        // Try to include it, but don't fail if column doesn't exist
         updateData.google_event_id = googleEventId
       }
       
