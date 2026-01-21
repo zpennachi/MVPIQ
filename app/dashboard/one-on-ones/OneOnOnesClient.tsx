@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { BookSession } from '@/components/calendar/BookSession'
 import { MyAppointments } from '@/components/calendar/MyAppointments'
 import { MentorAvailability } from '@/components/calendar/MentorAvailability'
@@ -11,10 +12,29 @@ interface OneOnOnesClientProps {
 }
 
 export function OneOnOnesClient({ userId, userRole }: OneOnOnesClientProps) {
+  const searchParams = useSearchParams()
   const [refreshKey, setRefreshKey] = useState(0)
-  const [activeTab, setActiveTab] = useState<'book' | 'appointments' | 'availability' | 'upcoming'>(
-    userRole === 'mentor' ? 'availability' : 'book'
-  )
+  
+  // Get active tab from URL params, default based on role
+  const getInitialTab = () => {
+    const tab = searchParams?.get('tab')
+    if (userRole === 'mentor') {
+      return tab === 'upcoming' ? 'upcoming' : 'availability'
+    }
+    return tab === 'appointments' ? 'appointments' : 'book'
+  }
+  
+  const [activeTab, setActiveTab] = useState<'book' | 'appointments' | 'availability' | 'upcoming'>(getInitialTab())
+
+  // Update tab when URL params change
+  useEffect(() => {
+    const tab = searchParams?.get('tab')
+    if (userRole === 'mentor') {
+      setActiveTab(tab === 'upcoming' ? 'upcoming' : 'availability')
+    } else {
+      setActiveTab(tab === 'appointments' ? 'appointments' : 'book')
+    }
+  }, [searchParams, userRole])
 
   const handleBookingSuccess = () => {
     // Trigger refresh of appointments
@@ -30,10 +50,13 @@ export function OneOnOnesClient({ userId, userRole }: OneOnOnesClientProps) {
   if (userRole === 'mentor') {
     return (
       <div className="space-y-6">
-        {/* Tabs */}
-        <div className="flex gap-2 border-b border-[#272727]">
+        {/* Tabs - Mobile only */}
+        <div className="flex lg:hidden gap-2 border-b border-[#272727]">
           <button
-            onClick={() => setActiveTab('availability')}
+            onClick={() => {
+              setActiveTab('availability')
+              window.history.pushState({}, '', '/dashboard/one-on-ones?tab=availability')
+            }}
             className={`px-4 py-2 font-medium transition ${
               activeTab === 'availability'
                 ? 'text-[#ffc700] border-b-2 border-[#ffc700]'
@@ -43,7 +66,10 @@ export function OneOnOnesClient({ userId, userRole }: OneOnOnesClientProps) {
             Availability
           </button>
           <button
-            onClick={() => setActiveTab('upcoming')}
+            onClick={() => {
+              setActiveTab('upcoming')
+              window.history.pushState({}, '', '/dashboard/one-on-ones?tab=upcoming')
+            }}
             className={`px-4 py-2 font-medium transition ${
               activeTab === 'upcoming'
                 ? 'text-[#ffc700] border-b-2 border-[#ffc700]'
@@ -73,10 +99,13 @@ export function OneOnOnesClient({ userId, userRole }: OneOnOnesClientProps) {
   // Players and coaches
   return (
     <div className="space-y-6">
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-[#272727]">
+      {/* Tabs - Mobile only */}
+      <div className="flex lg:hidden gap-2 border-b border-[#272727]">
         <button
-          onClick={() => setActiveTab('book')}
+          onClick={() => {
+            setActiveTab('book')
+            window.history.pushState({}, '', '/dashboard/one-on-ones?tab=book')
+          }}
           className={`px-4 py-2 font-medium transition ${
             activeTab === 'book'
               ? 'text-[#ffc700] border-b-2 border-[#ffc700]'
@@ -86,7 +115,10 @@ export function OneOnOnesClient({ userId, userRole }: OneOnOnesClientProps) {
           Book an Appointment
         </button>
         <button
-          onClick={() => setActiveTab('appointments')}
+          onClick={() => {
+            setActiveTab('appointments')
+            window.history.pushState({}, '', '/dashboard/one-on-ones?tab=appointments')
+          }}
           className={`px-4 py-2 font-medium transition ${
             activeTab === 'appointments'
               ? 'text-[#ffc700] border-b-2 border-[#ffc700]'

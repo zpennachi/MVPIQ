@@ -18,6 +18,8 @@ export function Sidebar() {
   const [hasPaid, setHasPaid] = useState(false)
   const [newFeedbackCount, setNewFeedbackCount] = useState(0)
   const [newSessionsCount, setNewSessionsCount] = useState(0)
+  const [upcomingAppointmentsCount, setUpcomingAppointmentsCount] = useState(0)
+  const [oneOnOnesExpanded, setOneOnOnesExpanded] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -52,6 +54,16 @@ export function Sidebar() {
           // Load notification counts for mentors
           if (data.role === 'mentor') {
             loadNotificationCounts(user.id)
+          }
+
+          // Load upcoming appointments count for all users
+          if (data.role === 'player' || data.role === 'coach') {
+            loadUpcomingAppointmentsCount(user.id)
+          }
+
+          // Auto-expand One-on-Ones submenu if on that page
+          if (pathname?.startsWith('/dashboard/one-on-ones')) {
+            setOneOnOnesExpanded(true)
           }
         }
       }
@@ -173,6 +185,33 @@ export function Sidebar() {
     }
   }
 
+  const loadUpcomingAppointmentsCount = async (userId: string) => {
+    try {
+      const { count } = await supabase
+        .from('booked_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .in('status', ['pending', 'confirmed'])
+        .gte('start_time', new Date().toISOString())
+
+      setUpcomingAppointmentsCount(count || 0)
+    } catch (error) {
+      console.error('Error loading upcoming appointments count:', error)
+    }
+  }
+
+  // Reload upcoming appointments count when navigating
+  useEffect(() => {
+    if ((profile?.role === 'player' || profile?.role === 'coach') && user) {
+      loadUpcomingAppointmentsCount(user.id)
+      const interval = setInterval(() => {
+        loadUpcomingAppointmentsCount(user.id)
+      }, 30000) // Every 30 seconds
+      return () => clearInterval(interval)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, profile?.role, user])
+
   // Close mobile menu when route changes
   useEffect(() => {
     setIsMobileMenuOpen(false)
@@ -210,9 +249,63 @@ export function Sidebar() {
         {/* Player Navigation */}
         {profile.role === 'player' && (
           <>
+            {/* One-on-Ones with submenu on desktop */}
+            <div className="hidden lg:block">
+              <button
+                onClick={() => setOneOnOnesExpanded(!oneOnOnesExpanded)}
+                className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
+                  isActive('/dashboard/one-on-ones')
+                    ? 'bg-[#ffc700] text-black'
+                    : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Calendar className="w-5 h-5" />
+                  <span className="font-medium">One-on-Ones</span>
+                </div>
+                <svg
+                  className={`w-4 h-4 transition-transform ${oneOnOnesExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {oneOnOnesExpanded && (
+                <div className="ml-8 mt-1 space-y-1">
+                  <Link
+                    href="/dashboard/one-on-ones?tab=book"
+                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${
+                      pathname === '/dashboard/one-on-ones' && !pathname.includes('tab=appointments')
+                        ? 'bg-[#272727] text-[#ffc700]'
+                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                    }`}
+                  >
+                    <span>Book an Appointment</span>
+                  </Link>
+                  <Link
+                    href="/dashboard/one-on-ones?tab=appointments"
+                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm relative ${
+                      pathname === '/dashboard/one-on-ones' && pathname.includes('tab=appointments')
+                        ? 'bg-[#272727] text-[#ffc700]'
+                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                    }`}
+                  >
+                    <span>My Appointments</span>
+                    {upcomingAppointmentsCount > 0 && (
+                      <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                        {upcomingAppointmentsCount > 9 ? '9+' : upcomingAppointmentsCount}
+                      </span>
+                    )}
+                  </Link>
+                </div>
+              )}
+            </div>
+            {/* Mobile: Simple link */}
             <Link
               href="/dashboard/one-on-ones"
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
+              className={`lg:hidden flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 relative ${
                 isActive('/dashboard/one-on-ones')
                   ? 'bg-[#ffc700] text-black'
                   : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
@@ -220,6 +313,11 @@ export function Sidebar() {
             >
               <Calendar className="w-5 h-5" />
               <span className="font-medium">One-on-Ones</span>
+              {upcomingAppointmentsCount > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {upcomingAppointmentsCount > 9 ? '9+' : upcomingAppointmentsCount}
+                </span>
+              )}
             </Link>
             <Link
               href="/dashboard/feedback"
@@ -254,9 +352,63 @@ export function Sidebar() {
                 </span>
               )}
             </Link>
+            {/* One-on-Ones with submenu on desktop */}
+            <div className="hidden lg:block">
+              <button
+                onClick={() => setOneOnOnesExpanded(!oneOnOnesExpanded)}
+                className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
+                  isActive('/dashboard/one-on-ones')
+                    ? 'bg-[#ffc700] text-black'
+                    : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-3 relative">
+                  <Calendar className="w-5 h-5" />
+                  <span className="font-medium">One-on-Ones</span>
+                  {newSessionsCount > 0 && (
+                    <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                      {newSessionsCount > 9 ? '9+' : newSessionsCount}
+                    </span>
+                  )}
+                </div>
+                <svg
+                  className={`w-4 h-4 transition-transform ${oneOnOnesExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {oneOnOnesExpanded && (
+                <div className="ml-8 mt-1 space-y-1">
+                  <Link
+                    href="/dashboard/one-on-ones?tab=availability"
+                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${
+                      pathname === '/dashboard/one-on-ones' && !pathname.includes('tab=upcoming')
+                        ? 'bg-[#272727] text-[#ffc700]'
+                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                    }`}
+                  >
+                    <span>Availability</span>
+                  </Link>
+                  <Link
+                    href="/dashboard/one-on-ones?tab=upcoming"
+                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${
+                      pathname === '/dashboard/one-on-ones' && pathname.includes('tab=upcoming')
+                        ? 'bg-[#272727] text-[#ffc700]'
+                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                    }`}
+                  >
+                    <span>Upcoming Appointments</span>
+                  </Link>
+                </div>
+              )}
+            </div>
+            {/* Mobile: Simple link */}
             <Link
               href="/dashboard/one-on-ones"
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 relative ${
+              className={`lg:hidden flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 relative ${
                 isActive('/dashboard/one-on-ones')
                   ? 'bg-[#ffc700] text-black'
                   : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
@@ -273,30 +425,78 @@ export function Sidebar() {
           </>
         )}
 
-        {/* Coach Navigation - Keep existing */}
+        {/* Coach Navigation */}
         {profile.role === 'coach' && (
           <>
+            {/* One-on-Ones with submenu on desktop */}
+            <div className="hidden lg:block">
+              <button
+                onClick={() => setOneOnOnesExpanded(!oneOnOnesExpanded)}
+                className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
+                  isActive('/dashboard/one-on-ones')
+                    ? 'bg-[#ffc700] text-black'
+                    : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Calendar className="w-5 h-5" />
+                  <span className="font-medium">One-on-Ones</span>
+                </div>
+                <svg
+                  className={`w-4 h-4 transition-transform ${oneOnOnesExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {oneOnOnesExpanded && (
+                <div className="ml-8 mt-1 space-y-1">
+                  <Link
+                    href="/dashboard/one-on-ones?tab=book"
+                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${
+                      pathname === '/dashboard/one-on-ones' && !pathname.includes('tab=appointments')
+                        ? 'bg-[#272727] text-[#ffc700]'
+                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                    }`}
+                  >
+                    <span>Book an Appointment</span>
+                  </Link>
+                  <Link
+                    href="/dashboard/one-on-ones?tab=appointments"
+                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm relative ${
+                      pathname === '/dashboard/one-on-ones' && pathname.includes('tab=appointments')
+                        ? 'bg-[#272727] text-[#ffc700]'
+                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                    }`}
+                  >
+                    <span>My Appointments</span>
+                    {upcomingAppointmentsCount > 0 && (
+                      <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                        {upcomingAppointmentsCount > 9 ? '9+' : upcomingAppointmentsCount}
+                      </span>
+                    )}
+                  </Link>
+                </div>
+              )}
+            </div>
+            {/* Mobile: Simple link */}
             <Link
-              href="/dashboard/calendar"
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
-                isActive('/dashboard/calendar')
+              href="/dashboard/one-on-ones"
+              className={`lg:hidden flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 relative ${
+                isActive('/dashboard/one-on-ones')
                   ? 'bg-[#ffc700] text-black'
                   : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
               }`}
             >
               <Calendar className="w-5 h-5" />
-              <span className="font-medium">Book Session</span>
-            </Link>
-            <Link
-              href="/dashboard/appointments"
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
-                isActive('/dashboard/appointments')
-                  ? 'bg-[#ffc700] text-black'
-                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
-              }`}
-            >
-              <Calendar className="w-5 h-5" />
-              <span className="font-medium">My Appointments</span>
+              <span className="font-medium">One-on-Ones</span>
+              {upcomingAppointmentsCount > 0 && (
+                <span className="absolute right-2 top-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {upcomingAppointmentsCount > 9 ? '9+' : upcomingAppointmentsCount}
+                </span>
+              )}
             </Link>
           </>
         )}
