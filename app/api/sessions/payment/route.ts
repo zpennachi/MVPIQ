@@ -72,7 +72,7 @@ async function createGoogleCalendarEvent(session: any): Promise<{ meetLink: stri
       endTime: session.end_time,
     })
 
-    // Create calendar event using OAuth
+    // Create calendar event using mentor's OAuth tokens
     const { eventId, meetLink } = await createCalendarEvent({
       summary: `1-on-1 Session: ${user.full_name || 'Student'} with ${mentor.full_name || 'Mentor'}`,
       description: `Scheduled mentoring session via MVP-IQ`,
@@ -82,6 +82,7 @@ async function createGoogleCalendarEvent(session: any): Promise<{ meetLink: stri
       userEmail: user.email || '',
       mentorName: mentor.full_name || 'Mentor',
       userName: user.full_name || 'Student',
+      mentorId: session.mentor_id, // Use mentor's OAuth tokens
     })
 
     logger.info('✅ Google Calendar event created successfully', { 

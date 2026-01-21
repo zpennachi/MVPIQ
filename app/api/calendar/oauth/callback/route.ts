@@ -35,15 +35,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/dashboard/settings?calendar_error=unauthorized', request.url))
     }
 
-    // Check if user is admin
+    // Check if user is mentor or admin (both can connect calendar)
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single()
 
-    if (profile?.role !== 'admin') {
-      return NextResponse.redirect(new URL('/dashboard/settings?calendar_error=not_admin', request.url))
+    if (!profile || (profile.role !== 'mentor' && profile.role !== 'admin')) {
+      return NextResponse.redirect(new URL('/dashboard/settings?calendar_error=not_authorized', request.url))
     }
 
     // Get redirect URI
@@ -75,9 +75,7 @@ export async function GET(request: NextRequest) {
       ? new Date(tokens.expiry_date).toISOString()
       : new Date(Date.now() + 3600 * 1000).toISOString()
 
-    // Store tokens in database (update the calendar owner's profile)
-    // We'll store it on a special admin profile or create a system account
-    // For now, let's find the admin user and store it there
+    // Store tokens in database (update the user's profile - mentor or admin)
     const { error: updateError } = await supabase
       .from('profiles')
       .update({
@@ -88,7 +86,6 @@ export async function GET(request: NextRequest) {
         google_calendar_token_expires_at: expiresAt,
       })
       .eq('id', user.id)
-      .eq('role', 'admin')
 
     if (updateError) {
       logger.error('Failed to store OAuth tokens', updateError)

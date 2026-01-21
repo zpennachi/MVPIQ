@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
         userEmail: userProfile.email || '',
         mentorName: mentor.full_name || 'Mentor',
         userName: userProfile.full_name || 'Student',
+        mentorId: session.mentor_id, // Use mentor's OAuth tokens
       })
 
       meetingLink = meetLink

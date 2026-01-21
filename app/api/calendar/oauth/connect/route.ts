@@ -25,16 +25,16 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Check if user is admin
+    // Check if user is mentor or admin (both can connect calendar)
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single()
 
-    if (profile?.role !== 'admin') {
+    if (!profile || (profile.role !== 'mentor' && profile.role !== 'admin')) {
       return NextResponse.json(
-        { error: 'Only admins can connect calendar' },
+        { error: 'Only mentors and admins can connect calendar' },
         { status: 403 }
       )
     }

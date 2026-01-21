@@ -402,8 +402,8 @@ export default function SettingsPage() {
             </p>
           </div>
 
-          {/* Google Calendar Connection (for admins) */}
-          {profile?.role === 'admin' && (
+          {/* Google Calendar Connection (for mentors and admins) */}
+          {(profile?.role === 'mentor' || profile?.role === 'admin') && (
             <div className="border-t border-[#272727] pt-6 mt-6">
               <label className="block text-sm font-medium text-[#d9d9d9] mb-3">
                 <div className="flex items-center gap-2">
@@ -412,8 +412,9 @@ export default function SettingsPage() {
                 </div>
               </label>
               <p className="text-sm text-[#d9d9d9]/70 mb-4">
-                Connect your Google Calendar to enable Google Meet link generation for all sessions. 
-                This allows the system to automatically create Meet links when users book appointments.
+                {profile?.role === 'mentor' 
+                  ? 'Connect your Google Calendar to enable Google Meet link generation for your sessions. When users book appointments with you, Meet links will be automatically created in your calendar.'
+                  : 'Connect your Google Calendar to enable Google Meet link generation for all sessions. This allows the system to automatically create Meet links when users book appointments.'}
               </p>
               {calendarConnected ? (
                 <div className="flex items-center gap-3 p-4 bg-green-900/20 border border-green-800 rounded-md">

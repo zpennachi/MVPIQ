@@ -19,6 +19,7 @@ export interface CalendarEventData {
   userEmail: string
   mentorName: string
   userName: string
+  mentorId?: string // Optional: if provided, use this mentor's OAuth tokens
 }
 
 export interface CalendarEventResult {
@@ -27,17 +28,163 @@ export interface CalendarEventResult {
 }
 
 /**
- * Get OAuth client for calendar owner (if connected)
+ * Get OAuth client for a specific user (mentor or admin)
  * Returns null if no OAuth tokens are available
  */
-async function getOAuthClient(): Promise<{ client: any; calendarId: string } | null> {
+async function getOAuthClient(userId?: string): Promise<{ client: any; calendarId: string } | null> {
   try {
     const supabase = await createClient()
     
-    // Find admin user with OAuth tokens (check all admins, not just connected=true)
+    let profileQuery = supabase
+      .from('profiles')
+      .select('id, email, google_calendar_connected, google_calendar_id, google_calendar_access_token, google_calendar_refresh_token, google_calendar_token_expires_at')
+    
+    // If userId provided, get that specific user's tokens (for mentors)
+    if (userId) {
+      const { data: profile, error: profileError } = await profileQuery
+        .eq('id', userId)
+        .single()
+      
+      if (profileError || !profile) {
+        logger.warn('User profile not found for OAuth', { 
+          userId,
+          error: profileError?.message || 'Profile not found',
+        })
+        return null
+      }
+      
+      if (!profile.google_calendar_access_token || !profile.google_calendar_refresh_token) {
+        logger.warn('OAuth tokens missing for user', {
+          userId,
+          email: profile.email,
+          hasAccessToken: !!profile.google_calendar_access_token,
+          hasRefreshToken: !!profile.google_calendar_refresh_token,
+        })
+        return null
+      }
+      
+      // Use this user's tokens
+      const userProfile = profile
+      
+      // Check if token is expired and refresh if needed
+      let accessToken = userProfile.google_calendar_access_token
+      const expiresAt = userProfile.google_calendar_token_expires_at
+      const now = new Date()
+      
+      // Only refresh if token is actually expired (with 5 minute buffer)
+      const expirationBuffer = 5 * 60 * 1000 // 5 minutes
+      const isExpired = expiresAt && new Date(expiresAt).getTime() <= (now.getTime() + expirationBuffer)
+      
+      if (isExpired) {
+        // Token expired, refresh it
+        logger.info('OAuth token expired, refreshing...', {
+          expiresAt,
+          now: now.toISOString(),
+          userId: userProfile.id,
+        })
+        
+        if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+          logger.warn('Cannot refresh OAuth token - GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET not set')
+          logger.warn('Will attempt to use expired token - Google API may refresh automatically')
+        } else {
+          try {
+            const oauth2Client = new google.auth.OAuth2(
+              env.GOOGLE_CLIENT_ID,
+              env.GOOGLE_CLIENT_SECRET,
+              '' // Redirect URI not needed for refresh
+            )
+
+            oauth2Client.setCredentials({
+              refresh_token: userProfile.google_calendar_refresh_token,
+            })
+
+            const { credentials } = await oauth2Client.refreshAccessToken()
+            
+            if (!credentials.access_token) {
+              logger.error('Failed to refresh OAuth token - no access_token in response', {
+                hasRefreshToken: !!credentials.refresh_token,
+                hasIdToken: !!credentials.id_token,
+              })
+              logger.warn('Will attempt to use existing token - Google API may refresh automatically')
+            } else {
+              accessToken = credentials.access_token
+
+              // Update token in database
+              const newExpiresAt = credentials.expiry_date 
+                ? new Date(credentials.expiry_date).toISOString()
+                : new Date(Date.now() + 3600 * 1000).toISOString()
+
+              const updateData: any = {
+                google_calendar_access_token: accessToken,
+                google_calendar_token_expires_at: newExpiresAt,
+              }
+              
+              if (credentials.refresh_token && credentials.refresh_token !== userProfile.google_calendar_refresh_token) {
+                logger.info('Google provided new refresh token, updating it', {
+                  userId: userProfile.id,
+                })
+                updateData.google_calendar_refresh_token = credentials.refresh_token
+              }
+              
+              const { error: updateError } = await supabase
+                .from('profiles')
+                .update(updateData)
+                .eq('id', userProfile.id)
+
+              if (updateError) {
+                logger.error('❌ Failed to update OAuth token in database', updateError, {
+                  userId: userProfile.id,
+                })
+              } else {
+                logger.info('✅ OAuth token refreshed and saved successfully', {
+                  userId: userProfile.id,
+                  newExpiresAt,
+                })
+              }
+            }
+          } catch (refreshError: any) {
+            logger.error('Exception during OAuth token refresh', refreshError, {
+              userId: userProfile.id,
+              errorMessage: refreshError?.message,
+              errorCode: refreshError?.code,
+            })
+            logger.warn('Will attempt to use existing token despite refresh error - Google API may refresh automatically')
+          }
+        }
+      } else {
+        logger.info('OAuth token is still valid', {
+          expiresAt,
+          now: now.toISOString(),
+          timeUntilExpiry: expiresAt ? `${Math.round((new Date(expiresAt).getTime() - now.getTime()) / 1000 / 60)} minutes` : 'unknown',
+        })
+      }
+
+      // Create OAuth client
+      if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+        return null
+      }
+
+      const oauth2Client = new google.auth.OAuth2(
+        env.GOOGLE_CLIENT_ID,
+        env.GOOGLE_CLIENT_SECRET,
+        ''
+      )
+
+      oauth2Client.setCredentials({
+        access_token: accessToken,
+        refresh_token: userProfile.google_calendar_refresh_token,
+      })
+
+      const calendar = google.calendar({ version: 'v3', auth: oauth2Client })
+      const calendarId = userProfile.google_calendar_id || 'primary'
+
+      return { client: calendar, calendarId }
+    }
+    
+    // Fallback: Find admin user with OAuth tokens (for backward compatibility)
     const { data: adminProfiles, error: profileError } = await supabase
       .from('profiles')
-      .select('id, google_calendar_connected, google_calendar_id, google_calendar_access_token, google_calendar_refresh_token, google_calendar_token_expires_at')
+      .select('id, email, google_calendar_connected, google_calendar_id, google_calendar_access_token, google_calendar_refresh_token, google_calendar_token_expires_at')
       .eq('role', 'admin')
     
     if (profileError) {
@@ -48,7 +195,6 @@ async function getOAuthClient(): Promise<{ client: any; calendarId: string } | n
       return null
     }
 
-    // Find the first admin with tokens (prioritize connected=true, but also check if tokens exist)
     const adminProfile = adminProfiles?.find(p => 
       p.google_calendar_access_token && 
       p.google_calendar_refresh_token
@@ -223,13 +369,16 @@ export async function createCalendarEvent(
     },
   }
 
-  // OAuth is required - no fallback to service account
-  const oauthClient = await getOAuthClient()
+  // Use mentor's OAuth tokens if mentorId provided, otherwise fallback to admin
+  const oauthClient = await getOAuthClient(eventData.mentorId)
   
   if (!oauthClient) {
-    const errorMessage = 'OAuth is not configured. Please connect Google Calendar in settings as an admin user.'
+    const errorMessage = eventData.mentorId 
+      ? `Mentor has not connected their Google Calendar. Please ask the mentor to connect their calendar in settings.`
+      : 'OAuth is not configured. Please connect Google Calendar in settings.'
     logger.error('❌ OAuth client not available', undefined, {
       hint: errorMessage,
+      mentorId: eventData.mentorId,
       requiredEnvVars: {
         GOOGLE_CLIENT_ID: !!env.GOOGLE_CLIENT_ID,
         GOOGLE_CLIENT_SECRET: !!env.GOOGLE_CLIENT_SECRET,
@@ -431,12 +580,15 @@ async function createEventWithMeetLink(
 /**
  * Delete a Google Calendar event
  */
-export async function deleteCalendarEvent(eventId: string): Promise<void> {
-  const oauthClient = await getOAuthClient()
+export async function deleteCalendarEvent(eventId: string, mentorId?: string): Promise<void> {
+  // Use mentor's OAuth tokens if mentorId provided, otherwise fallback to admin
+  const oauthClient = await getOAuthClient(mentorId)
   
   if (!oauthClient) {
-    const errorMessage = 'OAuth is not configured. Cannot delete calendar event.'
-    logger.error('❌ OAuth client not available for deletion', undefined, { eventId })
+    const errorMessage = mentorId 
+      ? `Mentor has not connected their Google Calendar. Cannot delete event.`
+      : 'OAuth is not configured. Cannot delete calendar event.'
+    logger.error('❌ OAuth client not available for deletion', undefined, { eventId, mentorId })
     throw new Error(errorMessage)
   }
 
