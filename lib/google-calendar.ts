@@ -84,22 +84,46 @@ export async function createCalendarEvent(
       },
     }
 
-    // Create event with Google Meet - try the simplest possible format
-    const response = await calendar.events.insert({
-      calendarId,
-      conferenceDataVersion: 1,
-      requestBody: {
-        ...event,
-        conferenceData: {
-          createRequest: {
-            requestId: `mvpiq-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-            conferenceSolutionKey: {
-              type: 'hangoutsMeet',
+    // Create event with Google Meet
+    // Try without conferenceDataVersion first, then with it if needed
+    let response
+    try {
+      response = await calendar.events.insert({
+        calendarId,
+        requestBody: {
+          ...event,
+          conferenceData: {
+            createRequest: {
+              requestId: `mvpiq-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+              conferenceSolutionKey: {
+                type: 'hangoutsMeet',
+              },
             },
           },
         },
-      },
-    })
+      })
+    } catch (error: any) {
+      // If that fails, try with conferenceDataVersion
+      if (error.message?.includes('conference') || error.code === 400) {
+        response = await calendar.events.insert({
+          calendarId,
+          conferenceDataVersion: 1,
+          requestBody: {
+            ...event,
+            conferenceData: {
+              createRequest: {
+                requestId: `mvpiq-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+                conferenceSolutionKey: {
+                  type: 'hangoutsMeet',
+                },
+              },
+            },
+          },
+        })
+      } else {
+        throw error
+      }
+    }
 
     // Extract Meet link from response
     const meetLink =
