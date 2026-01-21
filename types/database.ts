@@ -7,6 +7,10 @@ export interface Profile {
   phone_number: string | null
   profile_photo_url: string | null
   role: UserRole
+  google_calendar_id: string | null
+  google_calendar_access_token: string | null
+  google_calendar_refresh_token: string | null
+  google_calendar_connected: boolean | null
   created_at: string
   updated_at: string
 }
@@ -91,9 +95,10 @@ export interface AvailabilitySlot {
 
 export interface BookedSession {
   id: string
-  availability_slot_id: string
+  availability_slot_id: string | null // Can be null if using Google Calendar
   mentor_id: string
   user_id: string
+  google_event_id: string | null // Reference to Google Calendar event
   start_time: string
   end_time: string
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'refunded'

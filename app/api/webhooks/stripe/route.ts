@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
           // First, get the session to verify it exists and get user/mentor IDs
           const { data: existingSession } = await supabase
             .from('booked_sessions')
-            .select('user_id, mentor_id, start_time')
+            .select('user_id, mentor_id, start_time, end_time')
             .eq('id', sessionId)
             .single()
 
@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
             break
           }
 
-          // Generate meeting link
+          // Generate meeting link using lightweight solution
           const meetingLink = generateMeetingLink(sessionId)
           
           // Update session status
@@ -252,6 +252,13 @@ export async function POST(request: NextRequest) {
             mentorId: existingSession.mentor_id,
           })
 
+          // Get the updated session to include meeting link
+          const { data: updatedSession } = await supabase
+            .from('booked_sessions')
+            .select('meeting_link')
+            .eq('id', sessionId)
+            .single()
+
           // Send emails using centralized utility
           const emailResults = await sendEmails([
             ...(userEmail
@@ -259,11 +266,12 @@ export async function POST(request: NextRequest) {
                   {
                     type: 'session_confirmation' as const,
                     recipient: userEmail,
-                    data: {
-                      sessionId,
-                      mentorName,
-                      startTime: existingSession.start_time,
-                    },
+                      data: {
+                        sessionId,
+                        mentorName,
+                        startTime: existingSession.start_time,
+                        meetingLink: meetingLink,
+                      },
                   },
                 ]
               : []),
@@ -272,11 +280,12 @@ export async function POST(request: NextRequest) {
                   {
                     type: 'session_booking_notification' as const,
                     recipient: mentorEmail,
-                    data: {
-                      sessionId,
-                      userName,
-                      startTime: existingSession.start_time,
-                    },
+                      data: {
+                        sessionId,
+                        userName,
+                        startTime: existingSession.start_time,
+                        meetingLink: meetingLink,
+                      },
                   },
                 ]
               : []),

@@ -9,13 +9,17 @@ import Link from 'next/link'
 
 interface MyAppointmentsProps {
   userId: string
+  userRole?: 'player' | 'coach' | 'mentor' | 'admin'
 }
 
-export function MyAppointments({ userId }: MyAppointmentsProps) {
-  const [appointments, setAppointments] = useState<(BookedSession & { mentor?: Profile })[]>([])
+export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
+  const [appointments, setAppointments] = useState<(BookedSession & { mentor?: Profile; user?: Profile })[]>([])
   const [currentWeek, setCurrentWeek] = useState(new Date())
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
+  
+  // Determine if this is a mentor view
+  const isMentorView = userRole === 'mentor'
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 })
   const weekDays = eachDayOfInterval({
@@ -25,23 +29,33 @@ export function MyAppointments({ userId }: MyAppointmentsProps) {
 
   useEffect(() => {
     loadAppointments()
-  }, [userId, currentWeek])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, currentWeek, isMentorView])
 
   const loadAppointments = async () => {
     setLoading(true)
     const weekEnd = addDays(weekStart, 7)
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('booked_sessions')
       .select(`
         *,
-        mentor:profiles!booked_sessions_mentor_id_fkey(id, full_name, email, profile_photo_url)
+        mentor:profiles!booked_sessions_mentor_id_fkey(id, full_name, email, profile_photo_url),
+        user:profiles!booked_sessions_user_id_fkey(id, full_name, email, profile_photo_url)
       `)
-      .eq('user_id', userId)
       .in('status', ['pending', 'confirmed'])
       .gte('start_time', weekStart.toISOString())
       .lt('start_time', weekEnd.toISOString())
       .order('start_time', { ascending: true })
+
+    // If mentor view, filter by mentor_id; otherwise filter by user_id
+    if (isMentorView) {
+      query = query.eq('mentor_id', userId)
+    } else {
+      query = query.eq('user_id', userId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       console.error('Error loading appointments:', error)
@@ -134,16 +148,16 @@ export function MyAppointments({ userId }: MyAppointmentsProps) {
                       className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded p-1 text-xs"
                     >
                       <div className="flex items-center gap-1.5 mb-1">
-                        {apt.mentor?.profile_photo_url ? (
+                        {(isMentorView ? apt.user : apt.mentor)?.profile_photo_url ? (
                           <img
-                            src={apt.mentor.profile_photo_url}
-                            alt={apt.mentor?.full_name || 'Mentor'}
+                            src={(isMentorView ? apt.user : apt.mentor)?.profile_photo_url || ''}
+                            alt={(isMentorView ? apt.user : apt.mentor)?.full_name || (isMentorView ? 'Client' : 'Mentor')}
                             className="w-5 h-5 rounded-full object-cover flex-shrink-0 border border-yellow-400"
                           />
                         ) : (
                           <div className="w-5 h-5 bg-yellow-500/20 rounded-full flex items-center justify-center flex-shrink-0 border border-yellow-400">
                             <span className="text-[10px] font-bold text-yellow-800 dark:text-yellow-300">
-                              {getInitials(apt.mentor?.full_name || null)}
+                              {getInitials((isMentorView ? apt.user : apt.mentor)?.full_name || null)}
                             </span>
                           </div>
                         )}
@@ -152,7 +166,7 @@ export function MyAppointments({ userId }: MyAppointmentsProps) {
                         </div>
                       </div>
                       <div className="text-yellow-600 dark:text-yellow-400 text-xs truncate">
-                        {apt.mentor?.full_name || 'Mentor'}
+                        {isMentorView ? (apt.user?.full_name || apt.user?.email || 'Client') : (apt.mentor?.full_name || 'Mentor')}
                       </div>
                       {apt.meeting_link && (
                         <a
@@ -200,16 +214,16 @@ export function MyAppointments({ userId }: MyAppointmentsProps) {
                         className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded p-1.5 text-xs"
                       >
                         <div className="flex items-center gap-1.5 mb-1">
-                          {apt.mentor?.profile_photo_url ? (
+                          {(isMentorView ? apt.user : apt.mentor)?.profile_photo_url ? (
                             <img
-                              src={apt.mentor.profile_photo_url}
-                              alt={apt.mentor?.full_name || 'Mentor'}
+                              src={(isMentorView ? apt.user : apt.mentor)?.profile_photo_url || ''}
+                              alt={(isMentorView ? apt.user : apt.mentor)?.full_name || (isMentorView ? 'Client' : 'Mentor')}
                               className="w-5 h-5 rounded-full object-cover flex-shrink-0 border border-yellow-400"
                             />
                           ) : (
                             <div className="w-5 h-5 bg-yellow-500/20 rounded-full flex items-center justify-center flex-shrink-0 border border-yellow-400">
                               <span className="text-[10px] font-bold text-yellow-800 dark:text-yellow-300">
-                                {getInitials(apt.mentor?.full_name || null)}
+                                {getInitials((isMentorView ? apt.user : apt.mentor)?.full_name || null)}
                               </span>
                             </div>
                           )}
@@ -218,7 +232,7 @@ export function MyAppointments({ userId }: MyAppointmentsProps) {
                           </div>
                         </div>
                         <div className="text-yellow-600 dark:text-yellow-400 text-xs truncate">
-                          {apt.mentor?.full_name || 'Mentor'}
+                          {isMentorView ? (apt.user?.full_name || apt.user?.email || 'Client') : (apt.mentor?.full_name || 'Mentor')}
                         </div>
                         {apt.meeting_link && (
                           <a
@@ -265,21 +279,21 @@ export function MyAppointments({ userId }: MyAppointmentsProps) {
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
-                      <strong>Mentor:</strong>
-                      {apt.mentor?.profile_photo_url ? (
+                      <strong>{isMentorView ? 'Client:' : 'Mentor:'}</strong>
+                      {(isMentorView ? apt.user : apt.mentor)?.profile_photo_url ? (
                         <img
-                          src={apt.mentor.profile_photo_url}
-                          alt={apt.mentor?.full_name || 'Mentor'}
+                          src={(isMentorView ? apt.user : apt.mentor)?.profile_photo_url || ''}
+                          alt={(isMentorView ? apt.user : apt.mentor)?.full_name || (isMentorView ? 'Client' : 'Mentor')}
                           className="w-6 h-6 rounded-full object-cover border border-gray-300 dark:border-gray-600"
                         />
                       ) : (
                         <div className="w-6 h-6 bg-yellow-500/20 rounded-full flex items-center justify-center border border-gray-300 dark:border-gray-600">
                           <span className="text-xs font-bold text-yellow-600 dark:text-yellow-400">
-                            {getInitials(apt.mentor?.full_name || null)}
+                            {getInitials((isMentorView ? apt.user : apt.mentor)?.full_name || null)}
                           </span>
                         </div>
                       )}
-                      <span>{apt.mentor?.full_name || apt.mentor?.email || 'Mentor'}</span>
+                      <span>{(isMentorView ? apt.user : apt.mentor)?.full_name || (isMentorView ? apt.user : apt.mentor)?.email || (isMentorView ? 'Client' : 'Mentor')}</span>
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                       <strong>Duration:</strong> {formatTime(apt.start_time)} - {formatTime(apt.end_time)}
@@ -298,14 +312,90 @@ export function MyAppointments({ userId }: MyAppointmentsProps) {
                         Join Meeting
                       </a>
                     )}
-                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                      <Link
-                        href="/contact"
-                        className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-all duration-300"
-                      >
-                        Have a problem? Contact us
-                      </Link>
-                    </div>
+                    {isMentorView && (
+                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                        <button
+                          onClick={async () => {
+                            const userName = apt.user?.full_name || apt.user?.email || 'the user'
+                            if (!confirm(`Are you sure you want to cancel this session with ${userName}?`)) {
+                              return
+                            }
+
+                            try {
+                              // Cancel session via API (handles Google Calendar deletion)
+                              const cancelResponse = await fetch('/api/calendar/cancel', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ sessionId: apt.id }),
+                              })
+
+                              if (!cancelResponse.ok) {
+                                const errorData = await cancelResponse.json().catch(() => ({ error: 'Unknown error' }))
+                                throw new Error(errorData.error || 'Failed to cancel session')
+                              }
+
+                              // Grant credit to user for cancelled session
+                              if (apt.user?.id) {
+                                try {
+                                  await fetch('/api/credits/grant', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      userId: apt.user.id,
+                                      sourceSessionId: apt.id,
+                                      reason: 'mentor_cancellation',
+                                    }),
+                                  })
+                                } catch (creditError) {
+                                  console.error('Error granting credit:', creditError)
+                                }
+                              }
+
+                              // Send cancellation email
+                              if (apt.user?.email) {
+                                try {
+                                  await fetch('/api/notifications/email', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      type: 'session_cancelled',
+                                      email: apt.user.email,
+                                      data: {
+                                        mentorName: 'You',
+                                        userName: apt.user.full_name || apt.user.email || 'User',
+                                        startTime: apt.start_time,
+                                      },
+                                    }),
+                                  })
+                                } catch (emailError) {
+                                  console.error('Error sending cancellation email:', emailError)
+                                }
+                              }
+
+                              // Reload appointments
+                              loadAppointments()
+                              alert('Session cancelled. The user has been notified via email.')
+                            } catch (error: any) {
+                              console.error('Error cancelling session:', error)
+                              alert(error.message || 'Failed to cancel session')
+                            }
+                          }}
+                          className="w-full px-3 py-2 bg-red-900/30 text-red-400 border border-red-800 rounded text-sm font-medium hover:bg-red-900/50 transition"
+                        >
+                          Cancel Session
+                        </button>
+                      </div>
+                    )}
+                    {!isMentorView && (
+                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                        <Link
+                          href="/contact"
+                          className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-all duration-300"
+                        >
+                          Have a problem? Contact us
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

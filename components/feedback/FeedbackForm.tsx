@@ -104,6 +104,18 @@ export function FeedbackForm({
         }
       }
 
+      // Mark this feedback as seen in localStorage (only on client side)
+      if (typeof window !== 'undefined') {
+        try {
+          const seenIds = JSON.parse(localStorage.getItem('seen_feedback_ids') || '[]')
+          if (!seenIds.includes(submission.id)) {
+            localStorage.setItem('seen_feedback_ids', JSON.stringify([...seenIds, submission.id]))
+          }
+        } catch (e) {
+          console.error('Error marking feedback as seen:', e)
+        }
+      }
+
       onSubmitted()
     } catch (err: any) {
       setError(err.message || 'Failed to submit feedback')

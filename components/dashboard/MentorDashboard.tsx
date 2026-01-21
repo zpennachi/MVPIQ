@@ -151,14 +151,17 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
     const finalUserName = session.user.full_name || session.user.email || 'User'
 
     try {
+      // Cancel session via API (handles Google Calendar deletion)
+      const cancelResponse = await fetch('/api/calendar/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      })
 
-      // Update session status
-      const { error: updateError } = await supabase
-        .from('booked_sessions')
-        .update({ status: 'cancelled' })
-        .eq('id', sessionId)
-
-      if (updateError) throw updateError
+      if (!cancelResponse.ok) {
+        const errorData = await cancelResponse.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(errorData.error || 'Failed to cancel session')
+      }
 
       // Grant credit to user for cancelled session
       try {
@@ -253,7 +256,17 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
     return name[0].toUpperCase()
   }
 
-  const newSubmissions = submissions.filter(s => s.status === 'pending' || s.status === 'assigned')
+  // Consider feedback "new" if:
+  // - Status is pending or assigned, OR
+  // - Created within last 7 days (even if in progress)
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  
+  const newSubmissions = submissions.filter(s => {
+    const isPendingOrAssigned = s.status === 'pending' || s.status === 'assigned'
+    const isRecent = new Date(s.created_at) >= sevenDaysAgo
+    return isPendingOrAssigned || isRecent
+  })
   const pendingCount = newSubmissions.length
   const completedCount = submissions.filter(s => s.status === 'completed').length
 
@@ -388,6 +401,14 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
                           {session.status}
                         </span>
                       </div>
+                      <div className="mt-3 pt-3 border-t border-[#272727]">
+                        <button
+                          onClick={() => handleCancelSession(session.id, session)}
+                          className="w-full px-3 py-2 bg-red-900/30 text-red-400 border border-red-800 rounded text-sm font-medium hover:bg-red-900/50 transition"
+                        >
+                          Cancel Session
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -395,13 +416,13 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
             </div>
           )}
 
-          {/* Empty State */}
-          {submissions.length === 0 && upcomingSessions.length === 0 && (
+          {/* Empty State - Show when nothing NEW */}
+          {newSubmissions.length === 0 && upcomingSessions.length === 0 && (
             <div className="bg-black border border-[#272727] rounded-lg shadow-mvp p-12 text-center">
-              <MessageSquare className="w-16 h-16 mx-auto mb-4 text-[#272727]" />
-              <h3 className="text-lg font-semibold text-white mb-2">Welcome to your dashboard!</h3>
+              <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-500/50" />
+              <h3 className="text-lg font-semibold text-white mb-2">All Caught Up! 🎉</h3>
               <p className="text-[#d9d9d9] mb-6 max-w-md mx-auto">
-                You'll see new submissions and upcoming sessions here
+                You're all set! No new submissions or upcoming sessions right now.
               </p>
             </div>
           )}

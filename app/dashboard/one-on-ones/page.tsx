@@ -32,7 +32,7 @@ export default async function OneOnOnesPage() {
         </div>
         <div className="bg-black border border-[#272727] rounded-lg shadow-mvp p-4 sm:p-6">
           <h2 className="text-lg sm:text-xl font-semibold text-white mb-4">Upcoming Meetings</h2>
-          <MyAppointments userId={user.id} />
+          <MyAppointments userId={user.id} userRole="mentor" />
         </div>
       </div>
     )

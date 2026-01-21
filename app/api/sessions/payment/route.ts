@@ -47,6 +47,7 @@ async function sendConfirmationEmails(session: any, origin: string) {
               sessionId: session.id,
               mentorName: mentorName,
               startTime: session.start_time,
+              meetingLink: session.meeting_link,
             },
           }),
         })
@@ -170,11 +171,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Generate meeting link using lightweight solution
+    const meetingLink = generateMeetingLink(session.id)
+
     // If using credit, skip payment processing
     if (useCredit) {
-      // Generate meeting link
-      const meetingLink = generateMeetingLink(session.id)
-      
       // Update session with meeting link
       await supabase
         .from('booked_sessions')
@@ -196,9 +197,6 @@ export async function POST(request: NextRequest) {
 
     // Check if dev mode (no Stripe key)
     if (!process.env.STRIPE_SECRET_KEY || process.env.NODE_ENV === 'development') {
-      // Generate meeting link
-      const meetingLink = generateMeetingLink(session.id)
-      
       // Dev mode: Skip payment
       await supabase
         .from('booked_sessions')
@@ -248,12 +246,13 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Update session with payment intent
+    // Update session with payment intent and meeting link
     await supabase
       .from('booked_sessions')
       .update({
         payment_intent_id: checkoutSession.id,
         payment_status: 'processing',
+        meeting_link: meetingLink,
       })
       .eq('id', sessionId)
 
