@@ -148,16 +148,16 @@ export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
                       className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded p-1 text-xs"
                     >
                       <div className="flex items-center gap-1.5 mb-1">
-                        {apt.mentor?.profile_photo_url ? (
+                        {(isMentorView ? apt.user : apt.mentor)?.profile_photo_url ? (
                           <img
-                            src={apt.mentor.profile_photo_url}
-                            alt={apt.mentor?.full_name || 'Mentor'}
+                            src={(isMentorView ? apt.user : apt.mentor)?.profile_photo_url || ''}
+                            alt={(isMentorView ? apt.user : apt.mentor)?.full_name || (isMentorView ? 'Client' : 'Mentor')}
                             className="w-5 h-5 rounded-full object-cover flex-shrink-0 border border-yellow-400"
                           />
                         ) : (
                           <div className="w-5 h-5 bg-yellow-500/20 rounded-full flex items-center justify-center flex-shrink-0 border border-yellow-400">
                             <span className="text-[10px] font-bold text-yellow-800 dark:text-yellow-300">
-                              {getInitials(apt.mentor?.full_name || null)}
+                              {getInitials((isMentorView ? apt.user : apt.mentor)?.full_name || null)}
                             </span>
                           </div>
                         )}
@@ -166,7 +166,7 @@ export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
                         </div>
                       </div>
                       <div className="text-yellow-600 dark:text-yellow-400 text-xs truncate">
-                        {apt.mentor?.full_name || 'Mentor'}
+                        {isMentorView ? (apt.user?.full_name || apt.user?.email || 'Client') : (apt.mentor?.full_name || 'Mentor')}
                       </div>
                       {apt.meeting_link && (
                         <a
@@ -216,7 +216,7 @@ export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
                         <div className="flex items-center gap-1.5 mb-1">
                           {(isMentorView ? apt.user : apt.mentor)?.profile_photo_url ? (
                             <img
-                              src={(isMentorView ? apt.user : apt.mentor)?.profile_photo_url}
+                              src={(isMentorView ? apt.user : apt.mentor)?.profile_photo_url || ''}
                               alt={(isMentorView ? apt.user : apt.mentor)?.full_name || (isMentorView ? 'Client' : 'Mentor')}
                               className="w-5 h-5 rounded-full object-cover flex-shrink-0 border border-yellow-400"
                             />
