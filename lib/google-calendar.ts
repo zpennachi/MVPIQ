@@ -116,22 +116,44 @@ export async function createCalendarEvent(
         (ep: any) => ep.entryPointType === 'video'
       )?.uri || ''
       
+      // Sometimes Google doesn't return the Meet link immediately in the insert response
+      // Fetch the event again to get the Meet link if it wasn't in the initial response
+      if (!meetLink && response.data.id) {
+        logger.info('Meet link not in initial response, fetching event again', { eventId: response.data.id })
+        
+        // Wait a moment for Google to process the conference data
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        try {
+          const fetchedEvent = await calendar.events.get({
+            calendarId,
+            eventId: response.data.id,
+            conferenceDataVersion: 1,
+          })
+          
+          meetLink = fetchedEvent.data.conferenceData?.entryPoints?.find(
+            (ep: any) => ep.entryPointType === 'video'
+          )?.uri || ''
+          
+          if (meetLink) {
+            logger.info('Meet link retrieved from fetched event', { eventId: response.data.id, meetLink })
+          } else {
+            logger.warn('Meet link still not available after fetching', {
+              eventId: response.data.id,
+              hasConferenceData: !!fetchedEvent.data.conferenceData,
+            })
+          }
+        } catch (fetchError: any) {
+          logger.warn('Failed to fetch event for Meet link', fetchError, { eventId: response.data.id })
+        }
+      }
+      
       // Log the full response for debugging
       logger.info('Calendar event created with conference data', {
         eventId: response.data.id,
         hasConferenceData: !!response.data.conferenceData,
-        entryPoints: response.data.conferenceData?.entryPoints,
         meetLink,
       })
-      
-      // If no Meet link, log the full conference data structure for debugging
-      if (!meetLink) {
-        logger.warn('Event created but no Meet link in response', {
-          eventId: response.data.id,
-          conferenceData: response.data.conferenceData,
-          calendarId,
-        })
-      }
     } catch (error: any) {
       // If that fails with "Invalid conference type", try without specifying type
       if (error.message?.includes('conference type') || error.code === 400) {
