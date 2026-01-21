@@ -7,17 +7,98 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 })
 
 // Helper function to send confirmation emails
-// Generate a meeting link (Google Meet format)
-function generateMeetingLink(): string {
-  // Generate a random meeting ID (12 characters, alphanumeric)
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
-  let meetingId = ''
-  for (let i = 0; i < 12; i++) {
-    meetingId += chars.charAt(Math.floor(Math.random() * chars.length))
+// Generate a real Google Meet link using Google Calendar API
+async function generateMeetingLink(session: any): Promise<string> {
+  // Check if Google Calendar API is configured
+  const googleServiceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
+  const googlePrivateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+  const googleCalendarId = process.env.GOOGLE_CALENDAR_ID || 'primary'
+
+  if (googleServiceAccountEmail && googlePrivateKey) {
+    try {
+      // Use Google Calendar API to create event with Meet link
+      const { google } = await import('googleapis')
+      
+      // Create JWT auth client
+      const auth = new google.auth.JWT(
+        googleServiceAccountEmail,
+        undefined,
+        googlePrivateKey.replace(/\\n/g, '\n'),
+        ['https://www.googleapis.com/auth/calendar'],
+        undefined
+      )
+
+      const calendar = google.calendar({ version: 'v3', auth })
+
+      // Get mentor and user emails for calendar event
+      const supabase = await createClient()
+      const [mentorResult, userResult] = await Promise.all([
+        supabase.from('profiles').select('email, full_name').eq('id', session.mentor_id).maybeSingle(),
+        supabase.from('profiles').select('email, full_name').eq('id', session.user_id).maybeSingle(),
+      ])
+
+      const mentorEmail = mentorResult.data?.email
+      const userEmail = userResult.data?.email
+      const mentorName = mentorResult.data?.full_name || 'Mentor'
+      const userName = userResult.data?.full_name || 'User'
+
+      // Create calendar event with Meet link
+      const event = {
+        summary: `1-on-1 Session: ${userName} with ${mentorName}`,
+        description: `Scheduled mentoring session via MVP-IQ`,
+        start: {
+          dateTime: session.start_time,
+          timeZone: 'UTC',
+        },
+        end: {
+          dateTime: session.end_time,
+          timeZone: 'UTC',
+        },
+        attendees: [
+          ...(mentorEmail ? [{ email: mentorEmail }] : []),
+          ...(userEmail ? [{ email: userEmail }] : []),
+        ],
+        conferenceData: {
+          createRequest: {
+            requestId: `mvpiq-${session.id}-${Date.now()}`,
+            conferenceSolutionKey: {
+              type: 'hangoutsMeet',
+            },
+          },
+        },
+      }
+
+      const response = await calendar.events.insert({
+        calendarId: googleCalendarId,
+        conferenceDataVersion: 1,
+        requestBody: event,
+      })
+
+      // Extract Meet link from response
+      const meetLink = response.data.conferenceData?.entryPoints?.find(
+        (ep: any) => ep.entryPointType === 'video'
+      )?.uri
+
+      if (meetLink) {
+        console.log('✅ Generated real Google Meet link:', meetLink)
+        return meetLink
+      }
+    } catch (error) {
+      console.error('❌ Error generating Google Meet link via Calendar API:', error)
+      // Fall through to fallback
+    }
   }
-  // Format: abc-defg-hij (3-4-3 format)
-  const formattedId = `${meetingId.slice(0, 3)}-${meetingId.slice(3, 7)}-${meetingId.slice(7, 10)}`
-  return `https://meet.google.com/${formattedId}`
+
+  // Fallback: Generate a link to create a new Meet (requires manual creation)
+  // This opens Google Meet creation page with pre-filled date/time
+  const startTime = new Date(session.start_time)
+  const endTime = new Date(session.end_time)
+  const dateStr = startTime.toISOString().slice(0, 10).replace(/-/g, '')
+  const startStr = startTime.toTimeString().slice(0, 5).replace(':', '')
+  const endStr = endTime.toTimeString().slice(0, 5).replace(':', '')
+  
+  // Note: This creates a calendar link that will prompt to create a Meet
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&dates=${dateStr}T${startStr}00Z%2F${dateStr}T${endStr}00Z&text=1-on-1%20Session&details=Scheduled%20via%20MVP-IQ`
 }
 
 async function sendConfirmationEmails(session: any, origin: string) {
@@ -183,8 +264,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate meeting link
-    const meetingLink = generateMeetingLink()
+    // Generate meeting link (async now)
+    const meetingLink = await generateMeetingLink(session)
 
     // If using credit, skip payment processing
     if (useCredit) {

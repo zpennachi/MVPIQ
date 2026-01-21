@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
           // First, get the session to verify it exists and get user/mentor IDs
           const { data: existingSession } = await supabase
             .from('booked_sessions')
-            .select('user_id, mentor_id, start_time')
+            .select('user_id, mentor_id, start_time, end_time')
             .eq('id', sessionId)
             .single()
 
@@ -212,17 +212,75 @@ export async function POST(request: NextRequest) {
             break
           }
 
-          // Generate meeting link
-          const generateMeetingLink = (): string => {
-            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
-            let meetingId = ''
-            for (let i = 0; i < 12; i++) {
-              meetingId += chars.charAt(Math.floor(Math.random() * chars.length))
+          // Generate meeting link using same function as payment route
+          const meetingLink = await (async () => {
+            const googleServiceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
+            const googlePrivateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+            const googleCalendarId = process.env.GOOGLE_CALENDAR_ID || 'primary'
+
+            if (googleServiceAccountEmail && googlePrivateKey) {
+              try {
+                const { google } = await import('googleapis')
+                
+                const auth = new google.auth.JWT(
+                  googleServiceAccountEmail,
+                  undefined,
+                  googlePrivateKey.replace(/\\n/g, '\n'),
+                  ['https://www.googleapis.com/auth/calendar'],
+                  undefined
+                )
+
+                const calendar = google.calendar({ version: 'v3', auth })
+
+                const [mentorResult, userResult] = await Promise.all([
+                  supabase.from('profiles').select('email, full_name').eq('id', existingSession.mentor_id).maybeSingle(),
+                  supabase.from('profiles').select('email, full_name').eq('id', existingSession.user_id).maybeSingle(),
+                ])
+
+                const mentorName = mentorResult.data?.full_name || 'Mentor'
+                const userName = userResult.data?.full_name || 'User'
+
+                const event = {
+                  summary: `1-on-1 Session: ${userName} with ${mentorName}`,
+                  description: `Scheduled mentoring session via MVP-IQ`,
+                  start: { dateTime: existingSession.start_time, timeZone: 'UTC' },
+                  end: { dateTime: existingSession.end_time || new Date(new Date(existingSession.start_time).getTime() + 60 * 60 * 1000).toISOString(), timeZone: 'UTC' },
+                  attendees: [
+                    ...(mentorResult.data?.email ? [{ email: mentorResult.data.email }] : []),
+                    ...(userResult.data?.email ? [{ email: userResult.data.email }] : []),
+                  ],
+                  conferenceData: {
+                    createRequest: {
+                      requestId: `mvpiq-${sessionId}-${Date.now()}`,
+                      conferenceSolutionKey: { type: 'hangoutsMeet' },
+                    },
+                  },
+                }
+
+                const response = await calendar.events.insert({
+                  calendarId: googleCalendarId,
+                  conferenceDataVersion: 1,
+                  requestBody: event,
+                })
+
+                const meetLink = response.data.conferenceData?.entryPoints?.find(
+                  (ep: any) => ep.entryPointType === 'video'
+                )?.uri
+
+                if (meetLink) return meetLink
+              } catch (error) {
+                console.error('Error generating Google Meet link:', error)
+              }
             }
-            const formattedId = `${meetingId.slice(0, 3)}-${meetingId.slice(3, 7)}-${meetingId.slice(7, 10)}`
-            return `https://meet.google.com/${formattedId}`
-          }
-          const meetingLink = generateMeetingLink()
+
+            // Fallback
+            const startTime = new Date(existingSession.start_time)
+            const endTime = new Date(existingSession.end_time || new Date(startTime.getTime() + 60 * 60 * 1000))
+            const dateStr = startTime.toISOString().slice(0, 10).replace(/-/g, '')
+            const startStr = startTime.toTimeString().slice(0, 5).replace(':', '')
+            const endStr = endTime.toTimeString().slice(0, 5).replace(':', '')
+            return `https://calendar.google.com/calendar/render?action=TEMPLATE&dates=${dateStr}T${startStr}00Z%2F${dateStr}T${endStr}00Z&text=1-on-1%20Session&details=Scheduled%20via%20MVP-IQ`
+          })()
 
           // Update session status with meeting link
           await supabase
