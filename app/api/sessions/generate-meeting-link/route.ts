@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     }
 
     const mentor = mentorResult.data
-    const user = userResult.data
+    const userProfile = userResult.data
 
     // Generate Google Calendar event with Meet link using service account
     let meetingLink: string | null = null
@@ -79,14 +79,14 @@ export async function POST(request: NextRequest) {
 
     try {
       const { eventId, meetLink } = await createCalendarEvent({
-        summary: `1-on-1 Session: ${user.full_name || 'Student'} with ${mentor.full_name || 'Mentor'}`,
+        summary: `1-on-1 Session: ${userProfile.full_name || 'Student'} with ${mentor.full_name || 'Mentor'}`,
         description: `Scheduled mentoring session via MVP-IQ`,
         startTime: new Date(session.start_time),
         endTime: new Date(session.end_time),
         mentorEmail: mentor.email || '',
-        userEmail: user.email || '',
+        userEmail: userProfile.email || '',
         mentorName: mentor.full_name || 'Mentor',
-        userName: user.full_name || 'Student',
+        userName: userProfile.full_name || 'Student',
       })
 
       meetingLink = meetLink
