@@ -1,6 +1,13 @@
 # Google Calendar Integration Setup Guide
 
-This guide will walk you through setting up Google Calendar integration using a **service account** to generate Google Meet links for all sessions. This approach is simpler and doesn't require mentors to connect their own Google accounts.
+This guide will walk you through setting up Google Calendar integration to generate Google Meet links for all sessions.
+
+**⚠️ IMPORTANT:** Service accounts **cannot** create Meet links on regular Gmail accounts. You have two options:
+
+1. **Option 1 (Recommended):** Use OAuth with the calendar owner's Google account (works with Gmail, free)
+2. **Option 2:** Use a service account with Google Workspace and domain-wide delegation (paid, advanced)
+
+This guide covers **Option 1** - the simpler, free approach that works with regular Gmail accounts.
 
 ## Prerequisites
 
@@ -21,7 +28,7 @@ This guide will walk you through setting up Google Calendar integration using a 
 2. Search for **"Google Calendar API"**
 3. Click on it and press **"Enable"**
 
-## Step 3: Create Service Account
+## Step 3: Create OAuth 2.0 Credentials
 
 1. Go to **"APIs & Services"** → **"Credentials"**
 2. Click **"Create Credentials"** → **"Service account"**
@@ -93,19 +100,21 @@ GOOGLE_CALENDAR_ID=web@mvpiq.com
 
 ## Troubleshooting
 
-### "Service account is not configured" error
-- Verify all three environment variables are set
-- Check that the private key includes the full key with headers
+### "OAuth client not configured" error
+- Verify `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set in environment variables
+- Check that the redirect URI in Google Cloud Console matches your app URL
 
-### "Calendar not found" or permission errors
-- Ensure you've shared the calendar with the service account email
-- Verify the service account has "Make changes to events" permission
-- Check that `GOOGLE_CALENDAR_ID` matches the calendar you shared
+### "Calendar connection failed" error
+- Make sure you're logged in as an admin user
+- Check that the redirect URI in Google Cloud Console includes your callback URL
+- Verify the OAuth consent screen is configured correctly
+- Check that you granted all requested permissions
 
 ### Events not creating
 - Check Google Cloud Console that Calendar API is enabled
-- Verify the service account JSON key is valid
+- Verify the OAuth credentials are correct
 - Check server logs for detailed error messages
+- Make sure the calendar owner's account has Google Meet enabled
 
 ### Meet links not generating
 **⚠️ CRITICAL LIMITATION:** Service accounts **CANNOT** create Meet links on regular Gmail accounts (`@gmail.com`). This is a Google API limitation.
@@ -139,19 +148,24 @@ GOOGLE_CALENDAR_ID=web@mvpiq.com
 - ❌ Meet links will NOT be generated
 - ✅ You'll need to switch to Option 2 (OAuth) or Option 1 (Workspace)
 
-## Benefits of Service Account Approach
+## Benefits of OAuth Approach
 
-✅ **Simpler setup** - No OAuth flows for mentors  
-✅ **More reliable** - No token expiration issues  
-✅ **Centralized** - All events in one calendar  
-✅ **Easier management** - Single account to manage  
-✅ **Lower cost** - No per-user OAuth quotas  
+✅ **Works with Gmail accounts** - No need for Google Workspace  
+✅ **Free** - No additional costs  
+✅ **Simple setup** - Just connect once in admin settings  
+✅ **Automatic token refresh** - System handles token expiration  
+✅ **Meet links work** - Can generate Meet links on regular Gmail accounts  
 
-## Migration from OAuth
+## How It Works
 
-If you were previously using OAuth-based Google Calendar integration:
+1. **Admin connects their Google account** once via OAuth in settings
+2. **System stores OAuth tokens** securely in the database
+3. **When sessions are booked**, the system uses the admin's OAuth tokens to:
+   - Create calendar events
+   - Generate Google Meet links
+   - Store event IDs for cancellation
+4. **Tokens auto-refresh** when they expire (handled automatically)
 
-1. The old mentor-specific Google Calendar fields in the database are no longer used
-2. You can safely ignore `google_calendar_connected`, `google_calendar_access_token`, etc. in profiles
-3. All new sessions will use the service account automatically
-4. Existing sessions with `google_event_id` will still work for cancellation
+## Fallback to Service Account
+
+If OAuth is not connected, the system will fall back to using the service account (if configured). However, **service accounts cannot create Meet links on Gmail accounts**, so you'll need OAuth for full functionality.

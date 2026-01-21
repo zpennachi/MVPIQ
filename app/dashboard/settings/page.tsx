@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { User, Mail, Save, X, Upload, Camera, Users } from 'lucide-react'
+import { User, Mail, Save, X, Upload, Camera, Users, Calendar, CheckCircle2 } from 'lucide-react'
 import { useDropzone } from 'react-dropzone'
 import type { Profile } from '@/types/database'
 
@@ -29,6 +29,8 @@ export default function SettingsPage() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [currentPhotoUrl, setCurrentPhotoUrl] = useState<string | null>(null)
+  const [calendarConnected, setCalendarConnected] = useState(false)
+  const [connectingCalendar, setConnectingCalendar] = useState(false)
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const photoFile = acceptedFiles[0]
@@ -104,6 +106,7 @@ export default function SettingsPage() {
           email: profileData.email || '',
         })
         setCurrentPhotoUrl(profileData.profile_photo_url || null)
+        setCalendarConnected(profileData.google_calendar_connected || false)
 
         // Load teams if coach
         if (profileData.role === 'coach') {
@@ -370,6 +373,87 @@ export default function SettingsPage() {
             </p>
           </div>
 
+          {/* Google Calendar Connection (for admins) */}
+          {profile?.role === 'admin' && (
+            <div className="border-t border-[#272727] pt-6 mt-6">
+              <label className="block text-sm font-medium text-[#d9d9d9] mb-3">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Google Calendar Integration
+                </div>
+              </label>
+              <p className="text-sm text-[#d9d9d9]/70 mb-4">
+                Connect your Google Calendar to enable Google Meet link generation for all sessions. 
+                This allows the system to automatically create Meet links when users book appointments.
+              </p>
+              {calendarConnected ? (
+                <div className="flex items-center gap-3 p-4 bg-green-900/20 border border-green-800 rounded-md">
+                  <CheckCircle2 className="w-5 h-5 text-green-400" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-green-400">Calendar Connected</p>
+                    <p className="text-xs text-[#d9d9d9]/70 mt-1">
+                      Your Google Calendar is connected and Meet links will be generated automatically.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const { data: { user } } = await supabase.auth.getUser()
+                        if (!user) return
+
+                        const { error } = await supabase
+                          .from('profiles')
+                          .update({
+                            google_calendar_connected: false,
+                            google_calendar_access_token: null,
+                            google_calendar_refresh_token: null,
+                            google_calendar_token_expires_at: null,
+                          })
+                          .eq('id', user.id)
+
+                        if (error) throw error
+                        setCalendarConnected(false)
+                        setSuccess(true)
+                        setTimeout(() => setSuccess(false), 3000)
+                      } catch (err: any) {
+                        setError(err.message || 'Failed to disconnect calendar')
+                      }
+                    }}
+                    className="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setConnectingCalendar(true)
+                    try {
+                      const response = await fetch('/api/calendar/oauth/connect')
+                      const data = await response.json()
+                      
+                      if (data.authUrl) {
+                        // Redirect to Google OAuth
+                        window.location.href = data.authUrl
+                      } else {
+                        throw new Error(data.error || 'Failed to get OAuth URL')
+                      }
+                    } catch (err: any) {
+                      setError(err.message || 'Failed to connect calendar')
+                      setConnectingCalendar(false)
+                    }
+                  }}
+                  disabled={connectingCalendar}
+                  className="w-full px-4 py-2.5 bg-[#ffc700] text-black rounded-md hover:bg-[#e6b300] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 active:scale-95 hover:shadow-lg font-medium touch-manipulation flex items-center justify-center gap-2"
+                >
+                  <Calendar className="w-4 h-4" />
+                  {connectingCalendar ? 'Connecting...' : 'Connect Google Calendar'}
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Team Name Editing (for coaches) */}
           {profile?.role === 'coach' && teams.length > 0 && (

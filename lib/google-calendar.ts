@@ -9,6 +9,7 @@
 import { google } from 'googleapis'
 import { env } from './env'
 import { logger } from './logger'
+import { createClient } from '@/lib/supabase/server'
 
 export interface CalendarEventData {
   summary: string
@@ -62,6 +63,102 @@ function getServiceAccountCalendarId(): string {
 }
 
 /**
+ * Get OAuth client for calendar owner (if connected)
+ * Returns null if no OAuth tokens are available
+ */
+async function getOAuthClient(): Promise<{ client: any; calendarId: string } | null> {
+  try {
+    const supabase = await createClient()
+    
+    // Find admin user with connected Google Calendar
+    const { data: adminProfile } = await supabase
+      .from('profiles')
+      .select('id, google_calendar_connected, google_calendar_id, google_calendar_access_token, google_calendar_refresh_token, google_calendar_token_expires_at')
+      .eq('role', 'admin')
+      .eq('google_calendar_connected', true)
+      .single()
+
+    if (!adminProfile?.google_calendar_access_token || !adminProfile?.google_calendar_refresh_token) {
+      return null
+    }
+
+    // Check if token is expired and refresh if needed
+    let accessToken = adminProfile.google_calendar_access_token
+    const expiresAt = adminProfile.google_calendar_token_expires_at
+    const now = new Date()
+    
+    if (expiresAt && new Date(expiresAt) <= now) {
+      // Token expired, refresh it
+      logger.info('OAuth token expired, refreshing...')
+      
+      if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+        logger.warn('Cannot refresh OAuth token - GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET not set')
+        return null
+      }
+
+      const oauth2Client = new google.auth.OAuth2(
+        env.GOOGLE_CLIENT_ID,
+        env.GOOGLE_CLIENT_SECRET,
+        '' // Redirect URI not needed for refresh
+      )
+
+      oauth2Client.setCredentials({
+        refresh_token: adminProfile.google_calendar_refresh_token,
+      })
+
+      const { credentials } = await oauth2Client.refreshAccessToken()
+      
+      if (!credentials.access_token) {
+        logger.error('Failed to refresh OAuth token')
+        return null
+      }
+
+      accessToken = credentials.access_token
+
+      // Update token in database
+      const newExpiresAt = credentials.expiry_date 
+        ? new Date(credentials.expiry_date).toISOString()
+        : new Date(Date.now() + 3600 * 1000).toISOString()
+
+      await supabase
+        .from('profiles')
+        .update({
+          google_calendar_access_token: accessToken,
+          google_calendar_token_expires_at: newExpiresAt,
+          ...(credentials.refresh_token && { google_calendar_refresh_token: credentials.refresh_token }),
+        })
+        .eq('id', adminProfile.id)
+
+      logger.info('OAuth token refreshed successfully')
+    }
+
+    // Create OAuth client
+    if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+      return null
+    }
+
+    const oauth2Client = new google.auth.OAuth2(
+      env.GOOGLE_CLIENT_ID,
+      env.GOOGLE_CLIENT_SECRET,
+      ''
+    )
+
+    oauth2Client.setCredentials({
+      access_token: accessToken,
+      refresh_token: adminProfile.google_calendar_refresh_token,
+    })
+
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client })
+    const calendarId = adminProfile.google_calendar_id || 'primary'
+
+    return { client: calendar, calendarId }
+  } catch (error: any) {
+    logger.error('Failed to get OAuth client', error)
+    return null
+  }
+}
+
+/**
  * Create a Google Calendar event with Google Meet link
  * 
  * @param eventData - Event details
@@ -70,31 +167,63 @@ function getServiceAccountCalendarId(): string {
 export async function createCalendarEvent(
   eventData: CalendarEventData
 ): Promise<CalendarEventResult> {
+  // Create event object
+  const event = {
+    summary: eventData.summary,
+    description: `${eventData.description || 'Scheduled mentoring session via MVP-IQ'}\n\nParticipants:\n- Mentor: ${eventData.mentorEmail}\n- Student: ${eventData.userEmail}`,
+    start: {
+      dateTime: eventData.startTime.toISOString(),
+      timeZone: 'UTC',
+    },
+    end: {
+      dateTime: eventData.endTime.toISOString(),
+      timeZone: 'UTC',
+    },
+  }
+
+  // Try OAuth first (for Meet links with Gmail accounts)
+  const oauthClient = await getOAuthClient()
+  
+  if (oauthClient) {
+    logger.info('Using OAuth client for calendar event creation (supports Meet links)')
+    try {
+      const { client: calendar, calendarId } = oauthClient
+      return await createEventWithMeetLink(calendar, calendarId, event, 'oauth')
+    } catch (error: any) {
+      logger.warn('Failed to create event with OAuth, falling back to service account', error)
+      // Fall through to service account
+    }
+  }
+
+  // Fallback to service account
+  logger.info('Using service account for calendar event creation')
   try {
     const calendar = getCalendarClient()
     const calendarId = getServiceAccountCalendarId()
-
-    // Create a simple calendar event first (without conference data)
-    const event = {
+    return await createEventWithMeetLink(calendar, calendarId, event, 'service_account')
+  } catch (error: any) {
+    logger.error('Failed to create Google Calendar event', error, {
       summary: eventData.summary,
-      description: `${eventData.description || 'Scheduled mentoring session via MVP-IQ'}\n\nParticipants:\n- Mentor: ${eventData.mentorEmail}\n- Student: ${eventData.userEmail}`,
-      start: {
-        dateTime: eventData.startTime.toISOString(),
-        timeZone: 'UTC',
-      },
-      end: {
-        dateTime: eventData.endTime.toISOString(),
-        timeZone: 'UTC',
-      },
-    }
+      startTime: eventData.startTime,
+    })
+    throw error
+  }
+}
 
-    // Create event with Google Meet
-    // Try different approaches to create Meet link
-    let response
-    let meetLink = ''
-    
-    // First, try creating event with conference data using the standard format
-    try {
+/**
+ * Helper function to create event with Meet link
+ */
+async function createEventWithMeetLink(
+  calendar: any,
+  calendarId: string,
+  event: any,
+  authType: 'oauth' | 'service_account'
+): Promise<CalendarEventResult> {
+  let response: any
+  let meetLink = ''
+  
+  // First, try creating event with conference data using the standard format
+  try {
       response = await calendar.events.insert({
         calendarId,
         conferenceDataVersion: 1,
@@ -144,20 +273,21 @@ export async function createCalendarEvent(
                 meetLink,
                 attempt: i + 1,
                 delay: retryDelays[i],
+                authType,
               })
               break
             } else {
               logger.warn(`Meet link still not available after attempt ${i + 1}`, {
                 eventId: response.data.id,
                 hasConferenceData: !!fetchedData.conferenceData,
-                conferenceDataKeys: fetchedData.conferenceData ? Object.keys(fetchedData.conferenceData) : [],
-                entryPoints: fetchedData.conferenceData?.entryPoints,
+                authType,
               })
             }
           } catch (fetchError: any) {
             logger.warn(`Failed to fetch event for Meet link (attempt ${i + 1})`, { 
               error: fetchError, 
-              eventId: response.data.id 
+              eventId: response.data.id,
+              authType,
             })
           }
         }
@@ -217,11 +347,12 @@ export async function createCalendarEvent(
             eventId: response.data.id,
             hasConferenceData: !!response.data.conferenceData,
             meetLink,
+            authType,
           })
         } catch (error2: any) {
           // If that also fails, create event without conference data and log the issue
-          logger.error('Failed to create event with conference data', error2, { calendarId })
-          throw new Error(`Cannot create Google Meet link: ${error2.message || 'Unknown error'}. Make sure the calendar supports Google Meet and is shared with the service account.`)
+          logger.error('Failed to create event with conference data', error2, { calendarId, authType })
+          throw new Error(`Cannot create Google Meet link: ${error2.message || 'Unknown error'}. Make sure the calendar supports Google Meet.`)
         }
       } else {
         throw error
@@ -233,11 +364,11 @@ export async function createCalendarEvent(
     }
     
     // If we still don't have a Meet link, log a warning but don't fail
-    if (!meetLink) {
-      logger.warn('Calendar event created but no Meet link generated', {
+    if (!meetLink && authType === 'oauth') {
+      logger.warn('Calendar event created with OAuth but no Meet link generated', {
         eventId: response.data.id,
         calendarId,
-        hint: 'Calendar might not support Google Meet, or service account lacks permissions'
+        hint: 'Calendar might not support Google Meet or Meet might not be enabled'
       })
     }
 
@@ -245,19 +376,13 @@ export async function createCalendarEvent(
       eventId: response.data.id,
       meetLink,
       calendarId,
+      authType,
     })
 
     return {
       eventId: response.data.id,
       meetLink: meetLink || '',
     }
-  } catch (error: any) {
-    logger.error('Failed to create Google Calendar event', error, {
-      summary: eventData.summary,
-      startTime: eventData.startTime,
-    })
-    throw error
-  }
 }
 
 /**
