@@ -91,7 +91,7 @@ export async function createCalendarEvent(
         createRequest: {
           requestId: `mvpiq-${Date.now()}-${Math.random().toString(36).substring(7)}`,
           conferenceSolutionKey: {
-            type: 'hangoutsMeet',
+            type: 'eventHangout',
           },
         },
       },
