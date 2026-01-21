@@ -73,6 +73,11 @@ export default function RegisterPage() {
         provider: 'google',
         options: {
           redirectTo: `${redirectUrl}/auth/callback?next=/dashboard`,
+          scopes: 'email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       })
 

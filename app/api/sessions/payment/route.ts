@@ -1,11 +1,97 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { generateMeetingLink } from '@/lib/meeting'
+import { createCalendarEvent, refreshAccessToken, getCalendarId } from '@/lib/google-calendar'
+import { env } from '@/lib/env'
+import { logger } from '@/lib/logger'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2024-06-20' as Stripe.LatestApiVersion,
 })
+
+// Helper function to create Google Calendar event with Meet link
+async function createGoogleCalendarEvent(session: any): Promise<{ meetLink: string; eventId?: string } | null> {
+  try {
+    const supabase = await createClient()
+    
+    // Get mentor's Google Calendar credentials
+    const { data: mentor } = await supabase
+      .from('profiles')
+      .select('id, email, full_name, google_calendar_connected, google_calendar_access_token, google_calendar_refresh_token, google_calendar_id, google_calendar_token_expires_at')
+      .eq('id', session.mentor_id)
+      .single()
+
+    if (!mentor?.google_calendar_connected || !mentor.google_calendar_access_token) {
+      logger.warn('Mentor does not have Google Calendar connected', { mentorId: session.mentor_id })
+      return null
+    }
+
+    // Check if token is expired and refresh if needed
+    let accessToken = mentor.google_calendar_access_token
+    const tokenExpiresAt = mentor.google_calendar_token_expires_at 
+      ? new Date(mentor.google_calendar_token_expires_at)
+      : null
+
+    if (tokenExpiresAt && tokenExpiresAt < new Date() && mentor.google_calendar_refresh_token) {
+      try {
+        if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REDIRECT_URI) {
+          accessToken = await refreshAccessToken(
+            {
+              clientId: env.GOOGLE_CLIENT_ID,
+              clientSecret: env.GOOGLE_CLIENT_SECRET,
+              redirectUri: env.GOOGLE_REDIRECT_URI,
+            },
+            mentor.google_calendar_refresh_token
+          )
+
+          // Update stored token
+          await supabase
+            .from('profiles')
+            .update({
+              google_calendar_access_token: accessToken,
+              google_calendar_token_expires_at: new Date(Date.now() + 3600 * 1000).toISOString(), // 1 hour
+            })
+            .eq('id', mentor.id)
+
+          logger.info('Refreshed Google Calendar access token', { mentorId: mentor.id })
+        }
+      } catch (refreshError: any) {
+        logger.error('Failed to refresh Google Calendar token', refreshError, { mentorId: mentor.id })
+        return null
+      }
+    }
+
+    // Get user details
+    const { data: user } = await supabase
+      .from('profiles')
+      .select('email, full_name')
+      .eq('id', session.user_id)
+      .single()
+
+    // Create calendar event
+    const { eventId, meetLink } = await createCalendarEvent(
+      accessToken,
+      getCalendarId(mentor.google_calendar_id),
+      {
+        summary: `1-on-1 Session: ${user?.full_name || 'Student'} with ${mentor.full_name || 'Mentor'}`,
+        description: `Scheduled mentoring session via MVP-IQ`,
+        startTime: new Date(session.start_time),
+        endTime: new Date(session.end_time),
+        mentorEmail: mentor.email || '',
+        userEmail: user?.email || '',
+        mentorName: mentor.full_name || 'Mentor',
+        userName: user?.full_name || 'Student',
+      }
+    )
+
+    logger.info('Google Calendar event created', { sessionId: session.id, eventId, meetLink })
+
+    return { meetLink, eventId }
+  } catch (error: any) {
+    logger.error('Failed to create Google Calendar event', error, { sessionId: session.id })
+    return null
+  }
+}
 
 // Helper function to send confirmation emails
 async function sendConfirmationEmails(session: any, origin: string) {
@@ -171,16 +257,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate meeting link using lightweight solution
-    const meetingLink = generateMeetingLink(session.id)
+    // Create Google Calendar event with Meet link (if mentor has connected calendar)
+    const calendarEvent = await createGoogleCalendarEvent(session)
+    const meetingLink = calendarEvent?.meetLink || null
+    const googleEventId = calendarEvent?.eventId
 
     // If using credit, skip payment processing
     if (useCredit) {
-      // Update session with meeting link
+      // Update session with meeting link and calendar event ID
       await supabase
         .from('booked_sessions')
         .update({
           meeting_link: meetingLink,
+          ...(googleEventId && { google_event_id: googleEventId }),
         })
         .eq('id', sessionId)
       
@@ -205,6 +294,7 @@ export async function POST(request: NextRequest) {
           status: 'confirmed',
           payment_intent_id: `dev_${Date.now()}`,
           meeting_link: meetingLink,
+          ...(googleEventId && { google_event_id: googleEventId }),
         })
         .eq('id', sessionId)
 
@@ -246,13 +336,14 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Update session with payment intent and meeting link
+    // Update session with payment intent, meeting link, and calendar event ID
     await supabase
       .from('booked_sessions')
       .update({
         payment_intent_id: checkoutSession.id,
         payment_status: 'processing',
         meeting_link: meetingLink,
+        ...(googleEventId && { google_event_id: googleEventId }),
       })
       .eq('id', sessionId)
 
