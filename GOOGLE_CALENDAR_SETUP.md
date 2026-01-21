@@ -107,6 +107,22 @@ GOOGLE_CALENDAR_ID=web@mvpiq.com
 - Verify the service account JSON key is valid
 - Check server logs for detailed error messages
 
+### Meet links not generating
+**This is the most common issue!** Meet links require:
+1. **The calendar owner must have Google Meet enabled** - Regular Gmail accounts have this by default, but check:
+   - Go to Google Calendar → Settings → General
+   - Look for "Google Meet" section - it should be enabled
+   - If using Google Workspace, ensure the account has a Meet license
+2. **The calendar must support conferencing** - Some calendars (like resource calendars) don't support Meet
+3. **Service account limitations** - Service accounts can create Meet links, but:
+   - The calendar must be shared with the service account
+   - The calendar owner's account must have Meet enabled
+   - If Meet links still don't generate, you may need to use **Domain-Wide Delegation** with impersonation (advanced setup)
+4. **Check the event in Google Calendar UI** - Sometimes the Meet link exists in the UI even if the API doesn't return it immediately
+   - Open the calendar event manually
+   - If you see a Meet link there, the issue is with API response timing
+   - The code will retry fetching the event multiple times to get the link
+
 ## Benefits of Service Account Approach
 
 ✅ **Simpler setup** - No OAuth flows for mentors  

@@ -118,32 +118,48 @@ export async function createCalendarEvent(
       
       // Sometimes Google doesn't return the Meet link immediately in the insert response
       // Fetch the event again to get the Meet link if it wasn't in the initial response
+      // Try multiple times with increasing delays as Meet link creation can be asynchronous
       if (!meetLink && response.data.id) {
-        logger.info('Meet link not in initial response, fetching event again', { eventId: response.data.id })
+        logger.info('Meet link not in initial response, will retry fetching', { eventId: response.data.id })
         
-        // Wait a moment for Google to process the conference data
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        try {
-          const fetchedEvent = await calendar.events.get({
-            calendarId,
-            eventId: response.data.id,
-          })
+        // Try fetching multiple times with increasing delays
+        const retryDelays = [2000, 3000, 5000] // 2s, 3s, 5s
+        for (let i = 0; i < retryDelays.length && !meetLink; i++) {
+          await new Promise(resolve => setTimeout(resolve, retryDelays[i]))
           
-          meetLink = (fetchedEvent.data as any).conferenceData?.entryPoints?.find(
-            (ep: any) => ep.entryPointType === 'video'
-          )?.uri || ''
-          
-          if (meetLink) {
-            logger.info('Meet link retrieved from fetched event', { eventId: response.data.id, meetLink })
-          } else {
-            logger.warn('Meet link still not available after fetching', {
+          try {
+            const fetchedEvent = await calendar.events.get({
+              calendarId,
               eventId: response.data.id,
-              hasConferenceData: !!(fetchedEvent.data as any).conferenceData,
+            })
+            
+            const fetchedData = fetchedEvent.data as any
+            meetLink = fetchedData.conferenceData?.entryPoints?.find(
+              (ep: any) => ep.entryPointType === 'video'
+            )?.uri || ''
+            
+            if (meetLink) {
+              logger.info('Meet link retrieved from fetched event', { 
+                eventId: response.data.id, 
+                meetLink,
+                attempt: i + 1,
+                delay: retryDelays[i],
+              })
+              break
+            } else {
+              logger.warn(`Meet link still not available after attempt ${i + 1}`, {
+                eventId: response.data.id,
+                hasConferenceData: !!fetchedData.conferenceData,
+                conferenceDataKeys: fetchedData.conferenceData ? Object.keys(fetchedData.conferenceData) : [],
+                entryPoints: fetchedData.conferenceData?.entryPoints,
+              })
+            }
+          } catch (fetchError: any) {
+            logger.warn(`Failed to fetch event for Meet link (attempt ${i + 1})`, { 
+              error: fetchError, 
+              eventId: response.data.id 
             })
           }
-        } catch (fetchError: any) {
-          logger.warn('Failed to fetch event for Meet link', { error: fetchError, eventId: response.data.id })
         }
       }
       
@@ -151,8 +167,28 @@ export async function createCalendarEvent(
       logger.info('Calendar event created with conference data', {
         eventId: response.data.id,
         hasConferenceData: !!response.data.conferenceData,
+        conferenceDataKeys: response.data.conferenceData ? Object.keys(response.data.conferenceData) : [],
+        entryPoints: response.data.conferenceData?.entryPoints,
+        entryPointsCount: response.data.conferenceData?.entryPoints?.length || 0,
         meetLink,
+        fullConferenceData: JSON.stringify(response.data.conferenceData),
       })
+      
+      // If still no Meet link after fetching, log detailed info
+      if (!meetLink) {
+        logger.error('Meet link not generated - possible causes:', {
+          eventId: response.data.id,
+          calendarId,
+          serviceAccountEmail: env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+          possibleCauses: [
+            'Calendar owner may not have Google Meet enabled/licensed',
+            'Service account may need domain-wide delegation with impersonation',
+            'Calendar may not support Google Meet',
+            'Meet link creation may be asynchronous - try fetching event again later',
+          ],
+          conferenceData: response.data.conferenceData,
+        })
+      }
     } catch (error: any) {
       // If that fails with "Invalid conference type", try without specifying type
       if (error.message?.includes('conference type') || error.code === 400) {
