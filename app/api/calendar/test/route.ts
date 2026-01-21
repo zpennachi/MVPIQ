@@ -31,17 +31,38 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Check OAuth status
+    // Check OAuth status - check all admins, not just those with connected=true
     const supabase = await createClient()
-    const { data: adminProfile } = await supabase
+    const { data: adminProfiles, error: adminError } = await supabase
       .from('profiles')
       .select('id, email, google_calendar_connected, google_calendar_id, google_calendar_access_token, google_calendar_refresh_token')
       .eq('role', 'admin')
-      .eq('google_calendar_connected', true)
-      .single()
+    
+    // Find the first admin with connected calendar and tokens
+    const adminProfile = adminProfiles?.find(p => 
+      p.google_calendar_connected === true && 
+      p.google_calendar_access_token && 
+      p.google_calendar_refresh_token
+    ) || null
 
     const hasOAuth = !!adminProfile && !!adminProfile.google_calendar_access_token && !!adminProfile.google_calendar_refresh_token
     const hasOAuthEnv = !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET)
+    
+    // Log diagnostic info
+    logger.info('OAuth status check', {
+      adminCount: adminProfiles?.length || 0,
+      adminError: adminError?.message,
+      foundConnectedAdmin: !!adminProfile,
+      adminEmail: adminProfile?.email,
+      hasAccessToken: !!adminProfile?.google_calendar_access_token,
+      hasRefreshToken: !!adminProfile?.google_calendar_refresh_token,
+      allAdmins: adminProfiles?.map(p => ({
+        email: p.email,
+        connected: p.google_calendar_connected,
+        hasAccessToken: !!p.google_calendar_access_token,
+        hasRefreshToken: !!p.google_calendar_refresh_token,
+      })),
+    })
 
     // Try to create a test event (1 hour from now)
     const testStartTime = new Date()
