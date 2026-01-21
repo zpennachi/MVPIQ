@@ -249,24 +249,40 @@ export async function POST(request: NextRequest) {
     // Only try to generate if we don't already have a meeting link
     if (!meetingLink) {
       try {
+        logger.info('Attempting to generate meeting link in payment route', { sessionId, mentorId: session.mentor_id })
         const calendarEvent = await createGoogleCalendarEvent(session)
         meetingLink = calendarEvent?.meetLink || null
         googleEventId = calendarEvent?.eventId
         
         if (meetingLink) {
-          logger.info('Google Meet link generated in payment route', { sessionId, meetingLink, googleEventId })
+          logger.info('✅ Google Meet link generated successfully in payment route', { 
+            sessionId, 
+            meetingLink, 
+            googleEventId,
+            meetingLinkLength: meetingLink.length 
+          })
         } else {
-          logger.warn('No meeting link generated - service account may not be configured', { sessionId, mentorId: session.mentor_id })
+          logger.warn('⚠️ No meeting link generated in payment route', { 
+            sessionId, 
+            mentorId: session.mentor_id,
+            hasEventId: !!googleEventId,
+            eventId: googleEventId,
+            hint: 'OAuth may not be connected or Meet link generation failed. Check Vercel logs for details.'
+          })
         }
       } catch (calendarError: any) {
         // Log detailed error for debugging
         const errorMessage = calendarError?.message || 'Unknown error'
-        logger.error('Failed to create Google Calendar event in payment route', calendarError, { 
+        logger.error('❌ Failed to create Google Calendar event in payment route', calendarError, { 
           sessionId,
           errorMessage,
+          errorCode: calendarError?.code,
+          errorStack: calendarError?.stack,
           hint: errorMessage.includes('not configured') 
-            ? 'Google service account not configured. See GOOGLE_CALENDAR_SETUP.md'
-            : 'Check service account credentials and calendar permissions'
+            ? 'Google OAuth or service account not configured. See GOOGLE_CALENDAR_SETUP.md'
+            : errorMessage.includes('OAuth')
+            ? 'OAuth tokens may be invalid or expired. Try reconnecting calendar in settings.'
+            : 'Check OAuth tokens or service account credentials and calendar permissions'
         })
         // Continue without calendar event - don't fail the booking
         // Keep existing meeting link if it exists
@@ -357,7 +373,10 @@ export async function POST(request: NextRequest) {
         sessionId, 
         status: updatedSession?.status,
         payment_status: updatedSession?.payment_status,
-        meeting_link: updatedSession?.meeting_link 
+        meeting_link: updatedSession?.meeting_link,
+        hasMeetingLink: !!updatedSession?.meeting_link,
+        meetingLinkLength: updatedSession?.meeting_link?.length || 0,
+        googleEventId: updatedSession?.google_event_id
       })
       
       // Send confirmation emails with updated session data (includes meeting_link)
