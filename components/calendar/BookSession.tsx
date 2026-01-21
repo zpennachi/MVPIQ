@@ -353,6 +353,7 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
       }
 
       // No credits available or credit use failed - proceed with payment
+      console.log('📞 Calling payment route for session:', session.id)
       const response = await fetch('/api/sessions/payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -362,10 +363,13 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
         }),
       })
 
+      console.log('📞 Payment route response status:', response.status, response.ok)
       const data = await response.json()
+      console.log('📞 Payment route response data:', data)
 
       if (!response.ok) {
         // Delete session if payment fails
+        console.error('❌ Payment route failed:', data)
         await supabase.from('booked_sessions').delete().eq('id', session.id)
         throw new Error(data.error || 'Payment failed')
       }
@@ -375,6 +379,7 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
         window.location.href = data.checkoutUrl
       } else if (data.devMode) {
         // Dev mode: Payment skipped
+        console.log('✅ Dev mode confirmed, session should be confirmed')
         alert('✅ Dev Mode: Session booked! Payment skipped.')
         setShowPaymentModal(false)
         setSelectedSlot(null)
@@ -385,6 +390,8 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
         loadMentors()
         // Trigger callback to refresh appointments
         onBookingSuccess?.()
+      } else {
+        console.warn('⚠️ Payment route returned but no checkoutUrl or devMode flag')
       }
     } catch (error: any) {
       alert('Failed to book session: ' + error.message)
