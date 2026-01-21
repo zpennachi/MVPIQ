@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createCalendarEvent } from '@/lib/google-calendar'
 import { env } from '@/lib/env'
 import { logger } from '@/lib/logger'
+import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,6 +30,18 @@ export async function GET(request: NextRequest) {
         message: 'Please set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY in Vercel environment variables',
       }, { status: 400 })
     }
+
+    // Check OAuth status
+    const supabase = await createClient()
+    const { data: adminProfile } = await supabase
+      .from('profiles')
+      .select('id, email, google_calendar_connected, google_calendar_id, google_calendar_access_token IS NOT NULL as has_access_token, google_calendar_refresh_token IS NOT NULL as has_refresh_token')
+      .eq('role', 'admin')
+      .eq('google_calendar_connected', true)
+      .single()
+
+    const hasOAuth = !!adminProfile && adminProfile.has_access_token && adminProfile.has_refresh_token
+    const hasOAuthEnv = !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET)
 
     // Try to create a test event (1 hour from now)
     const testStartTime = new Date()
@@ -60,15 +73,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: result.meetLink 
-          ? 'Service account is configured correctly and Meet link was generated!'
+          ? (hasOAuth ? 'OAuth is configured correctly and Meet link was generated!' : 'Service account is configured correctly and Meet link was generated!')
+          : hasOAuth 
+          ? 'OAuth is configured but Meet link was not generated. Check Vercel logs for details.'
           : 'Service account is configured correctly, but Meet link was not generated.',
         details: {
           eventId: result.eventId,
           meetLink: result.meetLink || 'NOT GENERATED',
-          calendarId,
-          email: env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.substring(0, 30) + '...',
+          calendarId: hasOAuth ? (adminProfile?.google_calendar_id || 'primary') : calendarId,
+          email: hasOAuth ? adminProfile?.email : (env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.substring(0, 30) + '...'),
+          authMethod: hasOAuth ? 'OAuth' : 'Service Account',
           isGmailAccount,
           limitation: meetLinkIssue,
+          oAuthStatus: {
+            connected: hasOAuth,
+            hasTokens: hasOAuth,
+            hasEnvVars: hasOAuthEnv,
+            adminEmail: adminProfile?.email,
+          },
         },
         note: result.meetLink 
           ? 'A test event was created in your calendar with a Meet link. You can delete it.'
