@@ -11,10 +11,9 @@ DELETE FROM feedback_submissions;
 -- Delete all videos (since they're linked to feedback submissions)
 DELETE FROM videos;
 
--- Delete all payments related to sessions and submissions
+-- Delete all payments related to submissions
 DELETE FROM payments 
-WHERE submission_id IS NOT NULL 
-   OR session_id IS NOT NULL;
+WHERE submission_id IS NOT NULL;
 
 -- Optional: Reset any session credits if you want a completely fresh start
 -- DELETE FROM session_credits;
@@ -24,4 +23,4 @@ SELECT
   (SELECT COUNT(*) FROM booked_sessions) as remaining_sessions,
   (SELECT COUNT(*) FROM feedback_submissions) as remaining_submissions,
   (SELECT COUNT(*) FROM videos) as remaining_videos,
-  (SELECT COUNT(*) FROM payments WHERE submission_id IS NOT NULL OR session_id IS NOT NULL) as remaining_payments;
+  (SELECT COUNT(*) FROM payments WHERE submission_id IS NOT NULL) as remaining_payments;
