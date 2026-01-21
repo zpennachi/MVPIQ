@@ -145,25 +145,37 @@ async function getOAuthClient(): Promise<{ client: any; calendarId: string } | n
               ? new Date(credentials.expiry_date).toISOString()
               : new Date(Date.now() + 3600 * 1000).toISOString()
 
+            // CRITICAL: Use a transaction-like approach - only update access_token and expires_at
+            // NEVER clear refresh_token - it's permanent and must be preserved
+            const updateData: any = {
+              google_calendar_access_token: accessToken,
+              google_calendar_token_expires_at: newExpiresAt,
+            }
+            
+            // Only update refresh_token if Google provided a new one (rare but possible)
+            if (credentials.refresh_token && credentials.refresh_token !== adminProfile.google_calendar_refresh_token) {
+              logger.info('Google provided new refresh token, updating it', {
+                adminId: adminProfile.id,
+              })
+              updateData.google_calendar_refresh_token = credentials.refresh_token
+            }
+            
             const { error: updateError } = await supabase
               .from('profiles')
-              .update({
-                google_calendar_access_token: accessToken,
-                google_calendar_token_expires_at: newExpiresAt,
-                // Only update refresh_token if a new one was provided
-                ...(credentials.refresh_token && { google_calendar_refresh_token: credentials.refresh_token }),
-              })
+              .update(updateData)
               .eq('id', adminProfile.id)
 
             if (updateError) {
-              logger.error('Failed to update OAuth token in database', updateError, {
+              logger.error('❌ Failed to update OAuth token in database', updateError, {
                 adminId: adminProfile.id,
+                updateDataKeys: Object.keys(updateData),
               })
-              // Continue with new token even if DB update failed
+              // Continue with new token even if DB update failed - don't lose the token
             } else {
-              logger.info('OAuth token refreshed and saved successfully', {
+              logger.info('✅ OAuth token refreshed and saved successfully', {
                 adminId: adminProfile.id,
                 newExpiresAt,
+                updatedFields: Object.keys(updateData),
               })
             }
           }
@@ -235,61 +247,31 @@ export async function createCalendarEvent(
   }
 
   // Try OAuth first (for Meet links with Gmail accounts)
-  // Check if OAuth tokens exist before trying to get client
-  const supabase = await createClient()
-  const { data: oauthCheck } = await supabase
-    .from('profiles')
-    .select('id, google_calendar_connected, google_calendar_access_token, google_calendar_refresh_token')
-    .eq('role', 'admin')
-    .eq('google_calendar_connected', true)
-    .not('google_calendar_access_token', 'is', null)
-    .not('google_calendar_refresh_token', 'is', null)
-    .maybeSingle()
+  const oauthClient = await getOAuthClient()
   
-  const hasOAuthTokens = !!oauthCheck?.google_calendar_access_token && !!oauthCheck?.google_calendar_refresh_token
-  
-  if (hasOAuthTokens) {
-    logger.info('OAuth tokens found in database, attempting to use OAuth client', {
-      adminId: oauthCheck?.id,
-      hasAccessToken: !!oauthCheck?.google_calendar_access_token,
-      hasRefreshToken: !!oauthCheck?.google_calendar_refresh_token,
+  if (oauthClient) {
+    logger.info('Using OAuth client for calendar event creation (supports Meet links)', {
+      calendarId: oauthClient.calendarId,
     })
-    
-    const oauthClient = await getOAuthClient()
-    
-    if (oauthClient) {
-      logger.info('Using OAuth client for calendar event creation (supports Meet links)', {
-        calendarId: oauthClient.calendarId,
+    try {
+      const { client: calendar, calendarId } = oauthClient
+      const result = await createEventWithMeetLink(calendar, calendarId, event, 'oauth')
+      logger.info('✅ Successfully created calendar event with OAuth', {
+        eventId: result.eventId,
+        hasMeetLink: !!result.meetLink,
+        meetLink: result.meetLink || 'NOT GENERATED',
       })
-      try {
-        const { client: calendar, calendarId } = oauthClient
-        const result = await createEventWithMeetLink(calendar, calendarId, event, 'oauth')
-        logger.info('Successfully created calendar event with OAuth', {
-          eventId: result.eventId,
-          hasMeetLink: !!result.meetLink,
-          meetLink: result.meetLink ? 'generated' : 'not generated',
-        })
-        return result
-      } catch (error: any) {
-        logger.error('Failed to create event with OAuth', error, {
-          errorMessage: error.message,
-          errorCode: error.code,
-          errorStack: error.stack,
-          hint: 'OAuth tokens exist but event creation failed. This might indicate invalid tokens or API permissions issue.',
-        })
-        // Don't fall through - throw the error so caller knows OAuth failed
-        throw new Error(`OAuth event creation failed: ${error.message || 'Unknown error'}. Please check OAuth tokens in settings.`)
-      }
-    } else {
-      logger.warn('OAuth tokens exist in database but getOAuthClient() returned null', {
-        adminId: oauthCheck?.id,
-        hint: 'Token refresh may have failed. Check Vercel logs for details.',
+      return result
+    } catch (error: any) {
+      logger.error('❌ Failed to create event with OAuth, falling back to service account', error, {
+        errorMessage: error.message,
+        errorCode: error.code,
+        hint: 'OAuth failed but tokens are preserved. Will try service account as fallback.',
       })
-      // Don't fall through to service account - OAuth should work if tokens exist
-      throw new Error('OAuth tokens exist but could not create OAuth client. Please reconnect calendar in settings.')
+      // Fall through to service account - don't throw, preserve tokens
     }
   } else {
-    logger.info('No OAuth tokens found in database, will use service account')
+    logger.info('OAuth client not available, will use service account')
   }
 
   // Fallback to service account
