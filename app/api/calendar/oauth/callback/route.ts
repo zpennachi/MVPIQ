@@ -98,7 +98,8 @@ export async function GET(request: NextRequest) {
       expiresAt 
     })
 
-    return NextResponse.redirect(new URL('/dashboard/settings?calendar_connected=success', request.url))
+    // Redirect to dashboard (not settings) so they land on their dashboard after connecting
+    return NextResponse.redirect(new URL('/dashboard?calendar_connected=success', request.url))
   } catch (error: any) {
     logger.error('Failed to handle OAuth callback', error)
     return NextResponse.redirect(new URL('/dashboard/settings?calendar_error=callback_failed', request.url))

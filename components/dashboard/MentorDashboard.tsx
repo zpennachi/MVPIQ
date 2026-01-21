@@ -23,19 +23,51 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
   const [upcomingSessions, setUpcomingSessions] = useState<(BookedSession & { user?: Profile })[]>([])
   const [loadingSessions, setLoadingSessions] = useState(false)
   const [viewedSubmissionIds, setViewedSubmissionIds] = useState<Set<string>>(new Set())
+  const [calendarConnected, setCalendarConnected] = useState<boolean | null>(null)
+  const [connectingCalendar, setConnectingCalendar] = useState(false)
   const supabase = createClient()
+
+  const connectGoogleCalendar = async () => {
+    if (connectingCalendar) return
+    
+    setConnectingCalendar(true)
+    try {
+      // Get OAuth URL from API
+      const response = await fetch('/api/calendar/oauth/connect')
+      const data = await response.json()
+      
+      if (data.authUrl) {
+        // Redirect to Google OAuth
+        window.location.href = data.authUrl
+      } else {
+        console.error('Failed to get OAuth URL:', data.error)
+        setConnectingCalendar(false)
+      }
+    } catch (error: any) {
+      console.error('Error connecting calendar:', error)
+      setConnectingCalendar(false)
+    }
+  }
 
   useEffect(() => {
     const loadProfile = async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('full_name, email, profile_photo_url')
+        .select('full_name, email, profile_photo_url, google_calendar_connected')
         .eq('id', mentorId)
         .single()
-      if (data) setProfile(data)
+      if (data) {
+        setProfile(data)
+        setCalendarConnected(data.google_calendar_connected || false)
+        
+        // If calendar not connected, automatically trigger OAuth flow
+        if (!data.google_calendar_connected && !connectingCalendar) {
+          connectGoogleCalendar()
+        }
+      }
     }
     loadProfile()
-  }, [mentorId])
+  }, [mentorId, connectingCalendar])
 
   // Load viewed submission IDs from localStorage
   useEffect(() => {
@@ -54,6 +86,27 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
   useEffect(() => {
     loadUpcomingSessions()
   }, [mentorId])
+
+  // Reload profile after OAuth callback (check URL params)
+  useEffect(() => {
+    const checkOAuthCallback = async () => {
+      const urlParams = new URLSearchParams(window.location.search)
+      if (urlParams.get('calendar_connected') === 'success') {
+        // Reload profile to get updated calendar status
+        const { data } = await supabase
+          .from('profiles')
+          .select('google_calendar_connected')
+          .eq('id', mentorId)
+          .single()
+        if (data) {
+          setCalendarConnected(data.google_calendar_connected || false)
+        }
+        // Clean up URL
+        window.history.replaceState({}, '', '/dashboard')
+      }
+    }
+    checkOAuthCallback()
+  }, [mentorId, supabase])
 
   const loadSubmissions = async () => {
     setLoading(true)
