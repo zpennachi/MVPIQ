@@ -365,7 +365,18 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
                 </Link>
               </div>
               <SubmissionList
-                submissions={newSubmissions.slice(0, 3)}
+                submissions={newSubmissions.slice(0, 3).map(s => {
+                  // Mark as viewed when displayed
+                  if (!viewedSubmissionIds.has(s.id)) {
+                    const newViewed = new Set(viewedSubmissionIds)
+                    newViewed.add(s.id)
+                    setViewedSubmissionIds(newViewed)
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem(`viewed_submissions_${mentorId}`, JSON.stringify(Array.from(newViewed)))
+                    }
+                  }
+                  return s
+                })}
                 userRole="mentor"
                 onUpdate={loadSubmissions}
                 onSelectSubmission={handleSelectSubmission}
