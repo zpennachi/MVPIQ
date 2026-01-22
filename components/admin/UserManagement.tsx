@@ -482,7 +482,7 @@ export function UserManagement({ adminId }: UserManagementProps) {
                   type="button"
                   onClick={() => {
                     setShowInviteModal(false)
-                    setInviteData({ email: '', fullName: '', role: 'mentor' })
+                    setInviteData({ email: '', fullName: '', role: 'player' })
                   }}
                   className="px-4 py-2 border border-[#272727] text-[#d9d9d9] rounded-md hover:bg-[#272727] transition"
                 >
