@@ -6,6 +6,7 @@ import type { FeedbackSubmission } from '@/types/database'
 import { Play, MessageSquare } from 'lucide-react'
 import { VideoPlayerModal } from '@/components/video/VideoPlayerModal'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { FeedbackProgressTracker } from './FeedbackProgressTracker'
 
 interface SubmissionListProps {
   submissions: FeedbackSubmission[]
@@ -106,6 +107,13 @@ export function SubmissionList({
                     >
                       {video.video_url || video.file_path} <span>→</span>
                     </a>
+                  </div>
+                )}
+
+                {/* Progress Tracker - Show for players when feedback is not completed */}
+                {userRole === 'player' && submission.status !== 'completed' && (
+                  <div className="mt-4 p-4 bg-[#272727]/30 border border-[#272727] rounded-lg">
+                    <FeedbackProgressTracker submission={submission} />
                   </div>
                 )}
 
