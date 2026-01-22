@@ -257,65 +257,40 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
       </div>
 
       <div className="space-y-6">
-          {/* Pending Feedback Requests - Videos submitted waiting for feedback */}
-          {submissions.filter(s => s.status !== 'completed').length > 0 && (
-            <div className="bg-gradient-to-r from-[#ffc700]/10 to-[#ffc700]/5 border-2 border-[#ffc700]/40 rounded-lg shadow-mvp p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-lg sm:text-xl font-semibold text-white">Pending Feedback Requests</h2>
-                  <p className="text-sm text-[#d9d9d9]/70 mt-1">
-                    Your videos are being reviewed by professional mentors
-                  </p>
-                </div>
-                <Link
-                  href="/dashboard/feedback"
-                  className="text-sm text-[#ffc700] hover:text-[#e6b300] transition font-medium"
-                >
-                  View All →
-                </Link>
-              </div>
-              <SubmissionList 
-                submissions={submissions.filter(s => s.status !== 'completed')} 
-                userRole="player" 
-                onUpdate={loadData} 
-              />
-              {submissions.filter(s => s.status !== 'completed').length > 0 && (
-                <div className="mt-4 pt-4 border-t border-[#ffc700]/20">
+          {/* New Feedback - Show FIRST and prominently when available */}
+          {submissions.filter(s => s.status === 'completed' && s.feedback_text && !viewedFeedbackIds.has(s.id)).length > 0 && (
+            <div className="bg-gradient-to-r from-green-900/30 to-green-800/20 border-2 border-green-500/60 rounded-lg shadow-mvp p-4 sm:p-6 relative overflow-hidden">
+              {/* Subtle animation background */}
+              <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-transparent opacity-50"></div>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-green-500/40">
+                      <MessageSquare className="w-6 h-6 text-green-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                        🎉 New Feedback Available!
+                      </h2>
+                      <p className="text-sm text-green-300/90 mt-1 font-medium">
+                        {submissions.filter(s => s.status === 'completed' && s.feedback_text && !viewedFeedbackIds.has(s.id)).length} new feedback response{submissions.filter(s => s.status === 'completed' && s.feedback_text && !viewedFeedbackIds.has(s.id)).length > 1 ? 's' : ''} ready for review
+                      </p>
+                    </div>
+                  </div>
                   <Link
-                    href="/contact"
-                    className="inline-flex items-center gap-2 text-[#ffc700] hover:text-[#e6b300] text-sm font-medium transition"
+                    href="/dashboard/feedback"
+                    className="text-sm text-green-400 hover:text-green-300 transition font-medium whitespace-nowrap bg-green-500/10 px-3 py-1.5 rounded-md border border-green-500/30 hover:bg-green-500/20"
                   >
-                    <HelpCircle className="w-4 h-4" />
-                    Need help with your order?
+                    View All →
                   </Link>
                 </div>
-              )}
-            </div>
-          )}
-
-          {/* New Feedback - Completed feedback they haven't seen yet */}
-          {submissions.filter(s => s.status === 'completed' && s.feedback_text && !viewedFeedbackIds.has(s.id)).length > 0 && (
-            <div className="bg-gradient-to-r from-green-900/20 to-green-800/10 border-2 border-green-800/40 rounded-lg shadow-mvp p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-lg sm:text-xl font-semibold text-white">New Feedback Available</h2>
-                  <p className="text-sm text-[#d9d9d9]/70 mt-1">
-                    Professional feedback is ready for your review
-                  </p>
-                </div>
-                <Link
-                  href="/dashboard/feedback"
-                  className="text-sm text-green-400 hover:text-green-300 transition font-medium"
-                >
-                  View All →
-                </Link>
+                <SubmissionList 
+                  submissions={submissions.filter(s => s.status === 'completed' && s.feedback_text && !viewedFeedbackIds.has(s.id)).slice(0, 3)} 
+                  userRole="player" 
+                  onUpdate={loadData}
+                  onViewFeedback={(submissionId) => markFeedbackAsViewed(submissionId)}
+                />
               </div>
-              <SubmissionList 
-                submissions={submissions.filter(s => s.status === 'completed' && s.feedback_text && !viewedFeedbackIds.has(s.id)).slice(0, 3)} 
-                userRole="player" 
-                onUpdate={loadData}
-                onViewFeedback={(submissionId) => markFeedbackAsViewed(submissionId)}
-              />
             </div>
           )}
 
