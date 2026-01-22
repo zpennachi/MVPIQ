@@ -16,6 +16,7 @@ interface PlayerFeedbackPageProps {
 export function PlayerFeedbackPage({ userId }: PlayerFeedbackPageProps) {
   const [submissions, setSubmissions] = useState<FeedbackSubmission[]>([])
   const [loading, setLoading] = useState(true)
+  const [viewedFeedbackIds, setViewedFeedbackIds] = useState<Set<string>>(new Set())
   const searchParams = useSearchParams()
   const supabase = createClient()
 
@@ -26,6 +27,26 @@ export function PlayerFeedbackPage({ userId }: PlayerFeedbackPageProps) {
   }
 
   const [activeTab, setActiveTab] = useState<'my-feedback' | 'submit'>(getInitialTab())
+
+  // Load viewed feedback IDs from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const viewed = localStorage.getItem(`viewed_feedback_${userId}`)
+      if (viewed) {
+        setViewedFeedbackIds(new Set(JSON.parse(viewed)))
+      }
+    }
+  }, [userId])
+
+  // Mark feedback as viewed
+  const markFeedbackAsViewed = (submissionId: string) => {
+    const newViewed = new Set(viewedFeedbackIds)
+    newViewed.add(submissionId)
+    setViewedFeedbackIds(newViewed)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`viewed_feedback_${userId}`, JSON.stringify(Array.from(newViewed)))
+    }
+  }
 
   // Update tab when URL params change
   useEffect(() => {
@@ -52,6 +73,9 @@ export function PlayerFeedbackPage({ userId }: PlayerFeedbackPageProps) {
   // Separate under review and completed, show under review first
   const underReview = submissions.filter(s => s.status !== 'completed')
   const completed = submissions.filter(s => s.status === 'completed')
+  // Separate completed into new (not viewed) and viewed
+  const newCompleted = completed.filter(s => s.feedback_text && !viewedFeedbackIds.has(s.id))
+  const viewedCompleted = completed.filter(s => !s.feedback_text || viewedFeedbackIds.has(s.id))
   const sortedSubmissions = [...underReview, ...completed]
 
   if (loading) {
@@ -121,14 +145,31 @@ export function PlayerFeedbackPage({ userId }: PlayerFeedbackPageProps) {
               </div>
             )}
 
+            {/* New Completed Feedback Section */}
+            {newCompleted.length > 0 && (
+              <div className="bg-gradient-to-r from-green-900/30 to-green-800/20 border-2 border-green-500/60 rounded-lg shadow-mvp p-4 sm:p-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                  🎉 New Feedback
+                </h2>
+                <SubmissionList 
+                  submissions={newCompleted} 
+                  userRole="player" 
+                  onUpdate={loadData}
+                  onViewFeedback={(submissionId) => markFeedbackAsViewed(submissionId)}
+                  isNewFeedback={true}
+                />
+              </div>
+            )}
+
             {/* Completed Feedback Section */}
-            {completed.length > 0 && (
+            {viewedCompleted.length > 0 && (
               <div className="bg-black border border-[#272727] rounded-lg shadow-mvp p-4 sm:p-6">
                 <h2 className="text-lg sm:text-xl font-semibold text-white mb-4">Completed Feedback</h2>
                 <SubmissionList 
-                  submissions={completed} 
+                  submissions={viewedCompleted} 
                   userRole="player" 
-                  onUpdate={loadData} 
+                  onUpdate={loadData}
+                  onViewFeedback={(submissionId) => markFeedbackAsViewed(submissionId)}
                 />
               </div>
             )}
@@ -197,14 +238,30 @@ export function PlayerFeedbackPage({ userId }: PlayerFeedbackPageProps) {
             </div>
           )}
 
+          {/* New Completed Feedback Section */}
+          {newCompleted.length > 0 && (
+            <div className="bg-gradient-to-r from-green-900/30 to-green-800/20 border-2 border-green-500/60 rounded-lg shadow-mvp p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                🎉 New Feedback
+              </h2>
+              <SubmissionList 
+                submissions={newCompleted} 
+                userRole="player" 
+                onUpdate={loadData}
+                onViewFeedback={(submissionId) => markFeedbackAsViewed(submissionId)}
+              />
+            </div>
+          )}
+
           {/* Completed Feedback Section */}
-          {completed.length > 0 && (
+          {viewedCompleted.length > 0 && (
             <div className="bg-black border border-[#272727] rounded-lg shadow-mvp p-4 sm:p-6">
               <h2 className="text-lg sm:text-xl font-semibold text-white mb-4">Completed Feedback</h2>
               <SubmissionList 
-                submissions={completed} 
+                submissions={viewedCompleted} 
                 userRole="player" 
-                onUpdate={loadData} 
+                onUpdate={loadData}
+                onViewFeedback={(submissionId) => markFeedbackAsViewed(submissionId)}
               />
             </div>
           )}
