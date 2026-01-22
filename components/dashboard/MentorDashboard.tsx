@@ -10,6 +10,7 @@ import type { FeedbackSubmission, BookedSession, Profile } from '@/types/databas
 import { MessageSquare, CheckCircle, Clock, User, Calendar, X, Film } from 'lucide-react'
 import { format } from 'date-fns'
 import Link from 'next/link'
+import { getFullName, getFirstName, getInitials as getProfileInitials } from '@/lib/utils'
 
 interface MentorDashboardProps {
   mentorId: string
@@ -19,7 +20,7 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
   const [submissions, setSubmissions] = useState<FeedbackSubmission[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedSubmission, setSelectedSubmission] = useState<FeedbackSubmission | null>(null)
-  const [profile, setProfile] = useState<{ full_name: string | null; email: string; profile_photo_url: string | null } | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [upcomingSessions, setUpcomingSessions] = useState<(BookedSession & { user?: Profile })[]>([])
   const [loadingSessions, setLoadingSessions] = useState(false)
   const [viewedSubmissionIds, setViewedSubmissionIds] = useState<Set<string>>(new Set())
@@ -186,7 +187,7 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
   }
 
   const handleCancelSession = async (sessionId: string, session: BookedSession & { user?: Profile }) => {
-    const userName = session.user?.full_name || session.user?.email || 'the user'
+    const userName = getFullName(session.user) || session.user?.email || 'the user'
     if (!confirm(`Are you sure you want to cancel this session with ${userName}?`)) {
       return
     }
@@ -231,8 +232,8 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
               type: 'session_cancelled',
               email: session.user.email,
               data: {
-                mentorName: profile?.full_name || profile?.email || 'Mentor',
-                userName: session.user.full_name || session.user.email || 'User',
+                mentorName: getFullName(profile) || profile?.email || 'Mentor',
+                userName: getFullName(session.user) || session.user.email || 'User',
                 startTime: session.start_time,
               },
             }),
@@ -335,8 +336,8 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
     )
   }
 
-  const displayName = profile?.full_name || profile?.email || 'there'
-  const firstName = displayName !== 'there' ? displayName.split(' ')[0] : ''
+  const displayName = getFullName(profile) || profile?.email || 'there'
+  const firstName = getFirstName(profile) || ''
 
   return (
     <>
@@ -424,18 +425,18 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
                           {session.user?.profile_photo_url ? (
                             <img
                               src={session.user.profile_photo_url}
-                              alt={session.user?.full_name || session.user?.email || 'User'}
+                              alt={getFullName(session.user) || session.user?.email || 'User'}
                               className="w-8 h-8 rounded-full object-cover flex-shrink-0 border-2 border-[#ffc700]/40"
                             />
                           ) : (
                             <div className="w-8 h-8 bg-[#ffc700]/20 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-[#ffc700]/40">
                               <span className="text-sm font-bold text-[#ffc700]">
-                                {getInitials(session.user?.full_name || null)}
+                                {getInitials(session.user)}
                               </span>
                             </div>
                           )}
                           <h3 className="font-semibold text-white">
-                            {session.user?.full_name || session.user?.email || 'Unknown User'}
+                            {getFullName(session.user) || session.user?.email || 'Unknown User'}
                           </h3>
                         </div>
                         <p className="text-sm text-[#d9d9d9] mb-1">

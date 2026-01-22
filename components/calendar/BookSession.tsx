@@ -6,6 +6,7 @@ import type { AvailabilitySlot, Profile, BookedSession } from '@/types/database'
 import { Calendar, Clock, DollarSign, CreditCard } from 'lucide-react'
 import { format, startOfWeek, addDays, eachDayOfInterval, addWeeks, subWeeks, isSameDay, parseISO, addMinutes } from 'date-fns'
 import { expandRecurringSlots, type ExpandedSlot } from '@/lib/calendar/recurring-slots'
+import { getFullName, getInitials as getProfileInitials } from '@/lib/utils'
 
 interface BookSessionProps {
   userId: string
@@ -484,13 +485,8 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
             </h2>
             <div className="flex flex-wrap gap-2">
               {mentors.map(({ mentor, slots }) => {
-                const getInitials = (name: string | null) => {
-                  if (!name) return 'M'
-                  const parts = name.split(' ')
-                  if (parts.length >= 2) {
-                    return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
-                  }
-                  return name[0].toUpperCase()
+                const getInitials = (profile: Profile | null) => {
+                  return getProfileInitials(profile)
                 }
 
                 return (
@@ -533,7 +529,7 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
                 <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                  {selectedMentor.full_name || selectedMentor.email}&apos;s Availability
+                  {getFullName(selectedMentor) || selectedMentor.email}&apos;s Availability
                   {selectedMentorData.expandedSlots && selectedMentorData.expandedSlots.length > 0 && (
                     <span className="ml-2 text-xs sm:text-sm font-normal text-gray-500 dark:text-gray-400 block sm:inline">
                       ({selectedMentorData.expandedSlots.length} available slots)
@@ -674,21 +670,18 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
                   {selectedMentor?.profile_photo_url ? (
                     <img
                       src={selectedMentor.profile_photo_url}
-                      alt={selectedMentor.full_name || selectedMentor.email}
+                      alt={getFullName(selectedMentor) || selectedMentor.email}
                       className="w-12 h-12 rounded-full object-cover border-2 border-yellow-500"
                     />
                   ) : (
                     <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center border-2 border-yellow-500">
                       <span className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
-                        {selectedMentor?.full_name ? (selectedMentor.full_name.split(' ').length >= 2 
-                          ? `${selectedMentor.full_name.split(' ')[0][0]}${selectedMentor.full_name.split(' ')[1][0]}`.toUpperCase()
-                          : selectedMentor.full_name[0].toUpperCase())
-                          : 'M'}
+                        {getProfileInitials(selectedMentor)}
                       </span>
                     </div>
                   )}
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {selectedMentor?.full_name || selectedMentor?.email}
+                    {getFullName(selectedMentor) || selectedMentor?.email}
                   </p>
                 </div>
               </div>

@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { FeedbackSubmission } from '@/types/database'
+import type { FeedbackSubmission, Profile } from '@/types/database'
 import { X } from 'lucide-react'
+import { getFullName } from '@/lib/utils'
 
 interface FeedbackFormProps {
   submission: FeedbackSubmission
@@ -104,7 +105,7 @@ export function FeedbackForm({
                   videoTitle: video?.title,
                   feedbackText: feedbackText,
                   rating: submission.rating || 0,
-                  mentorName: mentorProfile?.full_name || mentorProfile?.email || 'Your mentor',
+                  mentorName: getFullName(mentorProfile as Profile) || mentorProfile?.email || 'Your mentor',
                 },
               }),
             })

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Profile, FeedbackSubmission } from '@/types/database'
 import { Search, Edit, UserCheck, UserX, MessageSquare, TrendingUp, UserPlus, X, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
+import { getFullName } from '@/lib/utils'
 
 interface MentorManagementProps {
   adminId: string
@@ -89,7 +90,8 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
   const handleEdit = (mentor: Profile) => {
     setEditingMentor(mentor.id)
     setEditData({
-      full_name: mentor.full_name || '',
+      first_name: mentor.first_name || '',
+      last_name: mentor.last_name || '',
       email: mentor.email,
       phone_number: (mentor as any).phone_number || '',
     })
@@ -117,7 +119,8 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
       const { error } = await supabase
         .from('profiles')
         .update({
-          full_name: editData.full_name || null,
+          first_name: editData.first_name?.trim() || null,
+          last_name: editData.last_name?.trim() || null,
           phone_number: editData.phone_number || null,
         })
         .eq('id', mentorId)
@@ -238,7 +241,7 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
 
   const filteredMentors = mentors.filter(mentor =>
     mentor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (mentor.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
+    (getFullName(mentor).toLowerCase().includes(searchTerm.toLowerCase()) || false)
   )
 
   if (loading) {
@@ -339,7 +342,7 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <h3 className="font-semibold text-white mb-1">
-                      {mentor.full_name || 'No name'}
+                      {getFullName(mentor) || 'No name'}
                     </h3>
                     <p className="text-sm text-[#d9d9d9]">{mentor.email}</p>
                     {(mentor as any).phone_number && (
@@ -460,17 +463,34 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
               </div>
 
               <div>
-                <label htmlFor="invite-name" className="block text-sm font-medium text-[#d9d9d9] mb-1">
-                  Full Name
-                </label>
-                <input
-                  id="invite-name"
-                  type="text"
-                  value={inviteData.fullName}
-                  onChange={(e) => setInviteData({ ...inviteData, fullName: e.target.value })}
-                  className="w-full px-3 py-2 border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700]"
-                  placeholder="Optional"
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="invite-first-name" className="block text-sm font-medium text-[#d9d9d9] mb-1">
+                      First Name
+                    </label>
+                    <input
+                      id="invite-first-name"
+                      type="text"
+                      value={inviteData.firstName}
+                      onChange={(e) => setInviteData({ ...inviteData, firstName: e.target.value })}
+                      className="w-full px-3 py-2 border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700]"
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="invite-last-name" className="block text-sm font-medium text-[#d9d9d9] mb-1">
+                      Last Name
+                    </label>
+                    <input
+                      id="invite-last-name"
+                      type="text"
+                      value={inviteData.lastName}
+                      onChange={(e) => setInviteData({ ...inviteData, lastName: e.target.value })}
+                      className="w-full px-3 py-2 border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700]"
+                      placeholder="Optional"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-2">

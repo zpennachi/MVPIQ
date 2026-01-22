@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { SubmissionList } from '@/components/feedback/SubmissionList'
 import { CardSkeleton } from '@/components/ui/LoadingSkeleton'
-import type { FeedbackSubmission } from '@/types/database'
+import type { FeedbackSubmission, Profile } from '@/types/database'
 import { MessageSquare, Users, DollarSign, HelpCircle, Video } from 'lucide-react'
 import Link from 'next/link'
+import { getFullName, getFirstName, getInitials as getProfileInitials } from '@/lib/utils'
 
 interface PlayerDashboardProps {
   userId: string
@@ -179,17 +180,12 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
     setLoading(false)
   }
 
-  const getInitials = (name: string | null) => {
-    if (!name) return 'U'
-    const parts = name.split(' ')
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
-    }
-    return name[0].toUpperCase()
+  const getInitials = (profile: Profile | null) => {
+    return getProfileInitials(profile)
   }
 
-  const displayName = profile?.full_name || profile?.email || 'there'
-  const firstName = displayName !== 'there' ? displayName.split(' ')[0] : ''
+  const displayName = getFullName(profile) || 'there'
+  const firstName = getFirstName(profile) || ''
   const playerNumber = teams.length > 0 ? teams[0].player_number : null
   const schoolName = teams.length > 0 ? teams[0].team.name : null
 
@@ -216,13 +212,13 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
           {profile?.profile_photo_url ? (
             <img
               src={profile.profile_photo_url}
-              alt={profile?.full_name || 'Profile'}
+              alt={getFullName(profile) || 'Profile'}
               className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover flex-shrink-0 border-2 border-[#ffc700]/40"
             />
           ) : (
             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#ffc700]/20 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-[#ffc700]/40">
               <span className="text-2xl sm:text-3xl font-bold text-[#ffc700]">
-                {getInitials(profile?.full_name || null)}
+                {getInitials(profile)}
               </span>
             </div>
           )}
@@ -290,20 +286,20 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
                         {mentor?.profile_photo_url ? (
                           <img
                             src={mentor.profile_photo_url}
-                            alt={mentor?.full_name || 'Mentor'}
+                            alt={getFullName(mentor as Profile) || 'Mentor'}
                             className="w-12 h-12 rounded-full object-cover flex-shrink-0 border-2 border-[#ffc700]/40"
                           />
                         ) : (
                           <div className="w-12 h-12 bg-[#ffc700]/20 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-[#ffc700]/40">
                             <span className="text-lg font-bold text-[#ffc700]">
-                              {getMentorInitials(mentor?.full_name || null)}
+                              {getProfileInitials(mentor as Profile)}
                             </span>
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
                           {mentor && (
                             <p className="text-sm font-semibold text-[#ffc700] mb-1">
-                              {mentor.full_name || mentor.email || 'Mentor'}
+                              {getFullName(mentor as Profile) || mentor.email || 'Mentor'}
                             </p>
                           )}
                           <p className="text-sm text-white">

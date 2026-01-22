@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Team, TeamMember, Profile } from '@/types/database'
 import { UserPlus, Users, Mail, Edit, Trash2, X, Save } from 'lucide-react'
+import { getFullName } from '@/lib/utils'
 
 interface TeamRosterProps {
   coachId: string
@@ -15,7 +16,7 @@ export function TeamRoster({ coachId }: TeamRosterProps) {
   const [members, setMembers] = useState<(TeamMember & { player: Profile })[]>([])
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [editingMember, setEditingMember] = useState<string | null>(null)
-  const [editData, setEditData] = useState<{ full_name: string; player_number: string } | null>(null)
+  const [editData, setEditData] = useState<{ first_name: string; last_name: string; player_number: string } | null>(null)
   const [inviteData, setInviteData] = useState({
     firstName: '',
     lastName: '',
@@ -133,10 +134,13 @@ export function TeamRoster({ coachId }: TeamRosterProps) {
       const member = members.find(m => m.id === memberId)
       if (!member) throw new Error('Member not found')
 
-      // Update player profile (full_name)
+      // Update player profile (first_name and last_name)
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ full_name: editData.full_name || null })
+        .update({ 
+          first_name: editData.first_name?.trim() || null,
+          last_name: editData.last_name?.trim() || null,
+        })
         .eq('id', member.player_id)
 
       if (profileError) throw profileError
@@ -276,11 +280,20 @@ export function TeamRoster({ coachId }: TeamRosterProps) {
                       {editingMember === member.id ? (
                         <div className="flex-1 flex flex-col sm:flex-row gap-3">
                           <div className="flex-1">
-                            <label className="block text-xs text-[#d9d9d9] mb-1">Full Name</label>
+                            <label className="block text-xs text-[#d9d9d9] mb-1">First Name</label>
                             <input
                               type="text"
-                              value={editData?.full_name || ''}
-                              onChange={(e) => setEditData({ ...editData!, full_name: e.target.value })}
+                              value={editData?.first_name || ''}
+                              onChange={(e) => setEditData({ ...editData!, first_name: e.target.value })}
+                              className="w-full px-3 py-2 text-sm border border-[#ffc700] rounded-md bg-black text-white focus:outline-none focus:ring-2 focus:ring-[#ffc700]"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <label className="block text-xs text-[#d9d9d9] mb-1">Last Name</label>
+                            <input
+                              type="text"
+                              value={editData?.last_name || ''}
+                              onChange={(e) => setEditData({ ...editData!, last_name: e.target.value })}
                               className="w-full px-3 py-2 text-sm border border-[#ffc700] rounded-md bg-black text-white focus:outline-none focus:ring-2 focus:ring-[#ffc700]"
                             />
                           </div>
@@ -337,7 +350,7 @@ export function TeamRoster({ coachId }: TeamRosterProps) {
                               <Edit className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => handleRemovePlayer(member.id, member.player?.full_name || member.player?.email || 'player')}
+                              onClick={() => handleRemovePlayer(member.id, getFullName(member.player) || member.player?.email || 'player')}
                               className="text-red-400 hover:text-red-300 p-2 rounded-md hover:bg-[#272727] transition-all duration-300 active:scale-95 touch-manipulation"
                               title="Remove from team"
                             >

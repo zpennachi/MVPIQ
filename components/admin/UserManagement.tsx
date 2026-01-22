@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types/database'
 import { Search, Edit, Trash2, UserCheck, UserX, Key, MoreVertical, UserPlus, X } from 'lucide-react'
 import { format } from 'date-fns'
+import { getFullName } from '@/lib/utils'
 
 interface UserManagementProps {
   adminId: string
@@ -16,9 +17,9 @@ export function UserManagement({ adminId }: UserManagementProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterRole, setFilterRole] = useState<'all' | 'player'>('all')
   const [editingUser, setEditingUser] = useState<string | null>(null)
-  const [editData, setEditData] = useState<{ full_name: string; email: string; phone_number: string; role: string } | null>(null)
+  const [editData, setEditData] = useState<{ first_name: string; last_name: string; email: string; phone_number: string; role: string } | null>(null)
   const [showInviteModal, setShowInviteModal] = useState(false)
-  const [inviteData, setInviteData] = useState({ email: '', fullName: '', role: 'player' as 'player' })
+  const [inviteData, setInviteData] = useState({ email: '', firstName: '', lastName: '', role: 'player' as 'player' })
   const [inviteLoading, setInviteLoading] = useState(false)
   const supabase = createClient()
 
@@ -64,7 +65,8 @@ export function UserManagement({ adminId }: UserManagementProps) {
   const handleEdit = (user: Profile) => {
     setEditingUser(user.id)
     setEditData({
-      full_name: user.full_name || '',
+      first_name: user.first_name || '',
+      last_name: user.last_name || '',
       email: user.email,
       phone_number: (user as any).phone_number || '',
       role: user.role,
@@ -97,7 +99,8 @@ export function UserManagement({ adminId }: UserManagementProps) {
       const { error } = await supabase
         .from('profiles')
         .update({
-          full_name: editData.full_name || null,
+          first_name: editData.first_name?.trim() || null,
+          last_name: editData.last_name?.trim() || null,
           phone_number: editData.phone_number || null,
           role: editData.role as any,
         })
@@ -153,7 +156,7 @@ export function UserManagement({ adminId }: UserManagementProps) {
 
   const handleToggleActive = async (userId: string, currentStatus: boolean) => {
     const user = users.find(u => u.id === userId)
-    const userName = user?.full_name || user?.email || 'this user'
+    const userName = getFullName(user) || user?.email || 'this user'
     const action = currentStatus ? 'deactivate' : 'activate'
     
     if (!confirm(`Are you sure you want to ${action} ${userName}?`)) return
@@ -180,7 +183,7 @@ export function UserManagement({ adminId }: UserManagementProps) {
 
   const handleDeleteUser = async (userId: string) => {
     const user = users.find(u => u.id === userId)
-    const userName = user?.full_name || user?.email || 'this user'
+    const userName = getFullName(user) || user?.email || 'this user'
     
     if (!confirm(`⚠️ WARNING: Are you sure you want to PERMANENTLY DELETE ${userName}?\n\nThis action cannot be undone and will delete all associated data.`)) return
 
@@ -228,7 +231,7 @@ export function UserManagement({ adminId }: UserManagementProps) {
 
       alert(data.message || 'Player invited successfully!')
       setShowInviteModal(false)
-      setInviteData({ email: '', fullName: '', role: 'player' })
+      setInviteData({ email: '', firstName: '', lastName: '', role: 'player' })
       loadUsers()
     } catch (error: any) {
       alert(error.message || 'Failed to invite user')
@@ -240,7 +243,7 @@ export function UserManagement({ adminId }: UserManagementProps) {
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
+      (getFullName(user).toLowerCase().includes(searchTerm.toLowerCase()) || false)
     
     const matchesRole = filterRole === 'all' || user.role === filterRole
 
@@ -321,13 +324,22 @@ export function UserManagement({ adminId }: UserManagementProps) {
                   {editingUser === user.id ? (
                     <>
                       <td className="px-4 py-3">
-                        <input
-                          type="text"
-                          value={editData?.full_name || ''}
-                          onChange={(e) => setEditData({ ...editData!, full_name: e.target.value })}
-                          placeholder="Full Name"
-                          className="w-full px-2 py-1 text-sm border border-[#ffc700] rounded bg-black text-white"
-                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            value={editData?.first_name || ''}
+                            onChange={(e) => setEditData({ ...editData!, first_name: e.target.value })}
+                            placeholder="First Name"
+                            className="w-full px-2 py-1 text-sm border border-[#ffc700] rounded bg-black text-white"
+                          />
+                          <input
+                            type="text"
+                            value={editData?.last_name || ''}
+                            onChange={(e) => setEditData({ ...editData!, last_name: e.target.value })}
+                            placeholder="Last Name"
+                            className="w-full px-2 py-1 text-sm border border-[#ffc700] rounded bg-black text-white"
+                          />
+                        </div>
                         <input
                           type="email"
                           value={editData?.email || ''}
@@ -375,7 +387,7 @@ export function UserManagement({ adminId }: UserManagementProps) {
                     <>
                       <td className="px-4 py-3">
                         <div>
-                          <p className="font-medium text-white">{user.full_name || 'No name'}</p>
+                          <p className="font-medium text-white">{getFullName(user) || 'No name'}</p>
                           <p className="text-sm text-[#d9d9d9]">{user.email}</p>
                           {(user as any).phone_number && (
                             <p className="text-xs text-[#d9d9d9]/70">{(user as any).phone_number}</p>
@@ -468,7 +480,7 @@ export function UserManagement({ adminId }: UserManagementProps) {
               <button
                 onClick={() => {
                   setShowInviteModal(false)
-                  setInviteData({ email: '', fullName: '', role: 'player' })
+                  setInviteData({ email: '', firstName: '', lastName: '', role: 'player' })
                 }}
                 className="text-[#d9d9d9] hover:text-white transition"
               >
@@ -497,18 +509,33 @@ export function UserManagement({ adminId }: UserManagementProps) {
                 />
               </div>
 
-              <div>
-                <label htmlFor="invite-name" className="block text-sm font-medium text-[#d9d9d9] mb-1">
-                  Full Name
-                </label>
-                <input
-                  id="invite-name"
-                  type="text"
-                  value={inviteData.fullName}
-                  onChange={(e) => setInviteData({ ...inviteData, fullName: e.target.value })}
-                  className="w-full px-3 py-2 border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700]"
-                  placeholder="Optional"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="invite-first-name" className="block text-sm font-medium text-[#d9d9d9] mb-1">
+                    First Name
+                  </label>
+                  <input
+                    id="invite-first-name"
+                    type="text"
+                    value={inviteData.firstName}
+                    onChange={(e) => setInviteData({ ...inviteData, firstName: e.target.value })}
+                    className="w-full px-3 py-2 border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700]"
+                    placeholder="Optional"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="invite-last-name" className="block text-sm font-medium text-[#d9d9d9] mb-1">
+                    Last Name
+                  </label>
+                  <input
+                    id="invite-last-name"
+                    type="text"
+                    value={inviteData.lastName}
+                    onChange={(e) => setInviteData({ ...inviteData, lastName: e.target.value })}
+                    className="w-full px-3 py-2 border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700]"
+                    placeholder="Optional"
+                  />
+                </div>
               </div>
 
               <div className="flex gap-3 pt-2">
@@ -523,7 +550,7 @@ export function UserManagement({ adminId }: UserManagementProps) {
                   type="button"
                   onClick={() => {
                     setShowInviteModal(false)
-                    setInviteData({ email: '', fullName: '', role: 'player' })
+                    setInviteData({ email: '', firstName: '', lastName: '', role: 'player' })
                   }}
                   className="px-4 py-2 border border-[#272727] text-[#d9d9d9] rounded-md hover:bg-[#272727] transition"
                 >

@@ -6,6 +6,7 @@ import type { BookedSession, Profile } from '@/types/database'
 import { Calendar, Video } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import Link from 'next/link'
+import { getFullName, getInitials as getProfileInitials } from '@/lib/utils'
 
 interface MyAppointmentsProps {
   userId: string
@@ -81,13 +82,8 @@ export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
     return format(parseISO(dateString), 'h:mm a')
   }
 
-  const getInitials = (name: string | null) => {
-    if (!name) return 'M'
-    const parts = name.split(' ')
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
-    }
-    return name[0].toUpperCase()
+  const getInitials = (profile: Profile | null | undefined) => {
+    return getProfileInitials(profile)
   }
 
   if (loading) {
@@ -131,17 +127,17 @@ export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
                       {(isMentorView ? apt.user : apt.mentor)?.profile_photo_url ? (
                         <img
                           src={(isMentorView ? apt.user : apt.mentor)?.profile_photo_url || ''}
-                          alt={(isMentorView ? apt.user : apt.mentor)?.full_name || (isMentorView ? 'Client' : 'Mentor')}
+                          alt={getFullName((isMentorView ? apt.user : apt.mentor) as Profile) || (isMentorView ? 'Client' : 'Mentor')}
                           className="w-6 h-6 rounded-full object-cover border border-gray-300 dark:border-gray-600"
                         />
                       ) : (
                         <div className="w-6 h-6 bg-yellow-500/20 rounded-full flex items-center justify-center border border-gray-300 dark:border-gray-600">
                           <span className="text-xs font-bold text-yellow-600 dark:text-yellow-400">
-                            {getInitials((isMentorView ? apt.user : apt.mentor)?.full_name || null)}
+                            {getInitials((isMentorView ? apt.user : apt.mentor) as Profile)}
                           </span>
                         </div>
                       )}
-                      <span>{(isMentorView ? apt.user : apt.mentor)?.full_name || (isMentorView ? apt.user : apt.mentor)?.email || (isMentorView ? 'Client' : 'Mentor')}</span>
+                      <span>{getFullName((isMentorView ? apt.user : apt.mentor) as Profile) || (isMentorView ? apt.user : apt.mentor)?.email || (isMentorView ? 'Client' : 'Mentor')}</span>
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                       <strong>Duration:</strong> {formatTime(apt.start_time)} - {formatTime(apt.end_time)}
@@ -210,7 +206,7 @@ export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
                                       email: apt.user.email,
                                       data: {
                                         mentorName: 'You',
-                                        userName: apt.user.full_name || apt.user.email || 'User',
+                                        userName: getFullName(apt.user as Profile) || apt.user.email || 'User',
                                         startTime: apt.start_time,
                                       },
                                     }),

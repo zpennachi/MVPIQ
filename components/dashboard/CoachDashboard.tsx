@@ -6,8 +6,9 @@ import { TeamRoster } from '@/components/coach/TeamRoster'
 import { VideoURLSubmission } from '@/components/video/VideoURLSubmission'
 import { SubmissionList } from '@/components/feedback/SubmissionList'
 import { CardSkeleton } from '@/components/ui/LoadingSkeleton'
-import type { Video, FeedbackSubmission, Team } from '@/types/database'
+import type { Video, FeedbackSubmission, Team, Profile } from '@/types/database'
 import { Film, MessageSquare, Users, CheckCircle, Clock } from 'lucide-react'
+import { getFullName, getFirstName } from '@/lib/utils'
 
 interface CoachDashboardProps {
   coachId: string
@@ -154,13 +155,14 @@ export function CoachDashboard({ coachId }: CoachDashboardProps) {
     )
   }
 
-  const displayName = profile?.full_name || profile?.email || 'there'
+  const displayName = getFullName(profile as Profile) || profile?.email || 'there'
+  const firstName = getFirstName(profile as Profile) || ''
 
   return (
     <div className="space-y-6 fade-in">
       <div className="dotted-bg-subtle rounded-lg p-4 -m-4 sm:-m-6 lg:-m-8 mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-white">
-          Welcome Back{displayName !== 'there' ? `, ${displayName.split(' ')[0]}` : ''}!
+          Welcome Back{firstName ? `, ${firstName}` : ''}!
         </h1>
         <p className="mt-2 text-sm sm:text-base text-[#d9d9d9]">
           Manage your team roster, submit videos, and track feedback progress

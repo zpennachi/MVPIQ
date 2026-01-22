@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types/database'
 import { ChevronDown, LogOut, Settings, LayoutDashboard } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
+import { getFullName, getFirstName, getInitials as getProfileInitials } from '@/lib/utils'
 
 export function Navbar() {
   const router = useRouter()
@@ -102,13 +103,8 @@ export function Navbar() {
     }
   }, [showDropdown])
 
-  const getInitials = (name: string | null) => {
-    if (!name) return 'U'
-    const parts = name.split(' ')
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
-    }
-    return name[0].toUpperCase()
+  const getInitials = (profile: Profile | null) => {
+    return getProfileInitials(profile)
   }
 
   if (loading) {
@@ -173,17 +169,17 @@ export function Navbar() {
                   {(profile as any)?.profile_photo_url ? (
                     <img
                       src={(profile as any).profile_photo_url}
-                      alt={profile?.full_name || 'Profile'}
+                      alt={getFullName(profile) || 'Profile'}
                       className="w-8 h-8 rounded-full object-cover border-2 border-gray-300"
                     />
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-[#ffc700]/20 border-2 border-gray-300 flex items-center justify-center">
                       <span className="text-xs font-bold text-[#ffc700]">
-                        {getInitials(profile?.full_name || null)}
+                        {getInitials(profile)}
                       </span>
                     </div>
                   )}
-                  <span className="hidden sm:inline">{profile?.full_name?.split(' ')[0] || profile?.email?.split('@')[0] || 'User'}</span>
+                  <span className="hidden sm:inline">{getFirstName(profile) || profile?.email?.split('@')[0] || 'User'}</span>
                   <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showDropdown ? 'rotate-180' : ''}`} />
                 </button>
                 

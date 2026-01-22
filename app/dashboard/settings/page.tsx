@@ -124,14 +124,10 @@ export default function SettingsPage() {
       if (data) {
         const profileData = data as Profile
         setProfile(profileData)
-        // Split full_name into first and last
-        const nameParts = (profileData.full_name || '').split(' ')
-        const firstName = nameParts[0] || ''
-        const lastName = nameParts.slice(1).join(' ') || ''
         
         setFormData({
-          first_name: firstName,
-          last_name: lastName,
+          first_name: profileData.first_name || '',
+          last_name: profileData.last_name || '',
           email: profileData.email || '',
         })
         setCurrentPhotoUrl(profileData.profile_photo_url || null)
@@ -213,14 +209,12 @@ export default function SettingsPage() {
         }
       }
 
-      // Combine first and last name
-      const fullName = `${formData.first_name} ${formData.last_name}`.trim() || null
-
       // Update profile
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
-          full_name: fullName,
+          first_name: formData.first_name.trim() || null,
+          last_name: formData.last_name.trim() || null,
           profile_photo_url: photoUrl,
         })
         .eq('id', user.id)

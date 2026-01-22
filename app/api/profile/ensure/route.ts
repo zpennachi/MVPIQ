@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, email, fullName, role } = profileEnsureSchema.parse(body)
+    const { userId, email, firstName, lastName, role } = profileEnsureSchema.parse(body)
 
     // Use service role key to bypass RLS
     const supabaseAdmin = createClient(
@@ -38,7 +38,8 @@ export async function POST(request: NextRequest) {
     const { error } = await supabaseAdmin.from('profiles').insert({
       id: userId,
       email,
-      full_name: fullName || '',
+      first_name: firstName || null,
+      last_name: lastName || null,
       role: role || 'player',
     })
 

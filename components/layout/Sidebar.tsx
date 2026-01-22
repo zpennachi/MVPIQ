@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import type { Profile } from '@/types/database'
 import { Logo } from '@/components/ui/Logo'
+import { getFullName } from '@/lib/utils'
 
 export function Sidebar() {
   const pathname = usePathname()
@@ -734,7 +735,7 @@ export function Sidebar() {
 
       <div className="mt-auto pt-6 border-t border-[#272727]">
         <div className="px-4 py-2 mb-4">
-          <p className="text-sm text-[#d9d9d9]">{profile.full_name || profile.email}</p>
+          <p className="text-sm text-[#d9d9d9]">{getFullName(profile) || profile.email}</p>
           <p className="text-xs text-[#d9d9d9]/70 capitalize">{profile.role}</p>
         </div>
         <button

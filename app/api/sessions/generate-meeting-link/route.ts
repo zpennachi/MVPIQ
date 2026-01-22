@@ -50,12 +50,12 @@ export async function POST(request: NextRequest) {
     const [mentorResult, userResult] = await Promise.all([
       supabase
         .from('profiles')
-        .select('email, full_name')
+        .select('email, first_name, last_name')
         .eq('id', session.mentor_id)
         .single(),
       supabase
         .from('profiles')
-        .select('email, full_name')
+        .select('email, first_name, last_name')
         .eq('id', session.user_id)
         .single(),
     ])
@@ -77,16 +77,30 @@ export async function POST(request: NextRequest) {
     let meetingLink: string | null = null
     let googleEventId: string | undefined = undefined
 
+    // Helper to get full name from first_name and last_name
+    function getFullName(profile: any): string {
+      if (!profile) return ''
+      const firstName = profile.first_name?.trim() || ''
+      const lastName = profile.last_name?.trim() || ''
+      if (firstName && lastName) return `${firstName} ${lastName}`
+      if (firstName) return firstName
+      if (lastName) return lastName
+      return profile.email || ''
+    }
+
+    const userFullName = getFullName(userProfile) || 'Student'
+    const mentorFullName = getFullName(mentor) || 'Mentor'
+
     try {
       const { eventId, meetLink } = await createCalendarEvent({
-        summary: `1-on-1 Session: ${userProfile.full_name || 'Student'} with ${mentor.full_name || 'Mentor'}`,
+        summary: `1-on-1 Session: ${userFullName} with ${mentorFullName}`,
         description: `Scheduled mentoring session via MVP-IQ`,
         startTime: new Date(session.start_time),
         endTime: new Date(session.end_time),
         mentorEmail: mentor.email || '',
         userEmail: userProfile.email || '',
-        mentorName: mentor.full_name || 'Mentor',
-        userName: userProfile.full_name || 'Student',
+        mentorName: mentorFullName,
+        userName: userFullName,
         mentorId: session.mentor_id, // Use mentor's OAuth tokens
       })
 

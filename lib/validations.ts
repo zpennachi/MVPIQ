@@ -19,7 +19,8 @@ export const submissionPaymentSchema = z.object({
 export const profileEnsureSchema = z.object({
   userId: z.string().uuid('Invalid user ID format'),
   email: z.string().email('Invalid email format'),
-  fullName: z.string().optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
   role: z.enum(['player', 'mentor', 'coach', 'admin', 'school']).optional().default('player'),
 })
 
@@ -75,7 +76,8 @@ export const creditUseSchema = z.object({
 export const adminUpdateUserSchema = z.object({
   userId: z.string().uuid('Invalid user ID format'),
   updates: z.object({
-    full_name: z.string().optional(),
+    first_name: z.string().optional(),
+    last_name: z.string().optional(),
     email: z.string().email().optional(),
     role: z.enum(['player', 'mentor', 'coach', 'admin', 'school']).optional(),
   }),

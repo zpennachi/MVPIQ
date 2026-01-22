@@ -57,7 +57,16 @@ export async function POST(request: NextRequest) {
     for (const session of sessions) {
       const userEmail = (session as any).user?.email
       const mentorEmail = (session as any).mentor?.email
-      const mentorName = (session as any).mentor?.full_name || (session as any).mentor?.email
+      function getFullName(profile: any): string {
+        if (!profile) return ''
+        const firstName = profile.first_name?.trim() || ''
+        const lastName = profile.last_name?.trim() || ''
+        if (firstName && lastName) return `${firstName} ${lastName}`
+        if (firstName) return firstName
+        if (lastName) return lastName
+        return profile.email || ''
+      }
+      const mentorName = getFullName((session as any).mentor) || (session as any).mentor?.email
 
       // Send reminder to user
       if (userEmail) {

@@ -98,7 +98,7 @@ export function VideoList({ videos, onVideoAction }: VideoListProps) {
               data: {
                 mentorName: mentorProfile.email,
                 videoTitle: videoData?.title || 'Video Submission',
-                playerName: playerProfileData?.full_name || playerProfileData?.email || 'Player',
+                playerName: getFullName(playerProfileData as Profile) || playerProfileData?.email || 'Player',
                 dashboardLink: `${window.location.origin}/dashboard/feedback`,
               },
             }),

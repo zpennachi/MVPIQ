@@ -12,7 +12,8 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    fullName: '',
+    firstName: '',
+    lastName: '',
     role: 'player' as const,
   })
   const [error, setError] = useState<string | null>(null)
@@ -99,7 +100,8 @@ export default function RegisterPage() {
         password: formData.password,
         options: {
           data: {
-            full_name: formData.fullName,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
             role: formData.role,
           },
         },
@@ -189,18 +191,33 @@ export default function RegisterPage() {
         </div>
 
         <form onSubmit={handleRegister} className="space-y-4">
-          <div>
-            <label htmlFor="fullName" className="block text-sm font-medium text-[#d9d9d9] mb-1">
-              Full Name
-            </label>
-            <input
-              id="fullName"
-              type="text"
-              value={formData.fullName}
-              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-              required
-              className="w-full px-3 py-2.5 text-base border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700] touch-manipulation"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="firstName" className="block text-sm font-medium text-[#d9d9d9] mb-1">
+                First Name
+              </label>
+              <input
+                id="firstName"
+                type="text"
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                required
+                className="w-full px-3 py-2.5 text-base border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700] touch-manipulation"
+              />
+            </div>
+            <div>
+              <label htmlFor="lastName" className="block text-sm font-medium text-[#d9d9d9] mb-1">
+                Last Name
+              </label>
+              <input
+                id="lastName"
+                type="text"
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                required
+                className="w-full px-3 py-2.5 text-base border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700] touch-manipulation"
+              />
+            </div>
           </div>
 
           <div>

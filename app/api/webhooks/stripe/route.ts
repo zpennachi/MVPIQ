@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
               // Get player info
               const { data: playerProfile } = await supabase
                 .from('profiles')
-                .select('full_name, email')
+                .select('first_name, last_name, email')
                 .eq('id', video.player_id)
                 .single()
 
@@ -224,12 +224,12 @@ export async function POST(request: NextRequest) {
             const [mentorResult, userResult] = await Promise.all([
               supabase
                 .from('profiles')
-                .select('email, full_name')
+                .select('email, first_name, last_name')
                 .eq('id', existingSession.mentor_id)
                 .single(),
               supabase
                 .from('profiles')
-                .select('email, full_name')
+                .select('email, first_name, last_name')
                 .eq('id', existingSession.user_id)
                 .single(),
             ])
@@ -240,14 +240,14 @@ export async function POST(request: NextRequest) {
             if (mentor && user) {
               // Create calendar event using mentor's OAuth tokens
               const calendarResult = await createCalendarEvent({
-                summary: `1-on-1 Session: ${user.full_name || 'Student'} with ${mentor.full_name || 'Mentor'}`,
+                summary: `1-on-1 Session: ${getFullName(user) || 'Student'} with ${getFullName(mentor) || 'Mentor'}`,
                 description: `Scheduled mentoring session via MVP-IQ`,
                 startTime: new Date(existingSession.start_time),
                 endTime: new Date(existingSession.end_time || new Date(new Date(existingSession.start_time).getTime() + 60 * 60 * 1000)),
                 mentorEmail: mentor.email || '',
                 userEmail: user.email || '',
-                mentorName: mentor.full_name || 'Mentor',
-                userName: user.full_name || 'Student',
+                mentorName: getFullName(mentor) || 'Mentor',
+                userName: getFullName(user) || 'Student',
                 mentorId: existingSession.mentor_id, // Use mentor's OAuth tokens
               })
 
@@ -277,12 +277,12 @@ export async function POST(request: NextRequest) {
           const [userResult, mentorResult] = await Promise.all([
             supabase
               .from('profiles')
-              .select('email, full_name')
+              .select('email, first_name, last_name')
               .eq('id', existingSession.user_id)
               .maybeSingle(),
             supabase
               .from('profiles')
-              .select('email, full_name')
+              .select('email, first_name, last_name')
               .eq('id', existingSession.mentor_id)
               .maybeSingle(),
           ])
@@ -458,11 +458,11 @@ export async function POST(request: NextRequest) {
                 // Get player info
                 const { data: playerProfile } = await supabase
                   .from('profiles')
-                  .select('full_name, email')
+                  .select('first_name, last_name, email')
                   .eq('id', video.player_id)
                   .single()
 
-                const playerName = playerProfile?.full_name || playerProfile?.email || 'Player'
+                const playerName = getFullName(playerProfile) || playerProfile?.email || 'Player'
                 const playerEmail = playerProfile?.email
 
                 // Send emails using centralized utility

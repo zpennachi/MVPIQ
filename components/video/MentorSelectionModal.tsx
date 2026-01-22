@@ -102,7 +102,7 @@ export function MentorSelectionModal({
                     </div>
                     <div>
                       <p className="font-medium text-gray-900 dark:text-white">
-                        {mentor.full_name || 'Professional Athlete'}
+                        {getFullName(mentor) || 'Professional Athlete'}
                       </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {mentor.email}

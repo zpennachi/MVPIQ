@@ -3,7 +3,8 @@ export type UserRole = 'player' | 'mentor' | 'coach' | 'admin' | 'school'
 export interface Profile {
   id: string
   email: string
-  full_name: string | null
+  first_name: string | null
+  last_name: string | null
   phone_number: string | null
   profile_photo_url: string | null
   role: UserRole

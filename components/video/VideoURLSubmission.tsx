@@ -116,7 +116,8 @@ export function VideoURLSubmission({
           body: JSON.stringify({
             userId: user.id,
             email: user.email,
-            fullName: user.user_metadata?.full_name || '',
+            firstName: user.user_metadata?.first_name || '',
+            lastName: user.user_metadata?.last_name || '',
             role: user.user_metadata?.role || 'player',
           }),
         })

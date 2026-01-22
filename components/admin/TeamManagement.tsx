@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Team, TeamMember, Profile } from '@/types/database'
 import { Search, Edit, Trash2, Users, School, UserPlus, X } from 'lucide-react'
 import { format } from 'date-fns'
+import { getFullName } from '@/lib/utils'
 
 interface TeamManagementProps {
   adminId: string
@@ -136,7 +137,7 @@ export function TeamManagement({ adminId }: TeamManagementProps) {
 
   const filteredTeams = teams.filter(team =>
     team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (team.coach?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+    (getFullName(team.coach).toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
     (team.coach?.email?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
   )
 
@@ -253,7 +254,7 @@ export function TeamManagement({ adminId }: TeamManagementProps) {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-white">
-                          {member.player?.full_name || member.player?.email || 'Unknown'}
+                          {getFullName(member.player) || member.player?.email || 'Unknown'}
                         </p>
                         <p className="text-sm text-[#d9d9d9]">
                           {member.player?.email}

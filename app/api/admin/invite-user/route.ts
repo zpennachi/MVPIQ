@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     // Verify admin role
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, email, full_name')
+      .select('role, email, first_name, last_name')
       .eq('id', user.id)
       .single()
 
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { email, fullName, role } = await request.json()
+    const { email, firstName, lastName, role } = await request.json()
 
     if (!email || !role) {
       return NextResponse.json(
@@ -79,7 +79,8 @@ export async function POST(request: NextRequest) {
       password: tempPassword,
       email_confirm: true, // Auto-confirm email
       user_metadata: {
-        full_name: fullName || '',
+        first_name: firstName || '',
+        last_name: lastName || '',
         role: role,
       },
     })
@@ -105,7 +106,8 @@ export async function POST(request: NextRequest) {
       .upsert({
         id: newUser.user.id,
         email,
-        full_name: fullName || null,
+        first_name: firstName || null,
+        last_name: lastName || null,
         role: role,
       }, {
         onConflict: 'id',
