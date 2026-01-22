@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user already exists
+    // Check if user already exists by checking profiles table
     const supabaseAdmin = createAdminClient(
       env.NEXT_PUBLIC_SUPABASE_URL,
       env.SUPABASE_SERVICE_ROLE_KEY,
@@ -56,22 +56,18 @@ export async function POST(request: NextRequest) {
       }
     )
 
-    const { data: existingUser } = await supabaseAdmin.auth.admin.getUserByEmail(email)
+    // Check if profile with this email already exists
+    const { data: existingProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('id, role, email')
+      .eq('email', email)
+      .single()
 
-    if (existingUser?.user) {
-      // User exists, check if they have a profile
-      const { data: existingProfile } = await supabaseAdmin
-        .from('profiles')
-        .select('id, role')
-        .eq('id', existingUser.user.id)
-        .single()
-
-      if (existingProfile) {
-        return NextResponse.json(
-          { error: `User with email ${email} already exists with role: ${existingProfile.role}` },
-          { status: 400 }
-        )
-      }
+    if (existingProfile) {
+      return NextResponse.json(
+        { error: `User with email ${email} already exists with role: ${existingProfile.role}` },
+        { status: 400 }
+      )
     }
 
     // Generate a secure random password
