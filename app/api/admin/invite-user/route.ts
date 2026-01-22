@@ -116,6 +116,9 @@ export async function POST(request: NextRequest) {
       // Don't fail - profile might already exist from trigger
     }
 
+    // Define role label for use in response
+    const roleLabel = role === 'mentor' ? 'Mentor/Professional Athlete' : role === 'school' ? 'School' : 'Player'
+
     // Send password reset email so they can set their own password
     try {
       const { error: resetError } = await supabaseAdmin.auth.admin.generateLink({
@@ -131,7 +134,6 @@ export async function POST(request: NextRequest) {
       }
 
       // Send a welcome email with login instructions
-      const roleLabel = role === 'mentor' ? 'Mentor/Professional Athlete' : role === 'school' ? 'School' : 'Player'
       const loginLink = `${env.NEXT_PUBLIC_APP_URL}/login`
       
       // Use submission_success template as a base for welcome email
