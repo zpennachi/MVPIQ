@@ -21,6 +21,7 @@ export function Sidebar() {
   const [newSessionsCount, setNewSessionsCount] = useState(0)
   const [upcomingAppointmentsCount, setUpcomingAppointmentsCount] = useState(0)
   const [oneOnOnesExpanded, setOneOnOnesExpanded] = useState(false)
+  const [feedbackExpanded, setFeedbackExpanded] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -65,6 +66,10 @@ export function Sidebar() {
           // Auto-expand One-on-Ones submenu if on that page
           if (pathname?.startsWith('/dashboard/one-on-ones')) {
             setOneOnOnesExpanded(true)
+          }
+          // Auto-expand Feedback submenu if on that page
+          if (pathname?.startsWith('/dashboard/feedback')) {
+            setFeedbackExpanded(true)
           }
         }
       }
@@ -331,9 +336,58 @@ export function Sidebar() {
                 </span>
               )}
             </Link>
+            {/* Feedback with submenu on desktop */}
+            <div className="hidden lg:block">
+              <button
+                onClick={() => setFeedbackExpanded(!feedbackExpanded)}
+                className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
+                  isActive('/dashboard/feedback')
+                    ? 'bg-[#ffc700] text-black'
+                    : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <MessageSquare className="w-5 h-5" />
+                  <span className="font-medium">Feedback</span>
+                </div>
+                <svg
+                  className={`w-4 h-4 transition-transform ${feedbackExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {feedbackExpanded && (
+                <div className="ml-8 mt-1 space-y-1">
+                  <Link
+                    href="/dashboard/feedback"
+                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${
+                      pathname === '/dashboard/feedback' && !pathname?.includes('/submit-video')
+                        ? 'bg-[#272727] text-[#ffc700]'
+                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                    }`}
+                  >
+                    <span>My Feedback</span>
+                  </Link>
+                  <Link
+                    href="/dashboard/feedback/submit-video"
+                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${
+                      pathname === '/dashboard/feedback/submit-video'
+                        ? 'bg-[#272727] text-[#ffc700]'
+                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                    }`}
+                  >
+                    <span>Submit Video</span>
+                  </Link>
+                </div>
+              )}
+            </div>
+            {/* Mobile: Simple link */}
             <Link
               href="/dashboard/feedback"
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
+              className={`lg:hidden flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
                 isActive('/dashboard/feedback')
                   ? 'bg-[#ffc700] text-black'
                   : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
@@ -509,6 +563,66 @@ export function Sidebar() {
                   {upcomingAppointmentsCount > 9 ? '9+' : upcomingAppointmentsCount}
                 </span>
               )}
+            </Link>
+            {/* Feedback with submenu on desktop */}
+            <div className="hidden lg:block">
+              <button
+                onClick={() => setFeedbackExpanded(!feedbackExpanded)}
+                className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
+                  isActive('/dashboard/feedback')
+                    ? 'bg-[#ffc700] text-black'
+                    : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <MessageSquare className="w-5 h-5" />
+                  <span className="font-medium">Feedback</span>
+                </div>
+                <svg
+                  className={`w-4 h-4 transition-transform ${feedbackExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {feedbackExpanded && (
+                <div className="ml-8 mt-1 space-y-1">
+                  <Link
+                    href="/dashboard/feedback"
+                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${
+                      pathname === '/dashboard/feedback' && !pathname?.includes('/submit-video')
+                        ? 'bg-[#272727] text-[#ffc700]'
+                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                    }`}
+                  >
+                    <span>My Feedback</span>
+                  </Link>
+                  <Link
+                    href="/dashboard/feedback/submit-video"
+                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${
+                      pathname === '/dashboard/feedback/submit-video'
+                        ? 'bg-[#272727] text-[#ffc700]'
+                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                    }`}
+                  >
+                    <span>Submit Video</span>
+                  </Link>
+                </div>
+              )}
+            </div>
+            {/* Mobile: Simple link */}
+            <Link
+              href="/dashboard/feedback"
+              className={`lg:hidden flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
+                isActive('/dashboard/feedback')
+                  ? 'bg-[#ffc700] text-black'
+                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+              }`}
+            >
+              <MessageSquare className="w-5 h-5" />
+              <span className="font-medium">Feedback</span>
             </Link>
           </>
         )}

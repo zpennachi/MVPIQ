@@ -10,6 +10,7 @@ interface VideoURLSubmissionProps {
   userRole: 'player' | 'coach' | 'admin'
   teamId?: string | null
   onSubmitted?: () => void
+  alwaysShowForm?: boolean // If true, always show the form (for dedicated submit page)
 }
 
 export function VideoURLSubmission({
@@ -17,8 +18,9 @@ export function VideoURLSubmission({
   userRole,
   teamId,
   onSubmitted,
+  alwaysShowForm = false,
 }: VideoURLSubmissionProps) {
-  const [showForm, setShowForm] = useState(false)
+  const [showForm, setShowForm] = useState(alwaysShowForm)
   const [submitting, setSubmitting] = useState(false)
   const [processingPayment, setProcessingPayment] = useState(false)
   const [formData, setFormData] = useState({
@@ -219,7 +221,7 @@ export function VideoURLSubmission({
 
   return (
     <div className="space-y-4">
-      {!showForm ? (
+      {!showForm && !alwaysShowForm ? (
         <button
           onClick={() => setShowForm(true)}
           className="flex items-center justify-center gap-2 bg-[#ffc700] text-black px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg hover:bg-[#e6b300] transition font-medium w-full sm:w-auto touch-manipulation"
@@ -238,17 +240,19 @@ export function VideoURLSubmission({
                 Share a YouTube or Hudl video link for professional analysis
               </p>
             </div>
-            <button
-              onClick={() => {
-                setShowForm(false)
-                setError(null)
-                setFormData({ videoUrl: '', title: '', description: '', playerNumbers: '' })
-              }}
-              className="text-[#d9d9d9] hover:text-white p-1 touch-manipulation"
-              aria-label="Close form"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            {!alwaysShowForm && (
+              <button
+                onClick={() => {
+                  setShowForm(false)
+                  setError(null)
+                  setFormData({ videoUrl: '', title: '', description: '', playerNumbers: '' })
+                }}
+                className="text-[#d9d9d9] hover:text-white p-1 touch-manipulation"
+                aria-label="Close form"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
           </div>
 
           {error && (
@@ -339,24 +343,26 @@ export function VideoURLSubmission({
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowForm(false)
-                  setError(null)
-                  setFormData({ videoUrl: '', title: '', description: '', playerNumbers: '' })
-                  setSelectedMentorId(null)
-                }}
-                disabled={submitting || processingPayment}
-                className="flex-1 px-4 py-2.5 border border-[#272727] rounded-md text-[#d9d9d9] hover:bg-[#272727] transition touch-manipulation font-medium disabled:opacity-50"
-              >
-                Cancel
-              </button>
+            <div className={`flex flex-col sm:flex-row gap-3 pt-2 ${alwaysShowForm ? 'justify-end' : ''}`}>
+              {!alwaysShowForm && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForm(false)
+                    setError(null)
+                    setFormData({ videoUrl: '', title: '', description: '', playerNumbers: '' })
+                    setSelectedMentorId(null)
+                  }}
+                  disabled={submitting || processingPayment}
+                  className="flex-1 px-4 py-2.5 border border-[#272727] rounded-md text-[#d9d9d9] hover:bg-[#272727] transition touch-manipulation font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              )}
               <button
                 type="submit"
                 disabled={submitting || processingPayment || !formData.videoUrl || !formData.title}
-                className="flex-1 px-4 py-2.5 bg-[#ffc700] text-black rounded-md hover:bg-[#e6b300] disabled:opacity-50 disabled:cursor-not-allowed transition font-medium touch-manipulation flex items-center justify-center gap-2"
+                className={`px-4 py-2.5 bg-[#ffc700] text-black rounded-md hover:bg-[#e6b300] disabled:opacity-50 disabled:cursor-not-allowed transition font-medium touch-manipulation flex items-center justify-center gap-2 ${alwaysShowForm ? 'w-full sm:w-auto' : 'flex-1'}`}
               >
                 {submitting ? (
                   <>
