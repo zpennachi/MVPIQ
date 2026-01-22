@@ -178,6 +178,32 @@ export function UserManagement({ adminId }: UserManagementProps) {
     }
   }
 
+  const handleDeleteUser = async (userId: string) => {
+    const user = users.find(u => u.id === userId)
+    const userName = user?.full_name || user?.email || 'this user'
+    
+    if (!confirm(`⚠️ WARNING: Are you sure you want to PERMANENTLY DELETE ${userName}?\n\nThis action cannot be undone and will delete all associated data.`)) return
+
+    try {
+      const response = await fetch('/api/admin/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete user')
+      }
+
+      loadUsers()
+      alert('User deleted successfully')
+    } catch (error: any) {
+      alert(error.message || 'Failed to delete user')
+    }
+  }
+
   const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -387,17 +413,32 @@ export function UserManagement({ adminId }: UserManagementProps) {
                           >
                             <Key className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => handleToggleActive(user.id, user.is_active || false)}
-                            className={`p-2 rounded transition ${
-                              user.is_active
-                                ? 'text-red-400 hover:bg-[#272727]'
-                                : 'text-green-400 hover:bg-[#272727]'
-                            }`}
-                            title={user.is_active ? 'Deactivate' : 'Activate'}
-                          >
-                            {user.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                          </button>
+                          {user.is_active ? (
+                            <button
+                              onClick={() => handleToggleActive(user.id, true)}
+                              className="p-2 text-red-400 hover:bg-[#272727] rounded transition"
+                              title="Deactivate"
+                            >
+                              <UserX className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleToggleActive(user.id, false)}
+                                className="p-2 text-green-400 hover:bg-[#272727] rounded transition"
+                                title="Reactivate"
+                              >
+                                <UserCheck className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(user.id)}
+                                className="p-2 text-red-500 hover:bg-[#272727] rounded transition"
+                                title="Delete permanently"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </>

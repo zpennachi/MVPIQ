@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile, FeedbackSubmission } from '@/types/database'
-import { Search, Edit, UserCheck, UserX, MessageSquare, TrendingUp, UserPlus, X } from 'lucide-react'
+import { Search, Edit, UserCheck, UserX, MessageSquare, TrendingUp, UserPlus, X, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 
 interface MentorManagementProps {
@@ -177,6 +177,32 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
     }
   }
 
+  const handleDeleteMentor = async (mentorId: string) => {
+    const mentor = mentors.find(m => m.id === mentorId)
+    const mentorName = mentor?.full_name || mentor?.email || 'this mentor'
+    
+    if (!confirm(`⚠️ WARNING: Are you sure you want to PERMANENTLY DELETE ${mentorName}?\n\nThis action cannot be undone and will delete all associated data.`)) return
+
+    try {
+      const response = await fetch('/api/admin/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: mentorId }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete mentor')
+      }
+
+      loadMentors()
+      alert('Mentor deleted successfully')
+    } catch (error: any) {
+      alert(error.message || 'Failed to delete mentor')
+    }
+  }
+
   const handleInviteMentor = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -320,13 +346,34 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
                       <p className="text-xs text-[#d9d9d9]/70 mt-1">{(mentor as any).phone_number}</p>
                     )}
                   </div>
-                  <button
-                    onClick={() => handleToggleActive(mentor.id)}
-                    className="p-2 text-green-400 hover:bg-[#272727] rounded transition"
-                    title="Toggle active status"
-                  >
-                    <UserCheck className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {(mentor as any)?.is_active !== false ? (
+                      <button
+                        onClick={() => handleToggleActive(mentor.id)}
+                        className="p-2 text-red-400 hover:bg-[#272727] rounded transition"
+                        title="Deactivate"
+                      >
+                        <UserX className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleToggleActive(mentor.id)}
+                          className="p-2 text-green-400 hover:bg-[#272727] rounded transition"
+                          title="Reactivate"
+                        >
+                          <UserCheck className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMentor(mentor.id)}
+                          className="p-2 text-red-500 hover:bg-[#272727] rounded transition"
+                          title="Delete permanently"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {mentor.stats && (
