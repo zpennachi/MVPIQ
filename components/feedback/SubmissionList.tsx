@@ -146,7 +146,6 @@ export function SubmissionList({
 
                 <div className="flex items-center gap-2 mt-4 flex-wrap">
                   <StatusBadge status={submission.status} type="submission" />
-                  <StatusBadge status={submission.payment_status} type="payment" />
                 </div>
               </div>
 
