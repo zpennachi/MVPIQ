@@ -96,6 +96,7 @@ export function Sidebar() {
   const loadNotificationCounts = async (mentorId: string) => {
     try {
       // Check for new feedback (pending/assigned or created within 7 days)
+      // Exclude completed feedback - it should never show as "new"
       const sevenDaysAgo = new Date()
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
       
@@ -105,10 +106,15 @@ export function Sidebar() {
         .select('id, status, created_at')
       
       // Filter on client side to find new feedback
+      // Exclude completed submissions - they should never show as "new"
       const feedback = allFeedback?.filter(f => {
+        // Exclude completed submissions
+        if (f.status === 'completed') {
+          return false
+        }
         const isPendingOrAssigned = f.status === 'pending' || f.status === 'assigned'
         const isRecent = new Date(f.created_at) >= sevenDaysAgo
-        return isPendingOrAssigned || (isRecent && f.status !== 'completed')
+        return isPendingOrAssigned || isRecent
       })
 
       // Get seen feedback IDs from localStorage (only on client side)
@@ -147,10 +153,15 @@ export function Sidebar() {
         .select('id, status, created_at')
       
       // Filter on client side to find new feedback
+      // Exclude completed submissions - they should never show as "new"
       const feedback = allFeedback?.filter(f => {
+        // Exclude completed submissions
+        if (f.status === 'completed') {
+          return false
+        }
         const isPendingOrAssigned = f.status === 'pending' || f.status === 'assigned'
         const isRecent = new Date(f.created_at) >= sevenDaysAgo
-        return isPendingOrAssigned || (isRecent && f.status !== 'completed')
+        return isPendingOrAssigned || isRecent
       })
 
       if (feedback && typeof window !== 'undefined') {
@@ -502,30 +513,33 @@ export function Sidebar() {
           </>
         )}
 
-        {profile.role === 'player' && !hasPaid ? (
-          <div
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 opacity-50 cursor-not-allowed ${
-              isActive('/dashboard/education')
-                ? 'bg-[#272727] text-[#d9d9d9]'
-                : 'text-[#d9d9d9]'
-            }`}
-            title="Complete a $50 payment to unlock Education content"
-          >
-            <Lock className="w-5 h-5" />
-            <span className="font-medium">Education</span>
-          </div>
-        ) : (
-          <Link
-            href="/dashboard/education"
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
-              isActive('/dashboard/education')
-                ? 'bg-[#ffc700] text-black'
-                : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
-            }`}
-          >
-            <BookOpen className="w-5 h-5" />
-            <span className="font-medium">Education</span>
-          </Link>
+        {/* Education - Hidden for admins (they have admin/education instead) */}
+        {profile.role !== 'admin' && (
+          profile.role === 'player' && !hasPaid ? (
+            <div
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 opacity-50 cursor-not-allowed ${
+                isActive('/dashboard/education')
+                  ? 'bg-[#272727] text-[#d9d9d9]'
+                  : 'text-[#d9d9d9]'
+              }`}
+              title="Complete a $50 payment to unlock Education content"
+            >
+              <Lock className="w-5 h-5" />
+              <span className="font-medium">Education</span>
+            </div>
+          ) : (
+            <Link
+              href="/dashboard/education"
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
+                isActive('/dashboard/education')
+                  ? 'bg-[#ffc700] text-black'
+                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+              }`}
+            >
+              <BookOpen className="w-5 h-5" />
+              <span className="font-medium">Education</span>
+            </Link>
+          )
         )}
 
         <Link
@@ -548,7 +562,7 @@ export function Sidebar() {
             <Link
               href="/dashboard/admin"
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
-                isActive('/dashboard/admin') && !isActive('/dashboard/admin/users') && !isActive('/dashboard/admin/teams') && !isActive('/dashboard/admin/mentors')
+                isActive('/dashboard/admin') && !isActive('/dashboard/admin/users') && !isActive('/dashboard/admin/teams') && !isActive('/dashboard/admin/mentors') && !isActive('/dashboard/admin/education') && !isActive('/dashboard/admin/homepage')
                   ? 'bg-[#ffc700] text-black'
                   : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
               }`}
@@ -588,6 +602,17 @@ export function Sidebar() {
             >
               <UserCheck className="w-5 h-5" />
               <span className="font-medium">Mentors</span>
+            </Link>
+            <Link
+              href="/dashboard/admin/education"
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
+                isActive('/dashboard/admin/education')
+                  ? 'bg-[#ffc700] text-black'
+                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+              }`}
+            >
+              <BookOpen className="w-5 h-5" />
+              <span className="font-medium">Education</span>
             </Link>
           </>
         )}

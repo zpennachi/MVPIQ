@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile, FeedbackSubmission } from '@/types/database'
-import { Search, Edit, UserCheck, UserX, MessageSquare, TrendingUp } from 'lucide-react'
+import { Search, Edit, UserCheck, UserX, MessageSquare, TrendingUp, UserPlus, X } from 'lucide-react'
 import { format } from 'date-fns'
 
 interface MentorManagementProps {
@@ -16,6 +16,9 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [editingMentor, setEditingMentor] = useState<string | null>(null)
   const [editData, setEditData] = useState<{ full_name: string; email: string; phone_number: string } | null>(null)
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [inviteData, setInviteData] = useState({ email: '', fullName: '' })
+  const [inviteLoading, setInviteLoading] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -25,17 +28,22 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
   const loadMentors = async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'mentor')
-        .order('created_at', { ascending: false })
+      // Use admin API endpoint to bypass RLS and get all mentors
+      const response = await fetch('/api/admin/users')
+      const result = await response.json()
 
-      if (error) throw error
+      if (!response.ok) {
+        console.error('Error loading mentors:', result.error)
+        setMentors([])
+        return
+      }
+
+      // Filter to only mentors
+      const data = (result.users || []).filter((user: Profile) => user.role === 'mentor')
 
       // Load stats for each mentor
       const mentorsWithStats = await Promise.all(
-        (data || []).map(async (mentor) => {
+        data.map(async (mentor: Profile) => {
           const { count: totalSubmissions } = await supabase
             .from('feedback_submissions')
             .select('*', { count: 'exact', head: true })
@@ -72,6 +80,7 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
       setMentors(mentorsWithStats as any)
     } catch (error) {
       console.error('Error loading mentors:', error)
+      setMentors([])
     } finally {
       setLoading(false)
     }
@@ -89,6 +98,21 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
   const handleSave = async (mentorId: string) => {
     if (!editData) return
 
+    // Find the original mentor data to compare changes
+    const originalMentor = mentors.find(m => m.id === mentorId)
+    if (!originalMentor) return
+
+    // Check if email is changing
+    const emailChanged = originalMentor.email !== editData.email
+
+    // Build confirmation message
+    let confirmMessage = 'Are you sure you want to update this mentor?'
+    if (emailChanged) {
+      confirmMessage += `\n\n⚠️ Email will change from "${originalMentor.email}" to "${editData.email}".`
+    }
+
+    if (!confirm(confirmMessage)) return
+
     try {
       const { error } = await supabase
         .from('profiles')
@@ -101,7 +125,7 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
       if (error) throw error
 
       // Update email in auth if changed (via API)
-      if (editData.email) {
+      if (editData.email && emailChanged) {
         try {
           const response = await fetch('/api/admin/update-user', {
             method: 'POST',
@@ -127,19 +151,62 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
   }
 
   const handleToggleActive = async (mentorId: string) => {
-    // Update updated_at to mark as active/inactive
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', mentorId)
+    const mentor = mentors.find(m => m.id === mentorId)
+    const mentorName = mentor?.full_name || mentor?.email || 'this mentor'
+    const currentStatus = (mentor as any)?.is_active !== false // Default to true
+    
+    if (!confirm(`Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} ${mentorName}?`)) return
 
-      if (error) throw error
+    try {
+      const response = await fetch('/api/admin/toggle-active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: mentorId, isActive: !currentStatus }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update mentor status')
+      }
 
       loadMentors()
-      alert('Mentor status updated')
+      alert(data.message || `Mentor ${currentStatus ? 'deactivated' : 'activated'} successfully`)
     } catch (error: any) {
       alert(error.message || 'Failed to update mentor status')
+    }
+  }
+
+  const handleInviteMentor = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    const confirmMessage = `Are you sure you want to invite ${inviteData.email} as a mentor?\n\nThey will receive an email with login instructions.`
+    
+    if (!confirm(confirmMessage)) return
+
+    setInviteLoading(true)
+
+    try {
+      const response = await fetch('/api/admin/invite-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...inviteData, role: 'mentor' }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to invite mentor')
+      }
+
+      alert(data.message || 'Mentor invited successfully!')
+      setShowInviteModal(false)
+      setInviteData({ email: '', fullName: '' })
+      loadMentors()
+    } catch (error: any) {
+      alert(error.message || 'Failed to invite mentor')
+    } finally {
+      setInviteLoading(false)
     }
   }
 
@@ -169,6 +236,15 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
             <h2 className="text-xl sm:text-2xl font-bold text-white">Mentor Management</h2>
             <p className="text-sm text-[#d9d9d9] mt-1">Manage all mentor accounts</p>
           </div>
+          <button
+            onClick={() => setShowInviteModal(true)}
+            className="px-4 py-2 bg-[#ffc700] text-black rounded-md hover:bg-[#e6b300] transition-all duration-300 active:scale-95 hover:shadow-lg flex items-center gap-2 font-medium relative z-10"
+            type="button"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span className="hidden sm:inline">Invite Mentor</span>
+            <span className="sm:hidden">Invite</span>
+          </button>
         </div>
       </div>
 
@@ -298,6 +374,81 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
       <div className="text-sm text-[#d9d9d9]">
         Showing {filteredMentors.length} of {mentors.length} mentors
       </div>
+
+      {/* Invite Mentor Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4">
+          <div className="bg-black border border-[#272727] rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-white">Invite Mentor</h3>
+              <button
+                onClick={() => {
+                  setShowInviteModal(false)
+                  setInviteData({ email: '', fullName: '' })
+                }}
+                className="text-[#d9d9d9] hover:text-white transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleInviteMentor} className="space-y-4">
+              <p className="text-sm text-[#d9d9d9]/70 mb-4">
+                Inviting a new mentor/professional athlete. They will receive an email with login instructions.
+              </p>
+
+              <div>
+                <label htmlFor="invite-email" className="block text-sm font-medium text-[#d9d9d9] mb-1">
+                  Email *
+                </label>
+                <input
+                  id="invite-email"
+                  type="email"
+                  value={inviteData.email}
+                  onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
+                  required
+                  className="w-full px-3 py-2 border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700]"
+                  placeholder="mentor@example.com"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="invite-name" className="block text-sm font-medium text-[#d9d9d9] mb-1">
+                  Full Name
+                </label>
+                <input
+                  id="invite-name"
+                  type="text"
+                  value={inviteData.fullName}
+                  onChange={(e) => setInviteData({ ...inviteData, fullName: e.target.value })}
+                  className="w-full px-3 py-2 border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700]"
+                  placeholder="Optional"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={inviteLoading}
+                  className="flex-1 px-4 py-2 bg-[#ffc700] text-black rounded-md hover:bg-[#e6b300] disabled:opacity-50 disabled:cursor-not-allowed transition font-medium"
+                >
+                  {inviteLoading ? 'Inviting...' : 'Send Invitation'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowInviteModal(false)
+                    setInviteData({ email: '', fullName: '' })
+                  }}
+                  className="px-4 py-2 border border-[#272727] text-[#d9d9d9] rounded-md hover:bg-[#272727] transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { CardSkeleton } from '@/components/ui/LoadingSkeleton'
-import { Users, UserCheck, School, MessageSquare, DollarSign, Calendar, TrendingUp, FileEdit } from 'lucide-react'
+import { Users, UserCheck, School, MessageSquare, DollarSign, Calendar, TrendingUp, FileEdit, BookOpen } from 'lucide-react'
 import Link from 'next/link'
 
 interface AdminDashboardProps {
@@ -25,66 +25,44 @@ export function AdminDashboard({ adminId }: AdminDashboardProps) {
 
   useEffect(() => {
     loadStats()
+    // Automatically refresh OAuth tokens on login/load
+    refreshOAuthTokens()
   }, [adminId])
+
+  const refreshOAuthTokens = async () => {
+    try {
+      // Silently refresh OAuth tokens - don't show errors to user
+      const response = await fetch('/api/calendar/oauth/refresh', {
+        method: 'POST',
+      })
+      const result = await response.json()
+      
+      if (result.success) {
+        console.log('✅ OAuth tokens refreshed automatically on login')
+      } else {
+        // Only log, don't show error - user can manually reconnect if needed
+        console.log('OAuth token refresh skipped:', result.message)
+      }
+    } catch (error) {
+      // Silently fail - don't interrupt user experience
+      console.log('OAuth token refresh failed silently:', error)
+    }
+  }
 
   const loadStats = async () => {
     setLoading(true)
     
     try {
-      // Total users
-      const { count: totalUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
+      // Use admin API endpoint to bypass RLS
+      const response = await fetch('/api/admin/stats')
+      const result = await response.json()
 
-      // Active users (users with activity in last 30 days)
-      const thirtyDaysAgo = new Date()
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-      
-      const { count: activeUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .gte('updated_at', thirtyDaysAgo.toISOString())
+      if (!response.ok) {
+        console.error('Error loading stats:', result.error)
+        return
+      }
 
-      // Total teams
-      const { count: totalTeams } = await supabase
-        .from('teams')
-        .select('*', { count: 'exact', head: true })
-
-      // Total mentors
-      const { count: totalMentors } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('role', 'mentor')
-
-      // Total submissions
-      const { count: totalSubmissions } = await supabase
-        .from('feedback_submissions')
-        .select('*', { count: 'exact', head: true })
-
-      // Total revenue (from payments)
-      const { data: payments } = await supabase
-        .from('payments')
-        .select('amount')
-        .eq('status', 'succeeded')
-
-      const totalRevenue = payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0
-
-      // Upcoming sessions
-      const { count: upcomingSessions } = await supabase
-        .from('booked_sessions')
-        .select('*', { count: 'exact', head: true })
-        .in('status', ['pending', 'confirmed'])
-        .gte('start_time', new Date().toISOString())
-
-      setStats({
-        totalUsers: totalUsers || 0,
-        activeUsers: activeUsers || 0,
-        totalTeams: totalTeams || 0,
-        totalMentors: totalMentors || 0,
-        totalSubmissions: totalSubmissions || 0,
-        totalRevenue: totalRevenue / 100, // Convert cents to dollars
-        upcomingSessions: upcomingSessions || 0,
-      })
+      setStats(result.stats)
     } catch (error) {
       console.error('Error loading stats:', error)
     } finally {
@@ -205,6 +183,15 @@ export function AdminDashboard({ adminId }: AdminDashboardProps) {
             <FileEdit className="w-6 h-6 text-[#ffc700] mb-2" />
             <h3 className="font-semibold text-white mb-1">Homepage Editor</h3>
             <p className="text-sm text-[#d9d9d9]">Edit homepage content and rearrange sections</p>
+          </Link>
+
+          <Link
+            href="/dashboard/admin/education"
+            className="p-4 bg-[#272727]/50 border border-[#272727] rounded-lg hover:border-[#ffc700]/40 transition"
+          >
+            <BookOpen className="w-6 h-6 text-[#ffc700] mb-2" />
+            <h3 className="font-semibold text-white mb-1">Education Videos</h3>
+            <p className="text-sm text-[#d9d9d9]">Upload and manage educational videos</p>
           </Link>
         </div>
       </div>

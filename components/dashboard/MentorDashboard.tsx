@@ -63,11 +63,34 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
         // If calendar not connected, automatically trigger OAuth flow
         if (!data.google_calendar_connected && !connectingCalendar) {
           connectGoogleCalendar()
+        } else if (data.google_calendar_connected) {
+          // If already connected, refresh tokens on login
+          refreshOAuthTokens()
         }
       }
     }
     loadProfile()
   }, [mentorId, connectingCalendar, connectGoogleCalendar, supabase])
+
+  const refreshOAuthTokens = async () => {
+    try {
+      // Silently refresh OAuth tokens - don't show errors to user
+      const response = await fetch('/api/calendar/oauth/refresh', {
+        method: 'POST',
+      })
+      const result = await response.json()
+      
+      if (result.success) {
+        console.log('✅ OAuth tokens refreshed automatically on login')
+      } else {
+        // Only log, don't show error - user can manually reconnect if needed
+        console.log('OAuth token refresh skipped:', result.message)
+      }
+    } catch (error) {
+      // Silently fail - don't interrupt user experience
+      console.log('OAuth token refresh failed silently:', error)
+    }
+  }
 
   // Load viewed submission IDs from localStorage
   useEffect(() => {
@@ -230,9 +253,16 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
 
   const handleFeedbackSubmitted = () => {
     // Mark submission as viewed when feedback is provided
+    // Also mark ALL completed submissions as viewed so they don't show as "new"
     if (selectedSubmission?.id) {
       const newViewed = new Set(viewedSubmissionIds)
       newViewed.add(selectedSubmission.id)
+      
+      // Mark all completed submissions as viewed so they don't show as "new"
+      submissions
+        .filter(s => s.status === 'completed')
+        .forEach(s => newViewed.add(s.id))
+      
       setViewedSubmissionIds(newViewed)
       if (typeof window !== 'undefined') {
         localStorage.setItem(`viewed_submissions_${mentorId}`, JSON.stringify(Array.from(newViewed)))
@@ -263,10 +293,16 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
   // - Status is pending or assigned, OR
   // - Created within last 7 days (even if in progress)
   // AND it hasn't been viewed yet
+  // AND it's NOT completed (completed feedback should never show as new)
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
   
   const newSubmissions = submissions.filter(s => {
+    // Exclude completed submissions - they should never show as "new"
+    if (s.status === 'completed') {
+      return false
+    }
+    
     // Exclude if already viewed
     if (viewedSubmissionIds.has(s.id)) {
       return false

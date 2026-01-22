@@ -8,13 +8,13 @@
 import { google } from 'googleapis'
 import { env } from './env'
 import { logger } from './logger'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 
 export interface GmailSendOptions {
   to: string
   subject: string
   html: string
-  from?: string // Optional, defaults to mvpweb@gmail.com
+  from?: string // Optional, defaults to mvpiqweb@gmail.com
 }
 
 export interface GmailSendResult {
@@ -25,12 +25,23 @@ export interface GmailSendResult {
 
 /**
  * Get OAuth client for Gmail using admin account
- * All emails are sent from mvpweb@gmail.com using a single admin's OAuth tokens
+ * All emails are sent from mvpiqweb@gmail.com using a single admin's OAuth tokens
  * Returns null if no OAuth tokens are available
  */
 async function getGmailOAuthClient(): Promise<{ client: any } | null> {
   try {
-    const supabase = await createClient()
+    // Use service role key to bypass RLS and fetch admin tokens
+    // This is necessary because emails might be sent from background jobs without user context
+    const supabase = createClient(
+      env.NEXT_PUBLIC_SUPABASE_URL,
+      env.SUPABASE_SERVICE_ROLE_KEY,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    )
     
     // Always use admin account for sending emails (centralized email management)
     const { data: adminProfiles, error: profileError } = await supabase
@@ -185,11 +196,11 @@ async function getGmailOAuthClient(): Promise<{ client: any } | null> {
 
 /**
  * Send an email via Gmail API
- * All emails are sent from mvpweb@gmail.com using admin's OAuth tokens
+ * All emails are sent from mvpiqweb@gmail.com using admin's OAuth tokens
  */
 export async function sendGmailEmail(options: GmailSendOptions): Promise<GmailSendResult> {
   try {
-    const fromEmail = options.from || 'mvpweb@gmail.com'
+    const fromEmail = options.from || 'mvpiqweb@gmail.com'
     
     // Always use admin's OAuth tokens for centralized email sending
     const oauthClient = await getGmailOAuthClient()

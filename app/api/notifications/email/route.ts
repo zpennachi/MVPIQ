@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           )
         }
-        subject = 'Payment Confirmation - Football Feedback'
+        subject = 'Payment Confirmation - MVP-IQ'
         html = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #FFD700;">Payment Received</h2>
@@ -72,15 +72,54 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           )
         }
-        subject = 'Your Feedback is Ready! - Football Feedback'
+        subject = 'Your Feedback is Ready! - MVP-IQ'
+        const feedbackText = (data.feedbackText as string) || ''
+        const rating = (data.rating as number) || 0
+        const mentorName = (data.mentorName as string) || 'Your mentor'
+        
+        // Escape HTML in feedback text to prevent XSS
+        const escapeHtml = (text: string) => {
+          return text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;')
+        }
+        
+        const safeFeedbackText = escapeHtml(feedbackText)
+        const safeVideoTitle = escapeHtml((data.videoTitle as string) || 'N/A')
+        const safeMentorName = escapeHtml(mentorName)
+        
+        // Generate star rating display
+        const starsHtml = Array.from({ length: 5 }, (_, i) => {
+          const filled = i < rating
+          return `<span style="color: ${filled ? '#FFD700' : '#666'}; font-size: 18px;">★</span>`
+        }).join('')
+        
         html = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #FFD700;">Feedback Ready</h2>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #1a1a1a; color: #fff;">
+            <h2 style="color: #FFD700; margin-bottom: 20px;">Your Feedback is Ready!</h2>
             <p>Hi there,</p>
-            <p>Great news! Your feedback is ready.</p>
-            <p><strong>Video:</strong> ${(data.videoTitle as string) || 'N/A'}</p>
-            <p><strong>Rating:</strong> ${(data.rating as number)}/5 stars</p>
-            <p><a href="${env.NEXT_PUBLIC_APP_URL}/dashboard" style="background: #FFD700; color: #000; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">View Feedback</a></p>
+            <p>Great news! Your feedback is ready from ${safeMentorName}.</p>
+            
+            <div style="background: #2a2a2a; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <p style="margin: 5px 0;"><strong style="color: #FFD700;">Video:</strong> ${safeVideoTitle}</p>
+              ${rating > 0 ? `<p style="margin: 5px 0;"><strong style="color: #FFD700;">Rating:</strong> ${starsHtml} (${rating}/5)</p>` : ''}
+            </div>
+            
+            ${feedbackText ? `
+            <div style="background: #2a2a2a; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #FFD700;">
+              <h3 style="color: #FFD700; margin-top: 0; margin-bottom: 15px;">Your Feedback:</h3>
+              <div style="white-space: pre-wrap; line-height: 1.6; color: #fff;">${safeFeedbackText.replace(/\n/g, '<br>')}</div>
+            </div>
+            ` : ''}
+            
+            <p style="margin: 20px 0;">
+              <a href="${env.NEXT_PUBLIC_APP_URL}/dashboard/feedback" style="background: #FFD700; color: #000; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">View in Dashboard</a>
+            </p>
+            
+            <p style="color: #888; font-size: 12px; margin-top: 20px;">Thank you for using MVP-IQ!</p>
           </div>
         `
         break
@@ -270,9 +309,9 @@ export async function POST(request: NextRequest) {
         )
     }
 
-    // Send email via Gmail API (all emails from mvpweb@gmail.com)
+    // Send email via Gmail API (all emails from mvpiqweb@gmail.com)
     const result = await sendGmailEmail({
-      from: 'mvpweb@gmail.com',
+      from: 'mvpiqweb@gmail.com',
       to: email,
       subject,
       html,

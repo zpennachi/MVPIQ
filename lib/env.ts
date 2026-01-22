@@ -17,7 +17,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
   
   // Gmail (uses OAuth, no separate API key needed)
-  // GMAIL_FROM_EMAIL is hardcoded to mvpweb@gmail.com in lib/gmail.ts
+  // GMAIL_FROM_EMAIL is hardcoded to mvpiqweb@gmail.com in lib/gmail.ts
   
   // App
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),

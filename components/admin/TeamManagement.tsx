@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Team, TeamMember, Profile } from '@/types/database'
-import { Search, Edit, Trash2, Users, School } from 'lucide-react'
+import { Search, Edit, Trash2, Users, School, UserPlus, X } from 'lucide-react'
 import { format } from 'date-fns'
 
 interface TeamManagementProps {
@@ -16,6 +16,9 @@ export function TeamManagement({ adminId }: TeamManagementProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null)
   const [teamMembers, setTeamMembers] = useState<(TeamMember & { player?: Profile })[]>([])
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [inviteData, setInviteData] = useState({ email: '', fullName: '' })
+  const [inviteLoading, setInviteLoading] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -31,34 +34,21 @@ export function TeamManagement({ adminId }: TeamManagementProps) {
   const loadTeams = async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('teams')
-        .select(`
-          *,
-          coach:profiles!teams_coach_id_fkey(*)
-        `)
-        .order('created_at', { ascending: false })
+      // Use admin API endpoint to bypass RLS
+      const response = await fetch('/api/admin/teams')
+      const result = await response.json()
 
-      if (error) throw error
+      if (!response.ok) {
+        console.error('Error loading teams:', result.error)
+        setTeams([])
+        return
+      }
 
-      // Get member counts
-      const teamsWithCounts = await Promise.all(
-        (data || []).map(async (team) => {
-          const { count } = await supabase
-            .from('team_members')
-            .select('*', { count: 'exact', head: true })
-            .eq('team_id', team.id)
-
-          return {
-            ...team,
-            memberCount: count || 0,
-          }
-        })
-      )
-
-      setTeams(teamsWithCounts as any)
+      console.log('Loaded teams:', { count: result.count, teamsFound: result.teams.length })
+      setTeams(result.teams || [])
     } catch (error) {
       console.error('Error loading teams:', error)
+      setTeams([])
     } finally {
       setLoading(false)
     }
@@ -110,6 +100,40 @@ export function TeamManagement({ adminId }: TeamManagementProps) {
     }
   }
 
+  const handleInviteSchool = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    const confirmMessage = `Are you sure you want to invite ${inviteData.email} as a school?\n\nThey will receive an email with login instructions.`
+    
+    if (!confirm(confirmMessage)) return
+
+    setInviteLoading(true)
+
+    try {
+      const response = await fetch('/api/admin/invite-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...inviteData, role: 'school' }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to invite school')
+      }
+
+      alert(data.message || 'School invited successfully!')
+      setShowInviteModal(false)
+      setInviteData({ email: '', fullName: '' })
+      // Reload teams to show new school if they create a team
+      loadTeams()
+    } catch (error: any) {
+      alert(error.message || 'Failed to invite school')
+    } finally {
+      setInviteLoading(false)
+    }
+  }
+
   const filteredTeams = teams.filter(team =>
     team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (team.coach?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
@@ -137,6 +161,15 @@ export function TeamManagement({ adminId }: TeamManagementProps) {
             <h2 className="text-xl sm:text-2xl font-bold text-white">Team/School Management</h2>
             <p className="text-sm text-[#d9d9d9] mt-1">Manage all teams and schools</p>
           </div>
+          <button
+            onClick={() => setShowInviteModal(true)}
+            className="px-4 py-2 bg-[#ffc700] text-black rounded-md hover:bg-[#e6b300] transition-all duration-300 active:scale-95 hover:shadow-lg flex items-center gap-2 font-medium relative z-10"
+            type="button"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span className="hidden sm:inline">Invite School</span>
+            <span className="sm:hidden">Invite</span>
+          </button>
         </div>
       </div>
 
@@ -235,6 +268,81 @@ export function TeamManagement({ adminId }: TeamManagementProps) {
           </div>
         )}
       </div>
+
+      {/* Invite School Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4">
+          <div className="bg-black border border-[#272727] rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-white">Invite School</h3>
+              <button
+                onClick={() => {
+                  setShowInviteModal(false)
+                  setInviteData({ email: '', fullName: '' })
+                }}
+                className="text-[#d9d9d9] hover:text-white transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleInviteSchool} className="space-y-4">
+              <p className="text-sm text-[#d9d9d9]/70 mb-4">
+                Inviting a new school account. They will receive an email with login instructions.
+              </p>
+
+              <div>
+                <label htmlFor="invite-email" className="block text-sm font-medium text-[#d9d9d9] mb-1">
+                  Email *
+                </label>
+                <input
+                  id="invite-email"
+                  type="email"
+                  value={inviteData.email}
+                  onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
+                  required
+                  className="w-full px-3 py-2 border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700]"
+                  placeholder="school@example.com"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="invite-name" className="block text-sm font-medium text-[#d9d9d9] mb-1">
+                  School Name
+                </label>
+                <input
+                  id="invite-name"
+                  type="text"
+                  value={inviteData.fullName}
+                  onChange={(e) => setInviteData({ ...inviteData, fullName: e.target.value })}
+                  className="w-full px-3 py-2 border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700]"
+                  placeholder="Optional"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={inviteLoading}
+                  className="flex-1 px-4 py-2 bg-[#ffc700] text-black rounded-md hover:bg-[#e6b300] disabled:opacity-50 disabled:cursor-not-allowed transition font-medium"
+                >
+                  {inviteLoading ? 'Inviting...' : 'Send Invitation'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowInviteModal(false)
+                    setInviteData({ email: '', fullName: '' })
+                  }}
+                  className="px-4 py-2 border border-[#272727] text-[#d9d9d9] rounded-md hover:bg-[#272727] transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

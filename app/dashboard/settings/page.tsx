@@ -93,12 +93,12 @@ export default function SettingsPage() {
         'oauth_failed': 'OAuth authorization failed. Please try again.',
         'missing_params': 'Missing OAuth parameters. Please try connecting again.',
         'unauthorized': 'Unauthorized. Please make sure you are logged in as an admin.',
-        'not_admin': 'Only admins can connect Google Calendar.',
+        'not_admin': 'Only admins and mentors can connect their Google account.',
         'no_tokens': 'Failed to get OAuth tokens. Please try again.',
         'store_failed': 'Failed to save OAuth tokens. Please check database permissions.',
         'callback_failed': 'OAuth callback failed. Please try again.',
       }
-      setError(`Calendar connection failed: ${errorMessages[calendarError] || calendarError}`)
+      setError(`Google account connection failed: ${errorMessages[calendarError] || calendarError}`)
       // Clean URL
       window.history.replaceState({}, '', window.location.pathname)
     }
@@ -402,27 +402,31 @@ export default function SettingsPage() {
             </p>
           </div>
 
-          {/* Google Calendar Connection (for mentors and admins) */}
+          {/* Google Account Connection (for mentors and admins) */}
           {(profile?.role === 'mentor' || profile?.role === 'admin') && (
             <div className="border-t border-[#272727] pt-6 mt-6">
               <label className="block text-sm font-medium text-[#d9d9d9] mb-3">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
-                  Google Calendar Integration
+                  {profile?.role === 'admin' ? 'Email Services' : 'Google Calendar Integration'}
                 </div>
               </label>
               <p className="text-sm text-[#d9d9d9]/70 mb-4">
                 {profile?.role === 'mentor' 
-                  ? 'Connect your Google account to enable Google Meet link generation for your sessions and email notifications. When users book appointments with you, Meet links will be automatically created in your calendar and emails will be sent from mvpweb@gmail.com.'
-                  : 'Connect your Google account to enable Google Meet link generation for all sessions and email notifications. This allows the system to automatically create Meet links when users book appointments and send emails from mvpweb@gmail.com.'}
+                  ? 'Connect your Google account to enable Google Meet link generation for your sessions and email notifications. When users book appointments with you, Meet links will be automatically created in your calendar and emails will be sent from mvpiqweb@gmail.com.'
+                  : 'Connect your Google account to enable email notifications. All system emails (feedback confirmations, session bookings, reminders, etc.) will be sent from mvpiqweb@gmail.com using your connected account.'}
               </p>
               {calendarConnected ? (
                 <div className="flex items-center gap-3 p-4 bg-green-900/20 border border-green-800 rounded-md">
                   <CheckCircle2 className="w-5 h-5 text-green-400" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-green-400">Calendar Connected</p>
+                    <p className="text-sm font-medium text-green-400">
+                      {profile?.role === 'admin' ? 'Email Services Connected' : 'Calendar Connected'}
+                    </p>
                     <p className="text-xs text-[#d9d9d9]/70 mt-1">
-                      Your Google Calendar is connected and Meet links will be generated automatically.
+                      {profile?.role === 'admin' 
+                        ? 'Your Google account is connected and email notifications are enabled. All system emails will be sent from mvpiqweb@gmail.com.'
+                        : 'Your Google Calendar is connected and Meet links will be generated automatically.'}
                     </p>
                   </div>
                   <button
@@ -447,7 +451,7 @@ export default function SettingsPage() {
                         setSuccess(true)
                         setTimeout(() => setSuccess(false), 3000)
                       } catch (err: any) {
-                        setError(err.message || 'Failed to disconnect calendar')
+                        setError(err.message || 'Failed to disconnect Google account')
                       }
                     }}
                     className="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition"
@@ -471,7 +475,7 @@ export default function SettingsPage() {
                         throw new Error(data.error || 'Failed to get OAuth URL')
                       }
                     } catch (err: any) {
-                      setError(err.message || 'Failed to connect calendar')
+                      setError(err.message || 'Failed to connect Google account')
                       setConnectingCalendar(false)
                     }
                   }}
@@ -479,7 +483,7 @@ export default function SettingsPage() {
                   className="w-full px-4 py-2.5 bg-[#ffc700] text-black rounded-md hover:bg-[#e6b300] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 active:scale-95 hover:shadow-lg font-medium touch-manipulation flex items-center justify-center gap-2"
                 >
                   <Calendar className="w-4 h-4" />
-                  {connectingCalendar ? 'Connecting...' : 'Connect Google Calendar'}
+                  {connectingCalendar ? 'Connecting...' : (profile?.role === 'admin' ? 'Connect Google Account' : 'Connect Google Calendar')}
                 </button>
               )}
             </div>

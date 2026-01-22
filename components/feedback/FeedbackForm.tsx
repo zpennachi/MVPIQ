@@ -87,6 +87,13 @@ export function FeedbackForm({
             .single()
 
           if (playerProfile?.email) {
+            // Get mentor name for email
+            const { data: mentorProfile } = await supabase
+              .from('profiles')
+              .select('full_name, email')
+              .eq('id', user.id)
+              .single()
+
             await fetch('/api/notifications/email', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -95,6 +102,9 @@ export function FeedbackForm({
                 email: playerProfile.email,
                 data: {
                   videoTitle: video?.title,
+                  feedbackText: feedbackText,
+                  rating: submission.rating || 0,
+                  mentorName: mentorProfile?.full_name || mentorProfile?.email || 'Your mentor',
                 },
               }),
             })

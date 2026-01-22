@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { EducationVideo } from '@/types/database'
-import { BookOpen, Play, Filter } from 'lucide-react'
+import { BookOpen, Filter } from 'lucide-react'
+import { VideoPlayerModal } from '@/components/video/VideoPlayerModal'
+import { VideoThumbnail } from '@/components/education/VideoThumbnail'
 
 export function EducationSection() {
   const [videos, setVideos] = useState<EducationVideo[]>([])
@@ -11,6 +13,8 @@ export function EducationSection() {
   const [selectedPosition, setSelectedPosition] = useState<string>('all')
   const [positions, setPositions] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedVideo, setSelectedVideo] = useState<EducationVideo | null>(null)
+  const [showVideoModal, setShowVideoModal] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -86,9 +90,16 @@ export function EducationSection() {
               key={video.id}
               className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 hover:shadow-lg transition"
             >
-              <div className="aspect-video bg-gray-900 rounded-lg mb-3 sm:mb-4 flex items-center justify-center">
-                <Play className="w-8 h-8 sm:w-12 sm:h-12 text-yellow-500" />
-              </div>
+              <VideoThumbnail
+                videoUrl={video.video_url}
+                title={video.title}
+                onClick={() => {
+                  setSelectedVideo(video)
+                  setShowVideoModal(true)
+                }}
+                className="mb-3 sm:mb-4"
+                playIconClassName="text-yellow-500 dark:text-yellow-400"
+              />
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2 break-words">
                 {video.title}
               </h3>
@@ -102,17 +113,31 @@ export function EducationSection() {
                   {video.description}
                 </p>
               )}
-              <a
-                href={video.video_url}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={() => {
+                  setSelectedVideo(video)
+                  setShowVideoModal(true)
+                }}
                 className="mt-3 sm:mt-4 inline-block text-yellow-500 hover:text-yellow-600 dark:text-yellow-400 dark:hover:text-yellow-300 font-medium text-sm touch-manipulation"
               >
                 Watch Video →
-              </a>
+              </button>
             </div>
           ))}
         </div>
+      )}
+
+      {/* Video Player Modal */}
+      {selectedVideo && (
+        <VideoPlayerModal
+          isOpen={showVideoModal}
+          onClose={() => {
+            setShowVideoModal(false)
+            setSelectedVideo(null)
+          }}
+          videoUrl={selectedVideo.video_url}
+          videoTitle={selectedVideo.title}
+        />
       )}
     </div>
   )

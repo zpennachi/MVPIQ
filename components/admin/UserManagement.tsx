@@ -14,11 +14,11 @@ export function UserManagement({ adminId }: UserManagementProps) {
   const [users, setUsers] = useState<(Profile & { is_active?: boolean })[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [filterRole, setFilterRole] = useState<'all' | 'player' | 'coach' | 'mentor' | 'admin' | 'school'>('all')
+  const [filterRole, setFilterRole] = useState<'all' | 'player'>('all')
   const [editingUser, setEditingUser] = useState<string | null>(null)
   const [editData, setEditData] = useState<{ full_name: string; email: string; phone_number: string; role: string } | null>(null)
   const [showInviteModal, setShowInviteModal] = useState(false)
-  const [inviteData, setInviteData] = useState({ email: '', fullName: '', role: 'mentor' as 'mentor' | 'school' })
+  const [inviteData, setInviteData] = useState({ email: '', fullName: '', role: 'player' as 'player' })
   const [inviteLoading, setInviteLoading] = useState(false)
   const supabase = createClient()
 
@@ -29,36 +29,33 @@ export function UserManagement({ adminId }: UserManagementProps) {
   const loadUsers = async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false })
+      // Use admin API endpoint to bypass RLS and get all users
+      const response = await fetch('/api/admin/users')
+      const result = await response.json()
 
-      if (error) throw error
+      if (!response.ok) {
+        console.error('Error loading users:', result.error)
+        setUsers([])
+        return
+      }
 
-      // Check active status (users with recent activity)
-      const usersWithStatus = await Promise.all(
-        (data || []).map(async (user) => {
-          // Check if user has any recent activity (videos, submissions, etc.)
-          const thirtyDaysAgo = new Date()
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      const data = result.users || []
+      console.log('Loaded users:', { count: result.count, usersFound: data.length })
 
-          const { count: recentActivity } = await supabase
-            .from('videos')
-            .select('*', { count: 'exact', head: true })
-            .eq('player_id', user.id)
-            .gte('created_at', thirtyDaysAgo.toISOString())
-
-          return {
-            ...user,
-            is_active: (recentActivity || 0) > 0 || new Date(user.updated_at) > thirtyDaysAgo,
-          }
-        })
-      )
+      // Filter to only show players
+      const playersOnly = data.filter((user: Profile) => user.role === 'player')
+      
+      // Map users with is_active status (default to true if not set)
+      const usersWithStatus = playersOnly.map((user: Profile) => ({
+        ...user,
+        is_active: (user as any).is_active !== false, // Default to true if not set
+      }))
 
       setUsers(usersWithStatus as any)
     } catch (error) {
       console.error('Error loading users:', error)
+      // Set empty array on error so UI still renders
+      setUsers([])
     } finally {
       setLoading(false)
     }
@@ -77,6 +74,25 @@ export function UserManagement({ adminId }: UserManagementProps) {
   const handleSave = async (userId: string) => {
     if (!editData) return
 
+    // Find the original user data to compare changes
+    const originalUser = users.find(u => u.id === userId)
+    if (!originalUser) return
+
+    // Check if role is changing
+    const roleChanged = originalUser.role !== editData.role
+    const emailChanged = originalUser.email !== editData.email
+
+    // Build confirmation message
+    let confirmMessage = 'Are you sure you want to update this user?'
+    if (roleChanged) {
+      confirmMessage += `\n\n⚠️ Role will change from "${originalUser.role}" to "${editData.role}". This may affect their access permissions.`
+    }
+    if (emailChanged) {
+      confirmMessage += `\n\n⚠️ Email will change from "${originalUser.email}" to "${editData.email}".`
+    }
+
+    if (!confirm(confirmMessage)) return
+
     try {
       const { error } = await supabase
         .from('profiles')
@@ -90,7 +106,7 @@ export function UserManagement({ adminId }: UserManagementProps) {
       if (error) throw error
 
       // Update email in auth if changed (via API)
-      if (editData.email) {
+      if (editData.email && emailChanged) {
         try {
           const response = await fetch('/api/admin/update-user', {
             method: 'POST',
@@ -136,18 +152,27 @@ export function UserManagement({ adminId }: UserManagementProps) {
   }
 
   const handleToggleActive = async (userId: string, currentStatus: boolean) => {
-    // For now, we'll just update the updated_at timestamp
-    // In production, you might want an is_active column
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', userId)
+    const user = users.find(u => u.id === userId)
+    const userName = user?.full_name || user?.email || 'this user'
+    const action = currentStatus ? 'deactivate' : 'activate'
+    
+    if (!confirm(`Are you sure you want to ${action} ${userName}?`)) return
 
-      if (error) throw error
+    try {
+      const response = await fetch('/api/admin/toggle-active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, isActive: !currentStatus }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update user status')
+      }
 
       loadUsers()
-      alert(`User ${currentStatus ? 'deactivated' : 'activated'}`)
+      alert(data.message || `User ${currentStatus ? 'deactivated' : 'activated'} successfully`)
     } catch (error: any) {
       alert(error.message || 'Failed to update user status')
     }
@@ -155,6 +180,11 @@ export function UserManagement({ adminId }: UserManagementProps) {
 
   const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    const confirmMessage = `Are you sure you want to invite ${inviteData.email} as a player?\n\nThey will receive an email with login instructions.`
+    
+    if (!confirm(confirmMessage)) return
+
     setInviteLoading(true)
 
     try {
@@ -170,9 +200,9 @@ export function UserManagement({ adminId }: UserManagementProps) {
         throw new Error(data.error || 'Failed to invite user')
       }
 
-      alert(data.message || 'User invited successfully!')
+      alert(data.message || 'Player invited successfully!')
       setShowInviteModal(false)
-      setInviteData({ email: '', fullName: '', role: 'mentor' })
+      setInviteData({ email: '', fullName: '', role: 'player' })
       loadUsers()
     } catch (error: any) {
       alert(error.message || 'Failed to invite user')
@@ -209,15 +239,16 @@ export function UserManagement({ adminId }: UserManagementProps) {
       <div className="dotted-bg-subtle rounded-lg p-4 -m-4 sm:-m-6 lg:-m-8 mb-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-white">User Management</h2>
-            <p className="text-sm text-[#d9d9d9] mt-1">Manage all user accounts</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-white">Player Management</h2>
+            <p className="text-sm text-[#d9d9d9] mt-1">Manage all player accounts</p>
           </div>
           <button
             onClick={() => setShowInviteModal(true)}
-            className="px-4 py-2 bg-[#ffc700] text-black rounded-md hover:bg-[#e6b300] transition-all duration-300 active:scale-95 hover:shadow-lg flex items-center gap-2 font-medium"
+            className="px-4 py-2 bg-[#ffc700] text-black rounded-md hover:bg-[#e6b300] transition-all duration-300 active:scale-95 hover:shadow-lg flex items-center gap-2 font-medium relative z-10"
+            type="button"
           >
             <UserPlus className="w-4 h-4" />
-            <span className="hidden sm:inline">Invite User</span>
+            <span className="hidden sm:inline">Invite Player</span>
             <span className="sm:hidden">Invite</span>
           </button>
         </div>
@@ -240,12 +271,8 @@ export function UserManagement({ adminId }: UserManagementProps) {
           onChange={(e) => setFilterRole(e.target.value as any)}
           className="px-4 py-2 border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700]"
         >
-          <option value="all">All Roles</option>
-          <option value="player">Players</option>
-          <option value="coach">Coaches</option>
-          <option value="school">Schools</option>
-          <option value="mentor">Mentors</option>
-          <option value="admin">Admins</option>
+          <option value="all">All Players</option>
+          <option value="player">Active Players</option>
         </select>
       </div>
 
@@ -284,17 +311,9 @@ export function UserManagement({ adminId }: UserManagementProps) {
                         />
                       </td>
                       <td className="px-4 py-3">
-                        <select
-                          value={editData?.role || 'player'}
-                          onChange={(e) => setEditData({ ...editData!, role: e.target.value })}
-                          className="px-2 py-1 text-sm border border-[#ffc700] rounded bg-black text-white"
-                        >
-                          <option value="player">Player</option>
-                          <option value="coach">Coach</option>
-                          <option value="school">School</option>
-                          <option value="mentor">Mentor</option>
-                          <option value="admin">Admin</option>
-                        </select>
+                        <span className="px-2 py-1 rounded text-xs bg-[#272727] text-[#d9d9d9]">
+                          Player
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 rounded text-xs ${
@@ -390,25 +409,25 @@ export function UserManagement({ adminId }: UserManagementProps) {
         </div>
         {filteredUsers.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-[#d9d9d9]">No users found</p>
+            <p className="text-[#d9d9d9]">No players found</p>
           </div>
         )}
       </div>
 
       <div className="text-sm text-[#d9d9d9]">
-        Showing {filteredUsers.length} of {users.length} users
+        Showing {filteredUsers.length} of {users.length} players
       </div>
 
       {/* Invite Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4">
           <div className="bg-black border border-[#272727] rounded-lg max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-white">Invite User</h3>
+              <h3 className="text-xl font-bold text-white">Invite Player</h3>
               <button
                 onClick={() => {
                   setShowInviteModal(false)
-                  setInviteData({ email: '', fullName: '', role: 'mentor' })
+                  setInviteData({ email: '', fullName: '', role: 'player' })
                 }}
                 className="text-[#d9d9d9] hover:text-white transition"
               >
@@ -417,24 +436,10 @@ export function UserManagement({ adminId }: UserManagementProps) {
             </div>
 
             <form onSubmit={handleInviteUser} className="space-y-4">
-              <div>
-                <label htmlFor="invite-role" className="block text-sm font-medium text-[#d9d9d9] mb-1">
-                  Role
-                </label>
-                <select
-                  id="invite-role"
-                  value={inviteData.role}
-                  onChange={(e) => setInviteData({ ...inviteData, role: e.target.value as 'mentor' | 'school' })}
-                  className="w-full px-3 py-2 border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700]"
-                  required
-                >
-                  <option value="mentor">Mentor/Professional Athlete</option>
-                  <option value="school">School</option>
-                </select>
-                <p className="mt-1 text-xs text-[#d9d9d9]/70">
-                  Only mentors and schools require invitations. Players and coaches can register directly.
-                </p>
-              </div>
+              <input type="hidden" value="player" />
+              <p className="text-sm text-[#d9d9d9]/70 mb-4">
+                Inviting a new player account. They will receive an email with login instructions.
+              </p>
 
               <div>
                 <label htmlFor="invite-email" className="block text-sm font-medium text-[#d9d9d9] mb-1">

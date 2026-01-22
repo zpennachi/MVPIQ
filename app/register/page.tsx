@@ -13,7 +13,7 @@ export default function RegisterPage() {
     email: '',
     password: '',
     fullName: '',
-    role: 'player' as 'player' | 'coach',
+    role: 'player' as const,
   })
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -232,23 +232,6 @@ export default function RegisterPage() {
             />
           </div>
 
-          <div>
-            <label htmlFor="role" className="block text-sm font-medium text-[#d9d9d9] mb-1">
-              I am a
-            </label>
-            <select
-              id="role"
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as 'player' | 'coach' })}
-              className="w-full px-3 py-2.5 text-base border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700] touch-manipulation"
-            >
-              <option value="player">Player</option>
-              <option value="coach">Coach</option>
-            </select>
-            <p className="mt-1 text-xs text-[#d9d9d9]/70">
-              Mentors and schools must be invited by an admin.
-            </p>
-          </div>
 
           {/* Profile Photo Upload (Optional) */}
           <div>

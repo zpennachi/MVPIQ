@@ -9,6 +9,32 @@ interface VideoPlayerModalProps {
   videoTitle?: string
 }
 
+/**
+ * Extract YouTube video ID from various URL formats
+ */
+function getYouTubeVideoId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+    /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
+  ]
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern)
+    if (match && match[1]) {
+      return match[1]
+    }
+  }
+
+  return null
+}
+
+/**
+ * Check if URL is a YouTube URL
+ */
+function isYouTubeUrl(url: string): boolean {
+  return /youtube\.com|youtu\.be/.test(url)
+}
+
 export function VideoPlayerModal({
   isOpen,
   onClose,
@@ -16,6 +42,12 @@ export function VideoPlayerModal({
   videoTitle,
 }: VideoPlayerModalProps) {
   if (!isOpen) return null
+
+  const isYouTube = isYouTubeUrl(videoUrl)
+  const youtubeVideoId = isYouTube ? getYouTubeVideoId(videoUrl) : null
+  const embedUrl = youtubeVideoId 
+    ? `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&rel=0`
+    : null
 
   return (
     <div 
@@ -41,15 +73,29 @@ export function VideoPlayerModal({
             </div>
           )}
           <div className="relative aspect-video bg-black">
-            <video
-              src={videoUrl}
-              controls
-              autoPlay
-              className="w-full h-full max-h-[calc(95vh-60px)] sm:max-h-[calc(90vh-80px)] object-contain"
-              playsInline
-            >
-              Your browser does not support the video tag.
-            </video>
+            {isYouTube && embedUrl ? (
+              <iframe
+                src={embedUrl}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                title={videoTitle || 'YouTube video player'}
+              />
+            ) : (
+              <video
+                key={videoUrl} // Force re-render when video changes
+                src={videoUrl}
+                controls
+                autoPlay
+                className="w-full h-full max-h-[calc(95vh-60px)] sm:max-h-[calc(90vh-80px)] object-contain"
+                playsInline
+                onEnded={() => {
+                  // Video ended, user can close or it will stay open
+                }}
+              >
+                Your browser does not support the video tag.
+              </video>
+            )}
           </div>
         </div>
       </div>

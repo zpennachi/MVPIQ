@@ -164,12 +164,29 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
       
       // Always use MVPIQ availability_slots table (source of truth)
       // Google Calendar service account is used for creating events with Meet links
+      // Note: RLS policy filters by start_time > NOW(), but for recurring slots we need all active slots
+      // The expansion function will handle filtering to the current week
       const { data: slots, error: slotsError } = await supabase
         .from('availability_slots')
         .select('*')
         .eq('mentor_id', mentorId)
         .eq('is_active', true)
         .order('start_time', { ascending: true })
+      
+      console.log('🔍 Loaded slots from DB:', slots?.length || 0, 'for mentor:', mentorId)
+      if (slots && slots.length > 0) {
+        console.log('📅 Sample slot:', {
+          id: slots[0].id,
+          start_time: slots[0].start_time,
+          is_recurring: slots[0].is_recurring,
+          recurring_pattern: slots[0].recurring_pattern,
+        })
+      } else {
+        console.warn('⚠️ No slots found for mentor:', mentorId, 'Check:')
+        console.warn('  - Is mentor_id correct?')
+        console.warn('  - Are slots marked as is_active = true?')
+        console.warn('  - Does RLS policy allow viewing? (start_time > NOW() OR is_recurring = true)')
+      }
 
       if (slotsError) {
         console.error('Error loading mentor slots:', slotsError)

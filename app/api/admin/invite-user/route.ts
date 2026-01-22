@@ -36,10 +36,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate role - only mentors and schools can be invited
-    if (role !== 'mentor' && role !== 'school') {
+    // Validate role - mentors, schools, and players can be invited
+    if (role !== 'mentor' && role !== 'school' && role !== 'player') {
       return NextResponse.json(
-        { error: 'Only mentors and schools can be invited. Players and coaches can register directly.' },
+        { error: 'Invalid role. Only mentors, schools, and players can be invited.' },
         { status: 400 }
       )
     }
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Send a welcome email with login instructions
-      const roleLabel = role === 'mentor' ? 'Mentor/Professional Athlete' : 'School'
+      const roleLabel = role === 'mentor' ? 'Mentor/Professional Athlete' : role === 'school' ? 'School' : 'Player'
       const loginLink = `${env.NEXT_PUBLIC_APP_URL}/login`
       
       // Use submission_success template as a base for welcome email

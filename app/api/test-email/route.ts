@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
         <p>Hi there,</p>
         <p>This is a test email sent via the Gmail API integration.</p>
         <div style="background: #2a2a2a; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p style="margin: 5px 0;"><strong style="color: #FFD700;">Sent from:</strong> mvpweb@gmail.com</p>
+          <p style="margin: 5px 0;"><strong style="color: #FFD700;">Sent from:</strong> mvpiqweb@gmail.com</p>
           <p style="margin: 5px 0;"><strong style="color: #FFD700;">Sent to:</strong> ${recipientEmail}</p>
           <p style="margin: 5px 0;"><strong style="color: #FFD700;">Timestamp:</strong> ${new Date().toLocaleString()}</p>
         </div>
@@ -93,13 +93,13 @@ export async function GET(request: NextRequest) {
 
     logger.info('Sending test email', {
       to: recipientEmail,
-      from: 'mvpweb@gmail.com',
+      from: 'mvpiqweb@gmail.com',
       subject: testSubject,
     })
 
     // Send test email
     const result = await sendGmailEmail({
-      from: 'mvpweb@gmail.com',
+      from: 'mvpiqweb@gmail.com',
       to: recipientEmail,
       subject: testSubject,
       html: testHtml,
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
         error: result.error,
         details: {
           recipient: recipientEmail,
-          from: 'mvpweb@gmail.com',
+          from: 'mvpiqweb@gmail.com',
           oAuthStatus: {
             hasAdminTokens: !!adminWithTokens,
             adminEmail: adminWithTokens?.email || 'Not found',

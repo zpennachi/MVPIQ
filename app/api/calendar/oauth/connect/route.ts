@@ -39,6 +39,22 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Check if Google OAuth credentials are configured
+    if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+      logger.error('Google OAuth credentials not configured', undefined, {
+        hasClientId: !!env.GOOGLE_CLIENT_ID,
+        hasClientSecret: !!env.GOOGLE_CLIENT_SECRET,
+      })
+      return NextResponse.json(
+        { 
+          error: 'Google OAuth is not configured',
+          details: 'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set in environment variables',
+          hint: 'Add these to your .env file or Vercel environment variables',
+        },
+        { status: 500 }
+      )
+    }
+
     // Get the redirect URL from query params or use default
     const redirectUri = new URL('/api/calendar/oauth/callback', request.nextUrl.origin).toString()
 
