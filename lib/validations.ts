@@ -20,7 +20,7 @@ export const profileEnsureSchema = z.object({
   userId: z.string().uuid('Invalid user ID format'),
   email: z.string().email('Invalid email format'),
   fullName: z.string().optional(),
-  role: z.enum(['player', 'mentor', 'coach', 'admin']).optional().default('player'),
+  role: z.enum(['player', 'mentor', 'coach', 'admin', 'school']).optional().default('player'),
 })
 
 // Video URL submission validation
@@ -77,7 +77,7 @@ export const adminUpdateUserSchema = z.object({
   updates: z.object({
     full_name: z.string().optional(),
     email: z.string().email().optional(),
-    role: z.enum(['player', 'mentor', 'coach', 'admin']).optional(),
+    role: z.enum(['player', 'mentor', 'coach', 'admin', 'school']).optional(),
   }),
 })
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types/database'
-import { Search, Edit, Trash2, UserCheck, UserX, Key, MoreVertical } from 'lucide-react'
+import { Search, Edit, Trash2, UserCheck, UserX, Key, MoreVertical, UserPlus, X } from 'lucide-react'
 import { format } from 'date-fns'
 
 interface UserManagementProps {
@@ -14,9 +14,12 @@ export function UserManagement({ adminId }: UserManagementProps) {
   const [users, setUsers] = useState<(Profile & { is_active?: boolean })[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [filterRole, setFilterRole] = useState<'all' | 'player' | 'coach' | 'mentor' | 'admin'>('all')
+  const [filterRole, setFilterRole] = useState<'all' | 'player' | 'coach' | 'mentor' | 'admin' | 'school'>('all')
   const [editingUser, setEditingUser] = useState<string | null>(null)
   const [editData, setEditData] = useState<{ full_name: string; email: string; phone_number: string; role: string } | null>(null)
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [inviteData, setInviteData] = useState({ email: '', fullName: '', role: 'mentor' as 'mentor' | 'school' })
+  const [inviteLoading, setInviteLoading] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -150,6 +153,34 @@ export function UserManagement({ adminId }: UserManagementProps) {
     }
   }
 
+  const handleInviteUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setInviteLoading(true)
+
+    try {
+      const response = await fetch('/api/admin/invite-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(inviteData),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to invite user')
+      }
+
+      alert(data.message || 'User invited successfully!')
+      setShowInviteModal(false)
+      setInviteData({ email: '', fullName: '', role: 'mentor' })
+      loadUsers()
+    } catch (error: any) {
+      alert(error.message || 'Failed to invite user')
+    } finally {
+      setInviteLoading(false)
+    }
+  }
+
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -181,6 +212,14 @@ export function UserManagement({ adminId }: UserManagementProps) {
             <h2 className="text-xl sm:text-2xl font-bold text-white">User Management</h2>
             <p className="text-sm text-[#d9d9d9] mt-1">Manage all user accounts</p>
           </div>
+          <button
+            onClick={() => setShowInviteModal(true)}
+            className="px-4 py-2 bg-[#ffc700] text-black rounded-md hover:bg-[#e6b300] transition-all duration-300 active:scale-95 hover:shadow-lg flex items-center gap-2 font-medium"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span className="hidden sm:inline">Invite User</span>
+            <span className="sm:hidden">Invite</span>
+          </button>
         </div>
       </div>
 
@@ -204,6 +243,7 @@ export function UserManagement({ adminId }: UserManagementProps) {
           <option value="all">All Roles</option>
           <option value="player">Players</option>
           <option value="coach">Coaches</option>
+          <option value="school">Schools</option>
           <option value="mentor">Mentors</option>
           <option value="admin">Admins</option>
         </select>
@@ -251,6 +291,7 @@ export function UserManagement({ adminId }: UserManagementProps) {
                         >
                           <option value="player">Player</option>
                           <option value="coach">Coach</option>
+                          <option value="school">School</option>
                           <option value="mentor">Mentor</option>
                           <option value="admin">Admin</option>
                         </select>
@@ -357,6 +398,96 @@ export function UserManagement({ adminId }: UserManagementProps) {
       <div className="text-sm text-[#d9d9d9]">
         Showing {filteredUsers.length} of {users.length} users
       </div>
+
+      {/* Invite Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-black border border-[#272727] rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-white">Invite User</h3>
+              <button
+                onClick={() => {
+                  setShowInviteModal(false)
+                  setInviteData({ email: '', fullName: '', role: 'mentor' })
+                }}
+                className="text-[#d9d9d9] hover:text-white transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleInviteUser} className="space-y-4">
+              <div>
+                <label htmlFor="invite-role" className="block text-sm font-medium text-[#d9d9d9] mb-1">
+                  Role
+                </label>
+                <select
+                  id="invite-role"
+                  value={inviteData.role}
+                  onChange={(e) => setInviteData({ ...inviteData, role: e.target.value as 'mentor' | 'school' })}
+                  className="w-full px-3 py-2 border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700]"
+                  required
+                >
+                  <option value="mentor">Mentor/Professional Athlete</option>
+                  <option value="school">School</option>
+                </select>
+                <p className="mt-1 text-xs text-[#d9d9d9]/70">
+                  Only mentors and schools require invitations. Players and coaches can register directly.
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="invite-email" className="block text-sm font-medium text-[#d9d9d9] mb-1">
+                  Email *
+                </label>
+                <input
+                  id="invite-email"
+                  type="email"
+                  value={inviteData.email}
+                  onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
+                  required
+                  className="w-full px-3 py-2 border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700]"
+                  placeholder="user@example.com"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="invite-name" className="block text-sm font-medium text-[#d9d9d9] mb-1">
+                  Full Name
+                </label>
+                <input
+                  id="invite-name"
+                  type="text"
+                  value={inviteData.fullName}
+                  onChange={(e) => setInviteData({ ...inviteData, fullName: e.target.value })}
+                  className="w-full px-3 py-2 border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700]"
+                  placeholder="Optional"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={inviteLoading}
+                  className="flex-1 px-4 py-2 bg-[#ffc700] text-black rounded-md hover:bg-[#e6b300] disabled:opacity-50 disabled:cursor-not-allowed transition font-medium"
+                >
+                  {inviteLoading ? 'Inviting...' : 'Send Invitation'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowInviteModal(false)
+                    setInviteData({ email: '', fullName: '', role: 'mentor' })
+                  }}
+                  className="px-4 py-2 border border-[#272727] text-[#d9d9d9] rounded-md hover:bg-[#272727] transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
