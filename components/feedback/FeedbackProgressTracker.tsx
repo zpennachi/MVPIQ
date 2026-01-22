@@ -38,18 +38,7 @@ export function FeedbackProgressTracker({ submission, className = '' }: Feedback
     })
 
     // Step 2: Payment (if needed)
-    if (submission.payment_status === 'pending' || submission.payment_status === 'processing') {
-      stepList.push({
-        key: 'payment',
-        label: 'Payment',
-        status: submission.payment_status === 'completed' ? 'completed' : 'current',
-        icon: Circle,
-        timestamp: submission.payment_status === 'completed' ? 'Completed' : 'Pending',
-        description: submission.payment_status === 'completed' 
-          ? 'Payment processed' 
-          : 'Waiting for payment confirmation',
-      })
-    } else if (submission.payment_status === 'completed') {
+    if (submission.payment_status === 'completed') {
       stepList.push({
         key: 'payment',
         label: 'Payment',
@@ -57,6 +46,26 @@ export function FeedbackProgressTracker({ submission, className = '' }: Feedback
         icon: CheckCircle2,
         timestamp: 'Completed',
         description: 'Payment processed',
+      })
+    } else if (submission.payment_status === 'pending' || submission.payment_status === 'processing') {
+      stepList.push({
+        key: 'payment',
+        label: 'Payment',
+        status: 'current',
+        icon: Circle,
+        timestamp: submission.payment_status === 'processing' ? 'Processing' : 'Pending',
+        description: submission.payment_status === 'processing'
+          ? 'Payment is being processed'
+          : 'Waiting for payment confirmation',
+      })
+    } else if (submission.payment_status === 'failed') {
+      stepList.push({
+        key: 'payment',
+        label: 'Payment',
+        status: 'current',
+        icon: Circle,
+        timestamp: 'Failed',
+        description: 'Payment failed - please retry',
       })
     }
 
