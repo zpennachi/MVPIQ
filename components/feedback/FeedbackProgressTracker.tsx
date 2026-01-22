@@ -70,16 +70,7 @@ export function FeedbackProgressTracker({ submission, className = '' }: Feedback
     }
 
     // Step 3: Assigned
-    if (submission.status === 'assigned' || submission.status === 'in_progress' || submission.status === 'completed') {
-      stepList.push({
-        key: 'assigned',
-        label: 'Assigned to Mentor',
-        status: submission.status === 'pending' ? 'upcoming' : 'completed',
-        icon: User,
-        timestamp: submission.mentor_id ? 'Assigned' : undefined,
-        description: submission.mentor_id ? 'Mentor is reviewing your video' : 'Waiting for mentor assignment',
-      })
-    } else {
+    if (submission.status === 'pending') {
       stepList.push({
         key: 'assigned',
         label: 'Assigned to Mentor',
@@ -87,21 +78,34 @@ export function FeedbackProgressTracker({ submission, className = '' }: Feedback
         icon: Circle,
         description: 'Waiting for mentor assignment',
       })
+    } else if (submission.status === 'assigned' || submission.status === 'in_progress' || submission.status === 'completed') {
+      stepList.push({
+        key: 'assigned',
+        label: 'Assigned to Mentor',
+        status: 'completed',
+        icon: User,
+        timestamp: submission.mentor_id ? 'Assigned' : undefined,
+        description: submission.mentor_id ? 'Mentor is reviewing your video' : 'Waiting for mentor assignment',
+      })
     }
 
     // Step 4: In Progress
-    if (submission.status === 'in_progress' || submission.status === 'completed') {
+    if (submission.status === 'completed') {
       stepList.push({
         key: 'in_progress',
         label: 'In Progress',
-        status: submission.status === 'completed' ? 'completed' : 'current',
+        status: 'completed',
         icon: Clock,
-        timestamp: submission.status === 'in_progress' 
-          ? `Started ${formatDistanceToNow(updated, { addSuffix: true })}`
-          : undefined,
-        description: submission.status === 'in_progress' 
-          ? 'Mentor is providing feedback'
-          : 'Feedback being prepared',
+        description: 'Feedback being prepared',
+      })
+    } else if (submission.status === 'in_progress') {
+      stepList.push({
+        key: 'in_progress',
+        label: 'In Progress',
+        status: 'current',
+        icon: Clock,
+        timestamp: `Started ${formatDistanceToNow(updated, { addSuffix: true })}`,
+        description: 'Mentor is providing feedback',
       })
     } else {
       stepList.push({
