@@ -415,7 +415,7 @@ export function EducationManagement({ adminId }: EducationManagementProps) {
                     type="url"
                     value={formData.video_url}
                     onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
-                    required={uploadMethod === 'url' || editingVideo}
+                    required={uploadMethod === 'url' || !!editingVideo}
                     className="w-full px-3 py-2 border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700]"
                     placeholder="https://youtube.com/watch?v=... or other video URL"
                   />
