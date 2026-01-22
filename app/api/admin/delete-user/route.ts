@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { env } from '@/lib/env'
 import { logger } from '@/lib/logger'
 
@@ -41,7 +42,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 })
     }
 
-    // Delete user from auth using REST API (more reliable than JS client method)
+    // Use service role client to delete profile first (bypasses RLS)
+    const supabaseAdmin = createAdminClient(
+      env.NEXT_PUBLIC_SUPABASE_URL,
+      env.SUPABASE_SERVICE_ROLE_KEY,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    )
+
+    // Step 1: Delete the profile first (this will cascade to related data)
+    const { error: profileDeleteError } = await supabaseAdmin
+      .from('profiles')
+      .delete()
+      .eq('id', userId)
+
+    if (profileDeleteError) {
+      logger.error('Error deleting profile', profileDeleteError, { adminId: user.id, userId })
+      return NextResponse.json(
+        { error: `Failed to delete profile: ${profileDeleteError.message}` },
+        { status: 500 }
+      )
+    }
+
+    // Step 2: Delete user from auth (now that profile is gone, FK constraint won't block it)
     const deleteUrl = `${env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/users/${userId}`
     const deleteResponse = await fetch(deleteUrl, {
       method: 'DELETE',
@@ -62,7 +89,7 @@ export async function POST(request: NextRequest) {
         errorMessage = deleteResponse.statusText || `Failed to delete user (${deleteResponse.status})`
       }
       
-      logger.error('Error deleting user', { 
+      logger.error('Error deleting user from auth', { 
         adminId: user.id, 
         userId, 
         status: deleteResponse.status,
