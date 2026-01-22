@@ -134,6 +134,7 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
       `)
       .eq('user_id', userId)
       .in('status', ['pending', 'confirmed'])
+      .gte('start_time', new Date().toISOString())
       .order('start_time', { ascending: true })
 
     if (data) setOneOnOnes(data)
@@ -257,80 +258,7 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
       </div>
 
       <div className="space-y-6">
-          {/* Under Review Feedback - Show feedback that's being reviewed */}
-          {submissions.filter(s => s.status !== 'completed').length > 0 && (
-            <div className="bg-gradient-to-r from-[#ffc700]/10 to-[#ffc700]/5 border-2 border-[#ffc700]/40 rounded-lg shadow-mvp p-4 sm:p-6 relative overflow-hidden">
-              {/* Subtle animation background */}
-              <div className="absolute inset-0 bg-gradient-to-r from-[#ffc700]/5 to-transparent opacity-50"></div>
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-[#ffc700]/20 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-[#ffc700]/40">
-                      <MessageSquare className="w-6 h-6 text-[#ffc700]" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-                        📹 Under Review
-                      </h2>
-                      <p className="text-sm text-[#ffc700]/90 mt-1 font-medium">
-                        {submissions.filter(s => s.status !== 'completed').length} video{submissions.filter(s => s.status !== 'completed').length > 1 ? 's' : ''} being reviewed by professional mentors
-                      </p>
-                    </div>
-                  </div>
-                  <Link
-                    href="/dashboard/feedback"
-                    className="text-sm text-[#ffc700] hover:text-[#e6b300] transition font-medium whitespace-nowrap bg-[#ffc700]/10 px-3 py-1.5 rounded-md border border-[#ffc700]/30 hover:bg-[#ffc700]/20"
-                  >
-                    View All →
-                  </Link>
-                </div>
-                <SubmissionList 
-                  submissions={submissions.filter(s => s.status !== 'completed').slice(0, 3)} 
-                  userRole="player" 
-                  onUpdate={loadData}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* New Feedback - Show completed feedback that hasn't been viewed yet */}
-          {submissions.filter(s => s.status === 'completed' && s.feedback_text && !viewedFeedbackIds.has(s.id)).length > 0 && (
-            <div className="bg-gradient-to-r from-green-900/30 to-green-800/20 border-2 border-green-500/60 rounded-lg shadow-mvp p-4 sm:p-6 relative overflow-hidden">
-              {/* Subtle animation background */}
-              <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-transparent opacity-50"></div>
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-green-500/40">
-                      <MessageSquare className="w-6 h-6 text-green-400" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-                        🎉 New Feedback Available!
-                      </h2>
-                      <p className="text-sm text-green-300/90 mt-1 font-medium">
-                        {submissions.filter(s => s.status === 'completed' && s.feedback_text && !viewedFeedbackIds.has(s.id)).length} new feedback response{submissions.filter(s => s.status === 'completed' && s.feedback_text && !viewedFeedbackIds.has(s.id)).length > 1 ? 's' : ''} ready for review
-                      </p>
-                    </div>
-                  </div>
-                  <Link
-                    href="/dashboard/feedback"
-                    className="text-sm text-green-400 hover:text-green-300 transition font-medium whitespace-nowrap bg-green-500/10 px-3 py-1.5 rounded-md border border-green-500/30 hover:bg-green-500/20"
-                  >
-                    View All →
-                  </Link>
-                </div>
-                <SubmissionList 
-                  submissions={submissions.filter(s => s.status === 'completed' && s.feedback_text && !viewedFeedbackIds.has(s.id)).slice(0, 3)} 
-                  userRole="player" 
-                  onUpdate={loadData}
-                  onViewFeedback={(submissionId) => markFeedbackAsViewed(submissionId)}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Upcoming Appointments - Show next 3 */}
+          {/* Upcoming Appointments - Show FIRST */}
           {oneOnOnes.slice(0, 3).length > 0 && (
             <div className="bg-black border border-[#272727] rounded-lg shadow-mvp p-4 sm:p-6">
               <div className="flex items-center justify-between mb-4">
@@ -418,10 +346,83 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
             </div>
           )}
 
-          {/* Empty State - Show when no under review, no new feedback, and no upcoming appointments */}
-          {submissions.filter(s => s.status !== 'completed').length === 0 &&
-           submissions.filter(s => s.status === 'completed' && s.feedback_text && !viewedFeedbackIds.has(s.id)).length === 0 && 
-           oneOnOnes.length === 0 && (
+          {/* New Feedback - Show completed feedback that hasn't been viewed yet */}
+          {submissions.filter(s => s.status === 'completed' && s.feedback_text && !viewedFeedbackIds.has(s.id)).length > 0 && (
+            <div className="bg-gradient-to-r from-green-900/30 to-green-800/20 border-2 border-green-500/60 rounded-lg shadow-mvp p-4 sm:p-6 relative overflow-hidden">
+              {/* Subtle animation background */}
+              <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-transparent opacity-50"></div>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-green-500/40">
+                      <MessageSquare className="w-6 h-6 text-green-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                        🎉 New Feedback Available!
+                      </h2>
+                      <p className="text-sm text-green-300/90 mt-1 font-medium">
+                        {submissions.filter(s => s.status === 'completed' && s.feedback_text && !viewedFeedbackIds.has(s.id)).length} new feedback response{submissions.filter(s => s.status === 'completed' && s.feedback_text && !viewedFeedbackIds.has(s.id)).length > 1 ? 's' : ''} ready for review
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/dashboard/feedback"
+                    className="text-sm text-green-400 hover:text-green-300 transition font-medium whitespace-nowrap bg-green-500/10 px-3 py-1.5 rounded-md border border-green-500/30 hover:bg-green-500/20"
+                  >
+                    View All →
+                  </Link>
+                </div>
+                <SubmissionList 
+                  submissions={submissions.filter(s => s.status === 'completed' && s.feedback_text && !viewedFeedbackIds.has(s.id)).slice(0, 3)} 
+                  userRole="player" 
+                  onUpdate={loadData}
+                  onViewFeedback={(submissionId) => markFeedbackAsViewed(submissionId)}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Under Review Feedback - Show feedback that's being reviewed */}
+          {submissions.filter(s => s.status !== 'completed').length > 0 && (
+            <div className="bg-gradient-to-r from-[#ffc700]/10 to-[#ffc700]/5 border-2 border-[#ffc700]/40 rounded-lg shadow-mvp p-4 sm:p-6 relative overflow-hidden">
+              {/* Subtle animation background */}
+              <div className="absolute inset-0 bg-gradient-to-r from-[#ffc700]/5 to-transparent opacity-50"></div>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-[#ffc700]/20 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-[#ffc700]/40">
+                      <MessageSquare className="w-6 h-6 text-[#ffc700]" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                        📹 Under Review
+                      </h2>
+                      <p className="text-sm text-[#ffc700]/90 mt-1 font-medium">
+                        {submissions.filter(s => s.status !== 'completed').length} video{submissions.filter(s => s.status !== 'completed').length > 1 ? 's' : ''} being reviewed by professional mentors
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/dashboard/feedback"
+                    className="text-sm text-[#ffc700] hover:text-[#e6b300] transition font-medium whitespace-nowrap bg-[#ffc700]/10 px-3 py-1.5 rounded-md border border-[#ffc700]/30 hover:bg-[#ffc700]/20"
+                  >
+                    View All →
+                  </Link>
+                </div>
+                <SubmissionList 
+                  submissions={submissions.filter(s => s.status !== 'completed').slice(0, 3)} 
+                  userRole="player" 
+                  onUpdate={loadData}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Empty State - Show when no appointments, no new feedback, and no under review */}
+          {oneOnOnes.length === 0 &&
+           submissions.filter(s => s.status === 'completed' && s.feedback_text && !viewedFeedbackIds.has(s.id)).length === 0 &&
+           submissions.filter(s => s.status !== 'completed').length === 0 && (
             <div className="bg-black border border-[#272727] rounded-lg shadow-mvp p-12 text-center">
               <MessageSquare className="w-16 h-16 mx-auto mb-4 text-[#272727]" />
               <h3 className="text-lg font-semibold text-white mb-2">Welcome to your dashboard!</h3>
