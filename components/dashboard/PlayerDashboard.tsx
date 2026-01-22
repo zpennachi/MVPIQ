@@ -413,7 +413,7 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
               <MessageSquare className="w-16 h-16 mx-auto mb-4 text-[#272727]" />
               <h3 className="text-lg font-semibold text-white mb-2">Welcome to your dashboard!</h3>
               <p className="text-[#d9d9d9] mb-6 max-w-md mx-auto">
-                Get started by booking a one-on-one session or submitting gameplay feedback
+                Get started by booking a one-on-one session or submitting feedback
               </p>
               <div className="flex gap-3 justify-center">
                 <Link

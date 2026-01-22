@@ -340,7 +340,7 @@ export function Sidebar() {
               }`}
             >
               <MessageSquare className="w-5 h-5" />
-              <span className="font-medium">Gameplay Feedback</span>
+              <span className="font-medium">Feedback</span>
             </Link>
           </>
         )}
