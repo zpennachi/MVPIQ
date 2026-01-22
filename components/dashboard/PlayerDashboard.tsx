@@ -136,14 +136,7 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
       .in('status', ['pending', 'confirmed'])
       .order('start_time', { ascending: true })
 
-    if (data) {
-      // Filter to only show future appointments on client side
-      const now = new Date()
-      const futureAppointments = data.filter((session: any) => {
-        return new Date(session.start_time) >= now
-      })
-      setOneOnOnes(futureAppointments)
-    }
+    if (data) setOneOnOnes(data)
   }
 
   const loadData = async () => {

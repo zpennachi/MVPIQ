@@ -50,10 +50,6 @@ export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
   const loadAppointments = async () => {
     setLoading(true)
 
-    // Use start of today instead of exact current time to avoid timezone issues
-    const startOfToday = new Date()
-    startOfToday.setHours(0, 0, 0, 0)
-
     let query = supabase
       .from('booked_sessions')
       .select(`
@@ -62,7 +58,6 @@ export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
         user:profiles!booked_sessions_user_id_fkey(id, full_name, email, profile_photo_url)
       `)
       .in('status', ['pending', 'confirmed'])
-      .gte('start_time', startOfToday.toISOString())
       .order('start_time', { ascending: true })
 
     // If mentor view, filter by mentor_id; otherwise filter by user_id
