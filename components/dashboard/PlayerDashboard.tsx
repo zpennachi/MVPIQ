@@ -382,8 +382,9 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
             </div>
           )}
 
-          {/* Empty State */}
-          {submissions.length === 0 && oneOnOnes.length === 0 && (
+          {/* Empty State - Show when no new feedback and no upcoming appointments */}
+          {submissions.filter(s => s.status === 'completed' && s.feedback_text && !viewedFeedbackIds.has(s.id)).length === 0 && 
+           oneOnOnes.length === 0 && (
             <div className="bg-black border border-[#272727] rounded-lg shadow-mvp p-12 text-center">
               <MessageSquare className="w-16 h-16 mx-auto mb-4 text-[#272727]" />
               <h3 className="text-lg font-semibold text-white mb-2">Welcome to your dashboard!</h3>
