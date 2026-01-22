@@ -38,6 +38,22 @@ export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Listen for session cancellation events from other components (like MentorDashboard)
+  useEffect(() => {
+    const handleSessionCancelled = () => {
+      // Reload appointments when a session is cancelled elsewhere
+      loadAppointments()
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('sessionCancelled', handleSessionCancelled)
+      return () => {
+        window.removeEventListener('sessionCancelled', handleSessionCancelled)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const loadAppointments = async () => {
     setLoading(true)
     const weekEnd = addDays(weekStart, 7)

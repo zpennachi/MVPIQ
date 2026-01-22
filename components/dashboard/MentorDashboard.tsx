@@ -244,6 +244,12 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
 
       // Reload sessions
       loadUpcomingSessions()
+      
+      // Dispatch custom event to notify other components (like MyAppointments)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('sessionCancelled', { detail: { sessionId } }))
+      }
+      
       alert('Session cancelled. The user has been notified via email.')
     } catch (error: any) {
       console.error('Error cancelling session:', error)
