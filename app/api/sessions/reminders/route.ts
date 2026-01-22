@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
               data: {
                 sessionId: session.id,
                 mentorName: mentorName,
-                userName: (session as any).user?.full_name || (session as any).user?.email,
+                userName: getFullName((session as any).user) || (session as any).user?.email,
                 startTime: session.start_time,
                 meetingLink: session.meeting_link,
               },
