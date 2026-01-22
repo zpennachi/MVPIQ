@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { env } from '@/lib/env'
 import { logger } from '@/lib/logger'
 
@@ -42,26 +41,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 })
     }
 
-    // Use service role key to bypass RLS
-    const supabaseAdmin = createAdminClient(
-      env.NEXT_PUBLIC_SUPABASE_URL,
-      env.SUPABASE_SERVICE_ROLE_KEY,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
+    // Delete user from auth using REST API (more reliable than JS client method)
+    const deleteUrl = `${env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/users/${userId}`
+    const deleteResponse = await fetch(deleteUrl, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+      },
+    })
+
+    if (!deleteResponse.ok) {
+      let errorMessage = 'Failed to delete user'
+      try {
+        const errorData = await deleteResponse.json()
+        errorMessage = errorData.message || errorData.error_description || errorMessage
+      } catch {
+        // If response isn't JSON, use status text
+        errorMessage = deleteResponse.statusText || `Failed to delete user (${deleteResponse.status})`
       }
-    )
-
-    // Delete user from auth (this will cascade delete profile and related data)
-    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
-
-    if (deleteError) {
-      logger.error('Error deleting user', deleteError, { adminId: user.id, userId })
+      
+      logger.error('Error deleting user', { 
+        adminId: user.id, 
+        userId, 
+        status: deleteResponse.status,
+        statusText: deleteResponse.statusText 
+      })
+      
       return NextResponse.json(
-        { error: deleteError.message || 'Failed to delete user' },
-        { status: 500 }
+        { error: errorMessage },
+        { status: deleteResponse.status || 500 }
       )
     }
 
