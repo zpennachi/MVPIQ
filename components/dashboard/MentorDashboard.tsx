@@ -431,7 +431,7 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
                           ) : (
                             <div className="w-8 h-8 bg-[#ffc700]/20 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-[#ffc700]/40">
                               <span className="text-sm font-bold text-[#ffc700]">
-                                {getInitials(session.user)}
+                                {getProfileInitials(session.user || null)}
                               </span>
                             </div>
                           )}
