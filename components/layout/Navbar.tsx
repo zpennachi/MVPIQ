@@ -27,7 +27,7 @@ export function Navbar() {
       if (user) {
         const { data, error } = await supabase
           .from('profiles')
-          .select('*, profile_photo_url')
+          .select('*')
           .eq('id', user.id)
           .single()
         if (!error && data) {
@@ -44,7 +44,7 @@ export function Navbar() {
       if (session?.user) {
         supabase
           .from('profiles')
-          .select('*, profile_photo_url')
+          .select('*')
           .eq('id', session.user.id)
           .single()
           .then(({ data, error }) => {
