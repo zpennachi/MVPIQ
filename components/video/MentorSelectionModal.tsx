@@ -35,7 +35,7 @@ export function MentorSelectionModal({
       .from('profiles')
       .select('*')
       .eq('role', 'mentor')
-      .order('full_name', { ascending: true })
+      .order('first_name', { ascending: true })
 
     if (error) {
       console.error('Error loading mentors:', error)
