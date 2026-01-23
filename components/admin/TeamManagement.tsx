@@ -208,7 +208,7 @@ export function TeamManagement({ adminId }: TeamManagementProps) {
                       <h4 className="font-semibold text-white">{team.name}</h4>
                     </div>
                     <p className="text-sm text-[#d9d9d9]">
-                      Coach: {team.coach?.full_name || team.coach?.email || 'Unknown'}
+                      Coach: {getFullName(team.coach) || team.coach?.email || 'Unknown'}
                     </p>
                     <p className="text-xs text-[#d9d9d9]/70 mt-1">
                       {team.memberCount || 0} members • Created {format(new Date(team.created_at), 'MMM d, yyyy')}
