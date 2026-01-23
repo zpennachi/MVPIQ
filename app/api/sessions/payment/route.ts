@@ -128,20 +128,31 @@ async function sendConfirmationEmails(session: any, origin: string) {
     const [userResult, mentorResult] = await Promise.all([
       supabase
         .from('profiles')
-        .select('email, full_name')
+        .select('email, first_name, last_name')
         .eq('id', session.user_id)
         .maybeSingle(),
       supabase
         .from('profiles')
-        .select('email, full_name')
+        .select('email, first_name, last_name')
         .eq('id', session.mentor_id)
         .maybeSingle(),
     ])
 
+    // Helper to get full name
+    function getFullName(profile: any): string {
+      if (!profile) return ''
+      const firstName = profile.first_name?.trim() || ''
+      const lastName = profile.last_name?.trim() || ''
+      if (firstName && lastName) return `${firstName} ${lastName}`
+      if (firstName) return firstName
+      if (lastName) return lastName
+      return profile.email || ''
+    }
+
     const userEmail = userResult.data?.email
-    const userName = userResult.data?.full_name || userResult.data?.email
+    const userName = getFullName(userResult.data) || userResult.data?.email
     const mentorEmail = mentorResult.data?.email
-    const mentorName = mentorResult.data?.full_name || mentorResult.data?.email
+    const mentorName = getFullName(mentorResult.data) || mentorResult.data?.email
 
     // Send both emails in parallel and wait for both
     const emailPromises = []

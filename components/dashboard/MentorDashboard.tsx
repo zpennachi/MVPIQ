@@ -349,13 +349,13 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
           {profile?.profile_photo_url ? (
             <img
               src={profile.profile_photo_url}
-              alt={profile?.full_name || 'Profile'}
+              alt={getFullName(profile) || 'Profile'}
               className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover flex-shrink-0 border-2 border-[#ffc700]/40"
             />
           ) : (
             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#ffc700]/20 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-[#ffc700]/40">
               <span className="text-2xl sm:text-3xl font-bold text-[#ffc700]">
-                {getInitials(profile?.full_name || null)}
+                {getProfileInitials(profile)}
               </span>
             </div>
           )}

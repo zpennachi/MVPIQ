@@ -78,7 +78,8 @@ export function TeamRoster({ coachId }: TeamRosterProps) {
         password: inviteData.password,
         options: {
           data: {
-            full_name: `${inviteData.firstName} ${inviteData.lastName}`,
+            first_name: inviteData.firstName,
+            last_name: inviteData.lastName,
             role: 'player',
           },
         },
@@ -333,7 +334,7 @@ export function TeamRoster({ coachId }: TeamRosterProps) {
                             </div>
                             <div className="flex-1">
                               <p className="font-medium text-white">
-                                {member.player?.full_name || member.player?.email}
+                                {getFullName(member.player) || member.player?.email}
                               </p>
                               <p className="text-sm text-[#d9d9d9]">
                                 {member.player?.email}

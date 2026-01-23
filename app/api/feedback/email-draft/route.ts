@@ -87,7 +87,7 @@ Provide your feedback below this line:
           submissionId: submissionId,
           videoTitle: video.title,
           videoUrl: video.video_url || video.file_path,
-          playerName: player.full_name || player.email,
+          playerName: (player.first_name && player.last_name) ? `${player.first_name} ${player.last_name}` : (player.first_name || player.last_name || player.email || 'Player'),
           playerNotes: submission.player_notes,
           playerNumbers: video.player_numbers,
           emailContent: emailContent,

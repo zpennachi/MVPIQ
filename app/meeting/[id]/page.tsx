@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Video, Calendar, Clock, User, ExternalLink } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import Link from 'next/link'
+import { getFullName } from '@/lib/utils'
 
 export default function MeetingPage() {
   const params = useParams()
@@ -48,8 +49,8 @@ export default function MeetingPage() {
         .from('booked_sessions')
         .select(`
           *,
-          mentor:profiles!booked_sessions_mentor_id_fkey(id, full_name, email, profile_photo_url),
-          user:profiles!booked_sessions_user_id_fkey(id, full_name, email, profile_photo_url)
+          mentor:profiles!booked_sessions_mentor_id_fkey(id, first_name, last_name, email, profile_photo_url),
+          user:profiles!booked_sessions_user_id_fkey(id, first_name, last_name, email, profile_photo_url)
         `)
         .ilike('meeting_link', `%${meetingId}%`)
         .single()
@@ -168,7 +169,7 @@ export default function MeetingPage() {
                   <ExternalLink className="w-5 h-5" />
                 </a>
                 <p className="text-sm text-gray-400">
-                  Click to create a new Google Meet room. Share the link with {otherParty?.full_name || 'the other party'}.
+                  Click to create a new Google Meet room. Share the link with {getFullName(otherParty) || 'the other party'}.
                 </p>
               </div>
             </div>

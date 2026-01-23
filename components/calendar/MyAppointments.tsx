@@ -55,8 +55,8 @@ export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
       .from('booked_sessions')
       .select(`
         *,
-        mentor:profiles!booked_sessions_mentor_id_fkey(id, full_name, email, profile_photo_url),
-        user:profiles!booked_sessions_user_id_fkey(id, full_name, email, profile_photo_url)
+        mentor:profiles!booked_sessions_mentor_id_fkey(id, first_name, last_name, email, profile_photo_url),
+        user:profiles!booked_sessions_user_id_fkey(id, first_name, last_name, email, profile_photo_url)
       `)
       .in('status', ['pending', 'confirmed'])
       .order('start_time', { ascending: true })
@@ -160,7 +160,7 @@ export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
                       <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                         <button
                           onClick={async () => {
-                            const userName = apt.user?.full_name || apt.user?.email || 'the user'
+                            const userName = getFullName(apt.user) || apt.user?.email || 'the user'
                             if (!confirm(`Are you sure you want to cancel this session with ${userName}?`)) {
                               return
                             }

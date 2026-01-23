@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
           .single(),
         supabase
           .from('profiles')
-          .select('full_name, email')
+          .select('first_name, last_name, email')
           .eq('id', user.id)
           .single(),
       ])
@@ -95,7 +95,18 @@ export async function POST(request: NextRequest) {
         mentorEmail: mentor.email,
       })
 
-      const playerName = playerResult.data?.full_name || playerResult.data?.email || 'Player'
+      // Helper to get full name
+      function getFullName(profile: any): string {
+        if (!profile) return ''
+        const firstName = profile.first_name?.trim() || ''
+        const lastName = profile.last_name?.trim() || ''
+        if (firstName && lastName) return `${firstName} ${lastName}`
+        if (firstName) return firstName
+        if (lastName) return lastName
+        return profile.email || ''
+      }
+
+      const playerName = getFullName(playerResult.data) || playerResult.data?.email || 'Player'
       const playerEmail = playerResult.data?.email
 
       // Send emails using centralized utility
@@ -118,7 +129,7 @@ export async function POST(request: NextRequest) {
                 type: 'new_submission' as const,
                 recipient: mentor.email,
                 data: {
-                  mentorName: mentor.full_name || mentor.email,
+                  mentorName: getFullName(mentor) || mentor.email,
                   videoTitle: video.title || 'Video Submission',
                   playerName,
                   dashboardLink: `${env.NEXT_PUBLIC_APP_URL}/dashboard/feedback`,

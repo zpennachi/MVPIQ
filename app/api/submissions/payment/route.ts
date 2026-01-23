@@ -102,9 +102,20 @@ export async function POST(request: NextRequest) {
         // Get mentor profile
         console.log('🔍 [Payment Route] Looking up mentor for submission:', submission.id, 'mentor_id:', submission.mentor_id)
         
+        // Helper to get full name
+        function getFullName(profile: any): string {
+          if (!profile) return ''
+          const firstName = profile.first_name?.trim() || ''
+          const lastName = profile.last_name?.trim() || ''
+          if (firstName && lastName) return `${firstName} ${lastName}`
+          if (firstName) return firstName
+          if (lastName) return lastName
+          return profile.email || ''
+        }
+
         const { data: mentorProfile, error: mentorError } = await supabase
           .from('profiles')
-          .select('full_name, email')
+          .select('first_name, last_name, email')
           .eq('id', submission.mentor_id)
           .single()
 
@@ -117,7 +128,7 @@ export async function POST(request: NextRequest) {
         } else if (!mentorProfile) {
           console.warn('⚠️ [Payment Route] Mentor profile not found for ID:', submission.mentor_id)
         } else {
-          console.log('✅ [Payment Route] Found mentor:', mentorProfile.email, mentorProfile.full_name)
+          console.log('✅ [Payment Route] Found mentor:', mentorProfile.email, getFullName(mentorProfile))
         }
 
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
@@ -131,7 +142,7 @@ export async function POST(request: NextRequest) {
             email: user.email,
             data: {
               videoTitle: video?.title,
-              mentorName: mentorProfile?.full_name || 'Professional Athlete',
+              mentorName: getFullName(mentorProfile) || 'Professional Athlete',
             },
           }),
         })
@@ -149,7 +160,7 @@ export async function POST(request: NextRequest) {
           
           const { data: playerProfile } = await supabase
             .from('profiles')
-            .select('full_name')
+            .select('first_name, last_name, email')
             .eq('id', user.id)
             .single()
 
@@ -163,8 +174,8 @@ export async function POST(request: NextRequest) {
               email: mentorProfile.email,
               data: {
                 videoTitle: video?.title,
-                playerName: playerProfile?.full_name || 'Player',
-                mentorName: mentorProfile.full_name,
+                playerName: getFullName(playerProfile) || 'Player',
+                mentorName: getFullName(mentorProfile),
                 dashboardLink: `${baseUrl}/dashboard/feedback`,
               },
             }),

@@ -21,7 +21,7 @@ export function CoachDashboard({ coachId }: CoachDashboardProps) {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
   const [activeTab, setActiveTab] = useState<'home' | 'roster'>('home')
   const [loading, setLoading] = useState(true)
-  const [profile, setProfile] = useState<{ full_name: string | null; email: string } | null>(null)
+  const [profile, setProfile] = useState<{ first_name: string | null; last_name: string | null; email: string } | null>(null)
   const supabase = createClient()
 
   useEffect(() => {

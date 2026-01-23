@@ -17,7 +17,7 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
   const [submissions, setSubmissions] = useState<FeedbackSubmission[]>([])
   const [loading, setLoading] = useState(true)
   const [teams, setTeams] = useState<{ team: { id: string; name: string }; player_number: string | null }[]>([])
-  const [profile, setProfile] = useState<{ full_name: string | null; email: string; profile_photo_url: string | null } | null>(null)
+  const [profile, setProfile] = useState<{ first_name: string | null; last_name: string | null; email: string; profile_photo_url: string | null } | null>(null)
   const [hasPaid, setHasPaid] = useState(false)
   const [oneOnOnes, setOneOnOnes] = useState<any[]>([])
   const [availableCredits, setAvailableCredits] = useState(0)
@@ -116,7 +116,7 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
     const loadProfile = async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('full_name, email, profile_photo_url')
+        .select('first_name, last_name, email, profile_photo_url')
         .eq('id', userId)
         .single()
       if (data) setProfile(data)
