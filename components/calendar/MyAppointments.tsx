@@ -82,9 +82,6 @@ export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
     return format(parseISO(dateString), 'h:mm a')
   }
 
-  const getInitials = (profile: Profile | null | undefined) => {
-    return getProfileInitials(profile)
-  }
 
   if (loading) {
     return (
@@ -137,7 +134,7 @@ export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
                           </span>
                         </div>
                       )}
-                      <span>{getFullName((isMentorView ? apt.user : apt.mentor) as Profile) || (isMentorView ? apt.user : apt.mentor)?.email || (isMentorView ? 'Client' : 'Mentor')}</span>
+                      <span>{getFullName((isMentorView ? apt.user : apt.mentor)) || (isMentorView ? apt.user : apt.mentor)?.email || (isMentorView ? 'Client' : 'Mentor')}</span>
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                       <strong>Duration:</strong> {formatTime(apt.start_time)} - {formatTime(apt.end_time)}

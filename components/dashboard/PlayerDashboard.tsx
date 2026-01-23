@@ -213,9 +213,6 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
     setLoading(false)
   }
 
-  const getInitials = (profile: Profile | null) => {
-    return getProfileInitials(profile)
-  }
 
   const displayName = getFullName(profile) || 'there'
   const firstName = getFirstName(profile) || ''
@@ -251,7 +248,7 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
           ) : (
             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#ffc700]/20 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-[#ffc700]/40">
               <span className="text-2xl sm:text-3xl font-bold text-[#ffc700]">
-                {getInitials(profile)}
+                {getProfileInitials(profile)}
               </span>
             </div>
           )}
