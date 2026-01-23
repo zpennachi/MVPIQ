@@ -28,7 +28,7 @@ export function CoachDashboard({ coachId }: CoachDashboardProps) {
     const loadProfile = async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('full_name, email')
+        .select('first_name, last_name, email')
         .eq('id', coachId)
         .single()
       if (data) setProfile(data)
