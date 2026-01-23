@@ -16,9 +16,9 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [editingMentor, setEditingMentor] = useState<string | null>(null)
-  const [editData, setEditData] = useState<{ full_name: string; email: string; phone_number: string } | null>(null)
+  const [editData, setEditData] = useState<{ first_name: string; last_name: string; email: string; phone_number: string } | null>(null)
   const [showInviteModal, setShowInviteModal] = useState(false)
-  const [inviteData, setInviteData] = useState({ email: '', fullName: '' })
+  const [inviteData, setInviteData] = useState({ email: '', firstName: '', lastName: '' })
   const [inviteLoading, setInviteLoading] = useState(false)
   const supabase = createClient()
 
@@ -155,7 +155,7 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
 
   const handleToggleActive = async (mentorId: string) => {
     const mentor = mentors.find(m => m.id === mentorId)
-    const mentorName = mentor?.full_name || mentor?.email || 'this mentor'
+    const mentorName = getFullName(mentor) || mentor?.email || 'this mentor'
     const currentStatus = (mentor as any)?.is_active !== false // Default to true
     
     if (!confirm(`Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} ${mentorName}?`)) return
@@ -182,7 +182,7 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
 
   const handleDeleteMentor = async (mentorId: string) => {
     const mentor = mentors.find(m => m.id === mentorId)
-    const mentorName = mentor?.full_name || mentor?.email || 'this mentor'
+    const mentorName = getFullName(mentor) || mentor?.email || 'this mentor'
     
     if (!confirm(`⚠️ WARNING: Are you sure you want to PERMANENTLY DELETE ${mentorName}?\n\nThis action cannot be undone and will delete all associated data.`)) return
 
@@ -230,7 +230,7 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
 
       alert(data.message || 'Mentor invited successfully!')
       setShowInviteModal(false)
-      setInviteData({ email: '', fullName: '' })
+      setInviteData({ email: '', firstName: '', lastName: '' })
       loadMentors()
     } catch (error: any) {
       alert(error.message || 'Failed to invite mentor')
@@ -300,9 +300,16 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
               <div className="space-y-3">
                 <input
                   type="text"
-                  value={editData?.full_name || ''}
-                  onChange={(e) => setEditData({ ...editData!, full_name: e.target.value })}
-                  placeholder="Full Name"
+                  value={editData?.first_name || ''}
+                  onChange={(e) => setEditData({ ...editData!, first_name: e.target.value })}
+                  placeholder="First Name"
+                  className="w-full px-3 py-2 text-sm border border-[#ffc700] rounded bg-black text-white"
+                />
+                <input
+                  type="text"
+                  value={editData?.last_name || ''}
+                  onChange={(e) => setEditData({ ...editData!, last_name: e.target.value })}
+                  placeholder="Last Name"
                   className="w-full px-3 py-2 text-sm border border-[#ffc700] rounded bg-black text-white"
                 />
                 <input
@@ -434,7 +441,7 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
               <button
                 onClick={() => {
                   setShowInviteModal(false)
-                  setInviteData({ email: '', fullName: '' })
+                  setInviteData({ email: '', firstName: '', lastName: '' })
                 }}
                 className="text-[#d9d9d9] hover:text-white transition"
               >
@@ -505,7 +512,7 @@ export function MentorManagement({ adminId }: MentorManagementProps) {
                   type="button"
                   onClick={() => {
                     setShowInviteModal(false)
-                    setInviteData({ email: '', fullName: '' })
+                    setInviteData({ email: '', firstName: '', lastName: '' })
                   }}
                   className="px-4 py-2 border border-[#272727] text-[#d9d9d9] rounded-md hover:bg-[#272727] transition"
                 >
