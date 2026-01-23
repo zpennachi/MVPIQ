@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
                         type: 'new_submission' as const,
                         recipient: mentor.email,
                         data: {
-                          mentorName: mentor.full_name || mentor.email,
+                          mentorName: getFullName(mentor) || mentor.email,
                           videoTitle: video.title || 'Video Submission',
                           playerName,
                           dashboardLink: `${env.NEXT_PUBLIC_APP_URL}/dashboard/feedback`,
@@ -303,9 +303,9 @@ export async function POST(request: NextRequest) {
           ])
 
           const userEmail = userResult.data?.email
-          const userName = userResult.data?.full_name || userResult.data?.email
+          const userName = getFullName(userResult.data) || userResult.data?.email
           const mentorEmail = mentorResult.data?.email
-          const mentorName = mentorResult.data?.full_name || mentorResult.data?.email
+          const mentorName = getFullName(mentorResult.data) || mentorResult.data?.email
 
           logger.info('Starting email notifications for session', {
             sessionId,
