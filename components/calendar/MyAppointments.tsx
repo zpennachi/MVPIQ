@@ -130,7 +130,7 @@ export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
                       ) : (
                         <div className="w-6 h-6 bg-yellow-500/20 rounded-full flex items-center justify-center border border-gray-300 dark:border-gray-600">
                           <span className="text-xs font-bold text-yellow-600 dark:text-yellow-400">
-                            {getInitials((isMentorView ? apt.user : apt.mentor))}
+                            {getProfileInitials((isMentorView ? apt.user : apt.mentor))}
                           </span>
                         </div>
                       )}
