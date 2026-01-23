@@ -319,7 +319,7 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
                         {mentor?.profile_photo_url ? (
                           <img
                             src={mentor.profile_photo_url}
-                            alt={getFullName(mentor as Profile) || 'Mentor'}
+                            alt={getFullName(mentor) || 'Mentor'}
                             className="w-12 h-12 rounded-full object-cover flex-shrink-0 border-2 border-[#ffc700]/40"
                           />
                         ) : (
@@ -332,7 +332,7 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
                         <div className="flex-1 min-w-0">
                           {mentor && (
                             <p className="text-sm font-semibold text-[#ffc700] mb-1">
-                              {getFullName(mentor as Profile) || mentor.email || 'Mentor'}
+                              {getFullName(mentor) || mentor.email || 'Mentor'}
                             </p>
                           )}
                           <p className="text-sm text-white">

@@ -83,7 +83,7 @@ export function VideoList({ videos, onVideoAction }: VideoListProps) {
 
           const { data: playerProfileData } = await supabase
             .from('profiles')
-            .select('full_name, email')
+            .select('first_name, last_name, email')
             .eq('id', user.id)
             .single()
 
@@ -98,7 +98,7 @@ export function VideoList({ videos, onVideoAction }: VideoListProps) {
               data: {
                 mentorName: mentorProfile.email,
                 videoTitle: videoData?.title || 'Video Submission',
-                playerName: getFullName(playerProfileData as Profile) || playerProfileData?.email || 'Player',
+                playerName: getFullName(playerProfileData) || playerProfileData?.email || 'Player',
                 dashboardLink: `${window.location.origin}/dashboard/feedback`,
               },
             }),

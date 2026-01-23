@@ -91,7 +91,7 @@ export function FeedbackForm({
             // Get mentor name for email
             const { data: mentorProfile } = await supabase
               .from('profiles')
-              .select('full_name, email')
+              .select('first_name, last_name, email')
               .eq('id', user.id)
               .single()
 
@@ -105,7 +105,7 @@ export function FeedbackForm({
                   videoTitle: video?.title,
                   feedbackText: feedbackText,
                   rating: submission.rating || 0,
-                  mentorName: getFullName(mentorProfile as Profile) || mentorProfile?.email || 'Your mentor',
+                  mentorName: getFullName(mentorProfile) || mentorProfile?.email || 'Your mentor',
                 },
               }),
             })

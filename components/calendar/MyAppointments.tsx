@@ -127,13 +127,13 @@ export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
                       {(isMentorView ? apt.user : apt.mentor)?.profile_photo_url ? (
                         <img
                           src={(isMentorView ? apt.user : apt.mentor)?.profile_photo_url || ''}
-                          alt={getFullName((isMentorView ? apt.user : apt.mentor) as Profile) || (isMentorView ? 'Client' : 'Mentor')}
+                          alt={getFullName((isMentorView ? apt.user : apt.mentor)) || (isMentorView ? 'Client' : 'Mentor')}
                           className="w-6 h-6 rounded-full object-cover border border-gray-300 dark:border-gray-600"
                         />
                       ) : (
                         <div className="w-6 h-6 bg-yellow-500/20 rounded-full flex items-center justify-center border border-gray-300 dark:border-gray-600">
                           <span className="text-xs font-bold text-yellow-600 dark:text-yellow-400">
-                            {getInitials((isMentorView ? apt.user : apt.mentor) as Profile)}
+                            {getInitials((isMentorView ? apt.user : apt.mentor))}
                           </span>
                         </div>
                       )}
@@ -206,7 +206,7 @@ export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
                                       email: apt.user.email,
                                       data: {
                                         mentorName: 'You',
-                                        userName: getFullName(apt.user as Profile) || apt.user.email || 'User',
+                                        userName: getFullName(apt.user) || apt.user.email || 'User',
                                         startTime: apt.start_time,
                                       },
                                     }),

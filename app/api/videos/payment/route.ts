@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const [mentorResult, videoResult] = await Promise.all([
       supabase
         .from('profiles')
-        .select('id, email, full_name')
+        .select('id, email, first_name, last_name')
         .eq('id', mentorId)
         .eq('role', 'mentor')
         .single(),

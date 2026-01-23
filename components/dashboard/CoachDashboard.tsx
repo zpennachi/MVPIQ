@@ -155,8 +155,8 @@ export function CoachDashboard({ coachId }: CoachDashboardProps) {
     )
   }
 
-  const displayName = getFullName(profile as Profile) || profile?.email || 'there'
-  const firstName = getFirstName(profile as Profile) || ''
+  const displayName = getFullName(profile) || profile?.email || 'there'
+  const firstName = getFirstName(profile) || ''
 
   return (
     <div className="space-y-6 fade-in">

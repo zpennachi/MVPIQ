@@ -5,10 +5,20 @@
 import type { Profile } from '@/types/database'
 
 /**
+ * Partial profile type for utility functions - only requires fields we actually use
+ */
+type PartialProfile = {
+  first_name?: string | null
+  last_name?: string | null
+  email?: string | null
+}
+
+/**
  * Get full name from profile (first_name + last_name)
  * Falls back to email if no name is available
+ * Accepts full Profile or partial profile with just name/email fields
  */
-export function getFullName(profile: Profile | null | undefined): string {
+export function getFullName(profile: Profile | PartialProfile | null | undefined): string {
   if (!profile) return ''
   
   const firstName = profile.first_name?.trim() || ''
@@ -27,16 +37,18 @@ export function getFullName(profile: Profile | null | undefined): string {
 
 /**
  * Get first name from profile
+ * Accepts full Profile or partial profile with just name/email fields
  */
-export function getFirstName(profile: Profile | null | undefined): string {
+export function getFirstName(profile: Profile | PartialProfile | null | undefined): string {
   if (!profile) return ''
   return profile.first_name?.trim() || profile.email?.split('@')[0] || ''
 }
 
 /**
  * Get initials from profile (first letter of first name + first letter of last name)
+ * Accepts full Profile or partial profile with just name/email fields
  */
-export function getInitials(profile: Profile | null | undefined): string {
+export function getInitials(profile: Profile | PartialProfile | null | undefined): string {
   if (!profile) return 'U'
   
   const firstName = profile.first_name?.trim() || ''

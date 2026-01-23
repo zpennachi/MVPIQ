@@ -156,7 +156,7 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
         .from('booked_sessions')
         .select(`
           *,
-          user:profiles!booked_sessions_user_id_fkey(id, full_name, email, profile_photo_url)
+          user:profiles!booked_sessions_user_id_fkey(id, first_name, last_name, email, profile_photo_url)
         `)
         .eq('mentor_id', mentorId)
         .in('status', ['pending', 'confirmed'])
