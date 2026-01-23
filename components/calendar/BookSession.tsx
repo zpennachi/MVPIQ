@@ -558,7 +558,7 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
                         </span>
                       </div>
                     )}
-                    <span>{mentor.full_name || mentor.email}</span>
+                    <span>{getFullName(mentor) || mentor.email}</span>
                   </button>
                 )
               })}
