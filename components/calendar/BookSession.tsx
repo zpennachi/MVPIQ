@@ -450,19 +450,59 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex items-center gap-3">
-        <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-500 dark:text-yellow-400" />
-        <div className="dotted-bg-subtle rounded-lg p-4 -m-4 sm:-m-6 lg:-m-8 mb-6 flex-1">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Book a 1-on-1 Session</h1>
-            {availableCredits > 0 && (
-              <div className="flex items-center gap-2 bg-green-600/20 border border-green-500/40 rounded-lg px-4 py-2">
-                <DollarSign className="w-5 h-5 text-green-400" />
-                <span className="text-sm sm:text-base font-semibold text-green-400">
-                  Credits: {availableCredits}
-                </span>
+      <div className="space-y-4 mb-6">
+        <div className="flex items-center gap-3">
+          <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-500 dark:text-yellow-400" />
+          <div className="dotted-bg-subtle rounded-lg p-4 -m-4 sm:-m-6 lg:-m-8 flex-1">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Book a 1-on-1 Session</h1>
+              {availableCredits > 0 && (
+                <div className="flex items-center gap-2 bg-green-600/20 border border-green-500/40 rounded-lg px-4 py-2">
+                  <DollarSign className="w-5 h-5 text-green-400" />
+                  <span className="text-sm sm:text-base font-semibold text-green-400">
+                    Credits: {availableCredits}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Descriptive Copy */}
+        <div className="bg-gradient-to-r from-[#ffc700]/10 to-[#ffc700]/5 border border-[#ffc700]/30 rounded-lg p-4 sm:p-5">
+          <h2 className="text-lg sm:text-xl font-bold text-white mb-2">Get Personalized Coaching from Professional Athletes</h2>
+          <p className="text-sm sm:text-base text-[#d9d9d9] leading-relaxed mb-3">
+            Book a one-on-one session with our professional mentors to receive personalized coaching, 
+            game analysis, and expert guidance tailored to your specific needs.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+            <div className="flex items-start gap-2">
+              <div className="w-6 h-6 rounded-full bg-[#ffc700]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-[#ffc700] text-xs font-bold">1</span>
               </div>
-            )}
+              <div>
+                <p className="text-xs font-semibold text-white mb-1">Choose Your Mentor</p>
+                <p className="text-xs text-[#d9d9d9]/80">Select from our roster of professional athletes</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="w-6 h-6 rounded-full bg-[#ffc700]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-[#ffc700] text-xs font-bold">2</span>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-white mb-1">Pick a Time</p>
+                <p className="text-xs text-[#d9d9d9]/80">Select from available time slots</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="w-6 h-6 rounded-full bg-[#ffc700]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-[#ffc700] text-xs font-bold">3</span>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-white mb-1">Get Expert Feedback</p>
+                <p className="text-xs text-[#d9d9d9]/80">Receive personalized coaching and analysis</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { ScrollToAnchor } from '@/components/homepage/ScrollToAnchor'
 import { DynamicHomepage } from '@/components/homepage/DynamicHomepage'
+import { FooterLinks } from '@/components/homepage/FooterLinks'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,18 +38,7 @@ export default async function Home() {
       <footer className="relative bg-black border-t border-[#272727] text-[#d9d9d9] py-12 dotted-bg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h4 className="font-bold text-white mb-4 uppercase tracking-wide">Pros</h4>
-            </div>
-            <div>
-              <h4 className="font-bold text-white mb-4 uppercase tracking-wide">Platform</h4>
-            </div>
-            <div>
-              <h4 className="font-bold text-white mb-4 uppercase tracking-wide">Insights</h4>
-            </div>
-            <div>
-              <h4 className="font-bold text-white mb-4 uppercase tracking-wide">Executive Summary</h4>
-            </div>
+            <FooterLinks />
           </div>
           <div className="border-t border-[#272727] pt-8">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">

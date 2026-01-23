@@ -280,14 +280,12 @@ export async function DynamicHomepage() {
                       {section.description}
                     </p>
                   )}
-                  {section.button_text && section.button_link && (
-                    <Link
-                      href={section.button_link}
-                      className="inline-block bg-[#ffc700] text-black px-10 py-4 rounded-lg font-bold text-lg uppercase tracking-wide hover:bg-[#e6b300] transition-all duration-300 active:scale-95 hover:shadow-lg touch-manipulation"
-                    >
-                      {section.button_text}
-                    </Link>
-                  )}
+                  <Link
+                    href="/register"
+                    className="inline-block bg-[#ffc700] text-black px-10 py-4 rounded-lg font-bold text-lg uppercase tracking-wide hover:bg-[#e6b300] transition-all duration-300 active:scale-95 hover:shadow-lg touch-manipulation"
+                  >
+                    SIGN UP
+                  </Link>
                 </div>
               </section>
             )

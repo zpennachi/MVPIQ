@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useDropzone } from 'react-dropzone'
 import { Upload, X, User } from 'lucide-react'
+import { Logo } from '@/components/ui/Logo'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -159,6 +160,9 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-black dotted-bg px-4 py-8">
       <div className="max-w-md w-full bg-black border border-[#272727] rounded-lg shadow-mvp p-6 sm:p-8 relative z-10">
+        <div className="flex justify-center mb-6">
+          <Logo height={60} variant="dark" />
+        </div>
         <h1 className="text-2xl sm:text-3xl font-bold text-center mb-6 text-[#d9d9d9]">Create Account</h1>
         
         {error && (

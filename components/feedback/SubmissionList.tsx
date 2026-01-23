@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 import { format } from 'date-fns'
-import type { FeedbackSubmission } from '@/types/database'
+import type { FeedbackSubmission, Profile } from '@/types/database'
 import { Play, MessageSquare } from 'lucide-react'
 import { VideoPlayerModal } from '@/components/video/VideoPlayerModal'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { FeedbackProgressTracker } from './FeedbackProgressTracker'
+import { getFullName, getInitials as getProfileInitials } from '@/lib/utils'
 
 interface SubmissionListProps {
   submissions: FeedbackSubmission[]
@@ -50,30 +51,57 @@ export function SubmissionList({
 
         const isClickable = userRole === 'mentor' && submission.status !== 'completed' && onSelectSubmission
 
+        const mentor = (submission as any).mentor as Profile | undefined
+
         return (
           <div
             key={submission.id}
-            className={`border border-[#272727] rounded-lg p-4 bg-black transition-all duration-300 ${
+            className={`border-2 border-[#272727] rounded-xl p-5 sm:p-6 bg-gradient-to-br from-black to-[#272727]/50 shadow-lg transition-all duration-300 ${
               isClickable
-                ? 'hover:border-[#ffc700]/40 hover-lift cursor-pointer hover:bg-[#272727]/30'
-                : 'hover:border-[#272727]'
+                ? 'hover:border-[#ffc700]/60 hover-lift cursor-pointer hover:bg-gradient-to-br hover:from-[#272727] hover:to-[#272727]/70 hover:shadow-xl'
+                : 'hover:border-[#ffc700]/30 hover:shadow-xl'
             }`}
             onClick={isClickable ? () => onSelectSubmission(submission) : undefined}
             title={isClickable ? 'Click to provide feedback' : undefined}
           >
             <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
               <div className="flex-1 w-full">
+                {/* Mentor Info Header - Premium styling */}
+                {mentor && submission.status === 'completed' && (
+                  <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[#272727]">
+                    {(mentor as any).profile_photo_url ? (
+                      <img
+                        src={(mentor as any).profile_photo_url}
+                        alt={getFullName(mentor) || 'Mentor'}
+                        className="w-10 h-10 rounded-full object-cover border-2 border-[#ffc700]/40"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#ffc700]/20 to-[#ffc700]/10 border-2 border-[#ffc700]/40 flex items-center justify-center">
+                        <span className="text-sm font-bold text-[#ffc700]">
+                          {getProfileInitials(mentor)}
+                        </span>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs text-[#d9d9d9]/70 uppercase tracking-wide">Reviewed by</p>
+                      <p className="text-sm font-semibold text-[#ffc700]">
+                        {getFullName(mentor) || mentor.email}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-start gap-3 mb-3">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#ffc700]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#ffc700]/20 to-[#ffc700]/10 rounded-lg flex items-center justify-center flex-shrink-0 border border-[#ffc700]/30">
                     <Play className="w-5 h-5 sm:w-6 sm:h-6 text-[#ffc700]" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-base sm:text-lg font-semibold text-white break-words">
+                      <h3 className="text-base sm:text-lg font-bold text-white break-words">
                         {video?.title || 'Untitled Video'}
                       </h3>
                       {isNewFeedback && submission.status === 'completed' && submission.feedback_text && (
-                        <span className="px-2 py-0.5 bg-green-500 text-white text-xs font-bold rounded-full">
+                        <span className="px-2.5 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-bold rounded-full shadow-md">
                           NEW
                         </span>
                       )}
@@ -128,14 +156,17 @@ export function SubmissionList({
 
                 {submission.feedback_text && (
                   <div 
-                    className="mt-4 p-4 bg-green-900/20 border border-green-800 rounded"
+                    className="mt-4 p-5 bg-gradient-to-br from-green-900/30 to-green-800/20 border-2 border-green-500/40 rounded-lg shadow-lg"
                     onMouseEnter={() => onViewFeedback?.(submission.id)}
                     onClick={() => onViewFeedback?.(submission.id)}
                   >
-                    <p className="text-sm font-medium text-green-400 mb-2">
-                      Professional Feedback:
-                    </p>
-                    <p className="text-sm text-green-300 whitespace-pre-wrap leading-relaxed">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-1 h-5 bg-[#ffc700] rounded-full"></div>
+                      <p className="text-sm font-bold text-green-400 uppercase tracking-wide">
+                        Professional Feedback
+                      </p>
+                    </div>
+                    <p className="text-sm text-green-200 whitespace-pre-wrap leading-relaxed">
                       {submission.feedback_text}
                     </p>
                     {submission.feedback_video_url && (

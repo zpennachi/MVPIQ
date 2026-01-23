@@ -24,23 +24,40 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
   const [viewedFeedbackIds, setViewedFeedbackIds] = useState<Set<string>>(new Set())
   const supabase = createClient()
 
-  // Load viewed feedback IDs from localStorage
+  // Load viewed feedback IDs from server
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const viewed = localStorage.getItem(`viewed_feedback_${userId}`)
-      if (viewed) {
-        setViewedFeedbackIds(new Set(JSON.parse(viewed)))
+    const loadViewedFeedback = async () => {
+      const { data: viewedData } = await supabase
+        .from('viewed_feedback')
+        .select('submission_id')
+        .eq('user_id', userId)
+
+      if (viewedData) {
+        setViewedFeedbackIds(new Set(viewedData.map(v => v.submission_id)))
       }
     }
-  }, [userId])
+    loadViewedFeedback()
+  }, [userId, supabase])
 
-  // Mark feedback as viewed
-  const markFeedbackAsViewed = (submissionId: string) => {
+  // Mark feedback as viewed (server-side)
+  const markFeedbackAsViewed = async (submissionId: string) => {
+    // Optimistically update UI
     const newViewed = new Set(viewedFeedbackIds)
     newViewed.add(submissionId)
     setViewedFeedbackIds(newViewed)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(`viewed_feedback_${userId}`, JSON.stringify(Array.from(newViewed)))
+
+    // Mark as viewed on server
+    try {
+      await fetch('/api/feedback/mark-viewed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ submissionId }),
+      })
+    } catch (error) {
+      console.error('Error marking feedback as viewed:', error)
+      // Revert optimistic update on error
+      newViewed.delete(submissionId)
+      setViewedFeedbackIds(new Set(viewedFeedbackIds))
     }
   }
 
@@ -143,14 +160,30 @@ export function PlayerDashboard({ userId }: PlayerDashboardProps) {
   const loadData = async () => {
     setLoading(true)
     
-    // Load submissions
-    const { data: submissionsData } = await supabase
-      .from('feedback_submissions')
-      .select('*, videos(*)')
+    // Load submissions and viewed feedback in parallel
+    const [submissionsResult, viewedResult] = await Promise.all([
+      supabase
+        .from('feedback_submissions')
+        .select(`
+          *,
+          videos(*),
+          mentor:profiles!feedback_submissions_mentor_id_fkey(id, first_name, last_name, email, profile_photo_url)
+        `)
       .eq('player_id', userId)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: false }),
+      supabase
+        .from('viewed_feedback')
+        .select('submission_id')
+        .eq('user_id', userId)
+    ])
 
-    if (submissionsData) setSubmissions(submissionsData as FeedbackSubmission[])
+    if (submissionsResult.data) {
+      setSubmissions(submissionsResult.data as FeedbackSubmission[])
+    }
+    
+    if (viewedResult.data) {
+      setViewedFeedbackIds(new Set(viewedResult.data.map(v => v.submission_id)))
+    }
 
     // Load team memberships
     const { data: teamMembersData } = await supabase
