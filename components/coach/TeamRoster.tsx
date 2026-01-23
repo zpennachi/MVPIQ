@@ -122,7 +122,8 @@ export function TeamRoster({ coachId }: TeamRosterProps) {
   const handleEditPlayer = (member: TeamMember & { player: Profile }) => {
     setEditingMember(member.id)
     setEditData({
-      full_name: member.player?.full_name || '',
+      first_name: member.player?.first_name || '',
+      last_name: member.player?.last_name || '',
       player_number: member.player_number || '',
     })
   }
