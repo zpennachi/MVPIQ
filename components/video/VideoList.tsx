@@ -7,6 +7,7 @@ import type { Video } from '@/types/database'
 import { Play, MessageSquare } from 'lucide-react'
 import { MentorSelectionModal } from './MentorSelectionModal'
 import { VideoPlayerModal } from './VideoPlayerModal'
+import { getFullName } from '@/lib/utils'
 
 interface VideoListProps {
   videos: Video[]
