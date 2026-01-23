@@ -533,7 +533,7 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
                   <button
                     key={mentor.id}
                     onClick={async () => {
-                      console.log('Mentor clicked:', mentor.full_name || mentor.email)
+                      console.log('Mentor clicked:', getFullName(mentor) || mentor.email)
                       setSelectedMentor(mentor)
                       // Load slots for this mentor
                       await loadMentorSlots(mentor.id)
