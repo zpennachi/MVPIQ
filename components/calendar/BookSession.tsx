@@ -85,7 +85,7 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
         .from('profiles')
         .select('*')
         .eq('role', 'mentor')
-        .order('full_name', { ascending: true })
+        .order('first_name', { ascending: true })
 
       if (mentorError) {
         console.error('Error loading mentors:', mentorError)
@@ -548,13 +548,13 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
                     {mentor.profile_photo_url ? (
                       <img
                         src={mentor.profile_photo_url}
-                        alt={mentor.full_name || mentor.email}
+                        alt={getFullName(mentor) || mentor.email}
                         className="w-6 h-6 rounded-full object-cover"
                       />
                     ) : (
                       <div className="w-6 h-6 bg-yellow-500/20 rounded-full flex items-center justify-center">
                         <span className="text-xs font-bold text-yellow-600 dark:text-yellow-400">
-                          {getInitials(mentor.full_name)}
+                          {getProfileInitials(mentor)}
                         </span>
                       </div>
                     )}
@@ -690,7 +690,7 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
           ) : selectedMentor ? (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700 text-center">
               <p className="text-gray-500 dark:text-gray-400">
-                {selectedMentorData ? 'Loading availability...' : `No availability data found for ${selectedMentor.full_name || selectedMentor.email}. Click a time slot to book.`}
+                {selectedMentorData ? 'Loading availability...' : `No availability data found for ${getFullName(selectedMentor) || selectedMentor.email}. Click a time slot to book.`}
               </p>
             </div>
           ) : null}
