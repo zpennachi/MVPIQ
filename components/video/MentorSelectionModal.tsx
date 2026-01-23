@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types/database'
 import { X, User } from 'lucide-react'
+import { getFullName } from '@/lib/utils'
 
 interface MentorSelectionModalProps {
   isOpen: boolean
