@@ -54,7 +54,7 @@ export function MentorDashboard({ mentorId }: MentorDashboardProps) {
     const loadProfile = async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, email, profile_photo_url, google_calendar_connected, role, created_at, updated_at, phone_number')
+        .select('*')
         .eq('id', mentorId)
         .single()
       if (data) {
