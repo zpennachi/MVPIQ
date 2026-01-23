@@ -145,7 +145,7 @@ export default function MeetingPage() {
                       {isMentor ? 'Student' : 'Mentor'}
                     </div>
                     <div className="text-white font-medium">
-                      {otherParty?.full_name || otherParty?.email || 'N/A'}
+                      {getFullName(otherParty) || otherParty?.email || 'N/A'}
                     </div>
                   </div>
                 </div>
