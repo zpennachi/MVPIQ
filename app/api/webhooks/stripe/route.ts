@@ -7,6 +7,21 @@ import { logger } from '@/lib/logger'
 import { handleApiError, ValidationError, NotFoundError } from '@/lib/errors'
 import { sendEmails } from '@/lib/email'
 
+// Helper to get full name from profile
+function getFullName(profile: { first_name?: string | null; last_name?: string | null; email?: string | null } | null | undefined): string {
+  if (!profile) return ''
+  const firstName = profile.first_name?.trim() || ''
+  const lastName = profile.last_name?.trim() || ''
+  if (firstName && lastName) {
+    return `${firstName} ${lastName}`
+  } else if (firstName) {
+    return firstName
+  } else if (lastName) {
+    return lastName
+  }
+  return profile.email || ''
+}
+
 export const dynamic = 'force-dynamic'
 
 // Lazy initialization to avoid build-time errors
@@ -88,7 +103,7 @@ export async function POST(request: NextRequest) {
                 .single(),
               supabase
                 .from('profiles')
-                .select('id, email, full_name')
+                .select('id, email, first_name, last_name')
                 .eq('id', mentorId)
                 .eq('role', 'mentor')
                 .single(),
@@ -146,7 +161,7 @@ export async function POST(request: NextRequest) {
                 .eq('id', video.player_id)
                 .single()
 
-              const playerName = playerProfile?.full_name || playerProfile?.email || 'Player'
+              const playerName = getFullName(playerProfile) || playerProfile?.email || 'Player'
               const playerEmail = playerProfile?.email
 
               // Send emails using centralized utility
@@ -409,7 +424,7 @@ export async function POST(request: NextRequest) {
             // Verify mentor exists
             const { data: mentor, error: mentorError } = await supabase
               .from('profiles')
-              .select('id, email, full_name')
+              .select('id, email, first_name, last_name')
               .eq('id', mentorId)
               .eq('role', 'mentor')
               .single()
@@ -485,7 +500,7 @@ export async function POST(request: NextRequest) {
                           type: 'new_submission' as const,
                           recipient: mentor.email,
                           data: {
-                            mentorName: mentor.full_name || mentor.email,
+                            mentorName: getFullName(mentor) || mentor.email,
                             videoTitle: video.title || 'Video Submission',
                             playerName,
                             dashboardLink: `${env.NEXT_PUBLIC_APP_URL}/dashboard/feedback`,
