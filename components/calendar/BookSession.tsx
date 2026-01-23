@@ -525,10 +525,6 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
             </h2>
             <div className="flex flex-wrap gap-2">
               {mentors.map(({ mentor, slots }) => {
-                const getInitials = (profile: Profile | null) => {
-                  return getProfileInitials(profile)
-                }
-
                 return (
                   <button
                     key={mentor.id}

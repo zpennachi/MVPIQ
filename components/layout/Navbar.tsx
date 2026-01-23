@@ -103,9 +103,6 @@ export function Navbar() {
     }
   }, [showDropdown])
 
-  const getInitials = (profile: Profile | null) => {
-    return getProfileInitials(profile)
-  }
 
   if (loading) {
     return (
@@ -175,7 +172,7 @@ export function Navbar() {
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-[#ffc700]/20 border-2 border-gray-300 flex items-center justify-center">
                       <span className="text-xs font-bold text-[#ffc700]">
-                        {getInitials(profile)}
+                        {getProfileInitials(profile)}
                       </span>
                     </div>
                   )}
