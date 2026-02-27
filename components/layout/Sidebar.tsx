@@ -255,8 +255,8 @@ export function Sidebar() {
         <Link
           href="/dashboard"
           className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${isActive('/dashboard') && !isActive('/dashboard/one-on-ones') && !isActive('/dashboard/feedback')
-              ? 'bg-[#ffc700] text-black'
-              : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+            ? 'bg-[#ffc700] text-black'
+            : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
             }`}
         >
           <Home className="w-5 h-5" />
@@ -271,8 +271,8 @@ export function Sidebar() {
               <button
                 onClick={() => setOneOnOnesExpanded(!oneOnOnesExpanded)}
                 className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${isActive('/dashboard/one-on-ones')
-                    ? 'bg-[#ffc700] text-black'
-                    : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                  ? 'bg-[#ffc700] text-black'
+                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                   }`}
               >
                 <div className="flex items-center gap-3">
@@ -293,8 +293,8 @@ export function Sidebar() {
                   <Link
                     href="/dashboard/one-on-ones?tab=book"
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${pathname === '/dashboard/one-on-ones' && searchParams?.get('tab') !== 'appointments'
-                        ? 'bg-[#272727] text-[#ffc700]'
-                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                      ? 'bg-[#272727] text-[#ffc700]'
+                      : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                       }`}
                   >
                     <span>Book an Appointment</span>
@@ -302,8 +302,8 @@ export function Sidebar() {
                   <Link
                     href="/dashboard/one-on-ones?tab=appointments"
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm relative ${pathname === '/dashboard/one-on-ones' && searchParams?.get('tab') === 'appointments'
-                        ? 'bg-[#272727] text-[#ffc700]'
-                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                      ? 'bg-[#272727] text-[#ffc700]'
+                      : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                       }`}
                   >
                     <span>My Appointments</span>
@@ -320,8 +320,8 @@ export function Sidebar() {
             <Link
               href="/dashboard/one-on-ones"
               className={`lg:hidden flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 relative ${isActive('/dashboard/one-on-ones')
-                  ? 'bg-[#ffc700] text-black'
-                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                ? 'bg-[#ffc700] text-black'
+                : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                 }`}
             >
               <Calendar className="w-5 h-5" />
@@ -337,8 +337,8 @@ export function Sidebar() {
               <button
                 onClick={() => setFeedbackExpanded(!feedbackExpanded)}
                 className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${isActive('/dashboard/feedback')
-                    ? 'bg-[#ffc700] text-black'
-                    : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                  ? 'bg-[#ffc700] text-black'
+                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                   }`}
               >
                 <div className="flex items-center gap-3">
@@ -359,8 +359,8 @@ export function Sidebar() {
                   <Link
                     href="/dashboard/feedback"
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${pathname === '/dashboard/feedback' && !pathname?.includes('/submit-video')
-                        ? 'bg-[#272727] text-[#ffc700]'
-                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                      ? 'bg-[#272727] text-[#ffc700]'
+                      : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                       }`}
                   >
                     <span>My Feedback</span>
@@ -368,8 +368,8 @@ export function Sidebar() {
                   <Link
                     href="/dashboard/feedback/submit-video"
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${pathname === '/dashboard/feedback/submit-video'
-                        ? 'bg-[#272727] text-[#ffc700]'
-                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                      ? 'bg-[#272727] text-[#ffc700]'
+                      : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                       }`}
                   >
                     <span>Submit Video</span>
@@ -381,8 +381,8 @@ export function Sidebar() {
             <Link
               href="/dashboard/feedback"
               className={`lg:hidden flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${isActive('/dashboard/feedback')
-                  ? 'bg-[#ffc700] text-black'
-                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                ? 'bg-[#ffc700] text-black'
+                : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                 }`}
             >
               <MessageSquare className="w-5 h-5" />
@@ -397,8 +397,8 @@ export function Sidebar() {
             <Link
               href="/dashboard/feedback"
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 relative ${isActive('/dashboard/feedback')
-                  ? 'bg-[#ffc700] text-black'
-                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                ? 'bg-[#ffc700] text-black'
+                : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                 }`}
             >
               <MessageSquare className="w-5 h-5" />
@@ -414,8 +414,8 @@ export function Sidebar() {
               <button
                 onClick={() => setOneOnOnesExpanded(!oneOnOnesExpanded)}
                 className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${isActive('/dashboard/one-on-ones')
-                    ? 'bg-[#ffc700] text-black'
-                    : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                  ? 'bg-[#ffc700] text-black'
+                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                   }`}
               >
                 <div className="flex items-center gap-3 relative">
@@ -441,8 +441,8 @@ export function Sidebar() {
                   <Link
                     href="/dashboard/one-on-ones?tab=availability"
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${pathname === '/dashboard/one-on-ones' && searchParams?.get('tab') !== 'upcoming'
-                        ? 'bg-[#272727] text-[#ffc700]'
-                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                      ? 'bg-[#272727] text-[#ffc700]'
+                      : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                       }`}
                   >
                     <span>Availability</span>
@@ -450,8 +450,8 @@ export function Sidebar() {
                   <Link
                     href="/dashboard/one-on-ones?tab=upcoming"
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${pathname === '/dashboard/one-on-ones' && searchParams?.get('tab') === 'upcoming'
-                        ? 'bg-[#272727] text-[#ffc700]'
-                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                      ? 'bg-[#272727] text-[#ffc700]'
+                      : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                       }`}
                   >
                     <span>Upcoming Appointments</span>
@@ -463,8 +463,8 @@ export function Sidebar() {
             <Link
               href="/dashboard/one-on-ones"
               className={`lg:hidden flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 relative ${isActive('/dashboard/one-on-ones')
-                  ? 'bg-[#ffc700] text-black'
-                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                ? 'bg-[#ffc700] text-black'
+                : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                 }`}
             >
               <Calendar className="w-5 h-5" />
@@ -486,8 +486,8 @@ export function Sidebar() {
               <button
                 onClick={() => setOneOnOnesExpanded(!oneOnOnesExpanded)}
                 className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${isActive('/dashboard/one-on-ones')
-                    ? 'bg-[#ffc700] text-black'
-                    : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                  ? 'bg-[#ffc700] text-black'
+                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                   }`}
               >
                 <div className="flex items-center gap-3">
@@ -508,8 +508,8 @@ export function Sidebar() {
                   <Link
                     href="/dashboard/one-on-ones?tab=book"
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${pathname === '/dashboard/one-on-ones' && searchParams?.get('tab') !== 'appointments'
-                        ? 'bg-[#272727] text-[#ffc700]'
-                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                      ? 'bg-[#272727] text-[#ffc700]'
+                      : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                       }`}
                   >
                     <span>Book an Appointment</span>
@@ -517,8 +517,8 @@ export function Sidebar() {
                   <Link
                     href="/dashboard/one-on-ones?tab=appointments"
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm relative ${pathname === '/dashboard/one-on-ones' && searchParams?.get('tab') === 'appointments'
-                        ? 'bg-[#272727] text-[#ffc700]'
-                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                      ? 'bg-[#272727] text-[#ffc700]'
+                      : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                       }`}
                   >
                     <span>My Appointments</span>
@@ -535,8 +535,8 @@ export function Sidebar() {
             <Link
               href="/dashboard/one-on-ones"
               className={`lg:hidden flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 relative ${isActive('/dashboard/one-on-ones')
-                  ? 'bg-[#ffc700] text-black'
-                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                ? 'bg-[#ffc700] text-black'
+                : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                 }`}
             >
               <Calendar className="w-5 h-5" />
@@ -552,8 +552,8 @@ export function Sidebar() {
               <button
                 onClick={() => setFeedbackExpanded(!feedbackExpanded)}
                 className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${isActive('/dashboard/feedback')
-                    ? 'bg-[#ffc700] text-black'
-                    : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                  ? 'bg-[#ffc700] text-black'
+                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                   }`}
               >
                 <div className="flex items-center gap-3">
@@ -574,8 +574,8 @@ export function Sidebar() {
                   <Link
                     href="/dashboard/feedback"
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${pathname === '/dashboard/feedback' && !pathname?.includes('/submit-video')
-                        ? 'bg-[#272727] text-[#ffc700]'
-                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                      ? 'bg-[#272727] text-[#ffc700]'
+                      : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                       }`}
                   >
                     <span>My Feedback</span>
@@ -583,8 +583,8 @@ export function Sidebar() {
                   <Link
                     href="/dashboard/feedback/submit-video"
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 text-sm ${pathname === '/dashboard/feedback/submit-video'
-                        ? 'bg-[#272727] text-[#ffc700]'
-                        : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                      ? 'bg-[#272727] text-[#ffc700]'
+                      : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                       }`}
                   >
                     <span>Submit Video</span>
@@ -596,8 +596,8 @@ export function Sidebar() {
             <Link
               href="/dashboard/feedback"
               className={`lg:hidden flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${isActive('/dashboard/feedback')
-                  ? 'bg-[#ffc700] text-black'
-                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                ? 'bg-[#ffc700] text-black'
+                : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                 }`}
             >
               <MessageSquare className="w-5 h-5" />
@@ -608,36 +608,23 @@ export function Sidebar() {
 
         {/* Education - Hidden for admins (they have admin/education instead) */}
         {profile.role !== 'admin' && (
-          profile.role === 'player' && !hasPaid ? (
-            <div
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 opacity-50 cursor-not-allowed ${isActive('/dashboard/education')
-                  ? 'bg-[#272727] text-[#d9d9d9]'
-                  : 'text-[#d9d9d9]'
-                }`}
-              title="Complete a $50 payment to unlock Education content"
-            >
-              <Lock className="w-5 h-5" />
-              <span className="font-medium">Education</span>
-            </div>
-          ) : (
-            <Link
-              href="/dashboard/education"
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${isActive('/dashboard/education')
-                  ? 'bg-[#ffc700] text-black'
-                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
-                }`}
-            >
-              <BookOpen className="w-5 h-5" />
-              <span className="font-medium">Education</span>
-            </Link>
-          )
+          <Link
+            href="/dashboard/education"
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${isActive('/dashboard/education')
+              ? 'bg-[#ffc700] text-black'
+              : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+              }`}
+          >
+            <BookOpen className="w-5 h-5" />
+            <span className="font-medium">Education</span>
+          </Link>
         )}
 
         <Link
           href="/dashboard/settings"
           className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${isActive('/dashboard/settings')
-              ? 'bg-[#ffc700] text-black'
-              : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+            ? 'bg-[#ffc700] text-black'
+            : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
             }`}
         >
           <Settings className="w-5 h-5" />
@@ -652,8 +639,8 @@ export function Sidebar() {
             <Link
               href="/dashboard/admin"
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${isActive('/dashboard/admin') && !isActive('/dashboard/admin/users') && !isActive('/dashboard/admin/teams') && !isActive('/dashboard/admin/mentors') && !isActive('/dashboard/admin/education') && !isActive('/dashboard/admin/homepage')
-                  ? 'bg-[#ffc700] text-black'
-                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                ? 'bg-[#ffc700] text-black'
+                : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                 }`}
             >
               <Shield className="w-5 h-5" />
@@ -662,8 +649,8 @@ export function Sidebar() {
             <Link
               href="/dashboard/admin/users"
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${isActive('/dashboard/admin/users')
-                  ? 'bg-[#ffc700] text-black'
-                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                ? 'bg-[#ffc700] text-black'
+                : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                 }`}
             >
               <Users className="w-5 h-5" />
@@ -685,8 +672,8 @@ export function Sidebar() {
             <Link
               href="/dashboard/admin/mentors"
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${isActive('/dashboard/admin/mentors')
-                  ? 'bg-[#ffc700] text-black'
-                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                ? 'bg-[#ffc700] text-black'
+                : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                 }`}
             >
               <UserCheck className="w-5 h-5" />
@@ -695,8 +682,8 @@ export function Sidebar() {
             <Link
               href="/dashboard/admin/education"
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${isActive('/dashboard/admin/education')
-                  ? 'bg-[#ffc700] text-black'
-                  : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
+                ? 'bg-[#ffc700] text-black'
+                : 'text-[#d9d9d9] hover:bg-[#272727] hover:text-white'
                 }`}
             >
               <BookOpen className="w-5 h-5" />
