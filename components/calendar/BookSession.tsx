@@ -8,6 +8,33 @@ import { format, startOfWeek, addDays, eachDayOfInterval, addWeeks, subWeeks, is
 import { expandRecurringSlots, type ExpandedSlot } from '@/lib/calendar/recurring-slots'
 import { getFullName, getInitials as getProfileInitials } from '@/lib/utils'
 
+const SESSION_DURATION_MINUTES = 15
+
+/**
+ * Splits an expanded availability slot into 15-minute bookable sub-slots.
+ * E.g., a 1-hour block (9:00–10:00) becomes four 15-min slots.
+ */
+function splitInto15MinSlots(slots: ExpandedSlot[]): ExpandedSlot[] {
+  const subSlots: ExpandedSlot[] = []
+  for (const slot of slots) {
+    const start = parseISO(slot.start_time)
+    const end = parseISO(slot.end_time)
+    let current = start
+    while (current < end) {
+      const next = addMinutes(current, SESSION_DURATION_MINUTES)
+      if (next > end) break // don't create a partial slot
+      subSlots.push({
+        ...slot,
+        start_time: current.toISOString(),
+        end_time: next.toISOString(),
+        duration_minutes: SESSION_DURATION_MINUTES,
+      })
+      current = next
+    }
+  }
+  return subSlots
+}
+
 interface BookSessionProps {
   userId: string
   userRole: 'player' | 'coach' | 'admin'
@@ -129,7 +156,7 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
         mentorMap.forEach((mentorData) => {
           if (mentorData.slots.length > 0) {
             const expanded = expandRecurringSlots(mentorData.slots, weekStart, weekEnd)
-            mentorData.expandedSlots = expanded
+            mentorData.expandedSlots = splitInto15MinSlots(expanded)
           }
         })
       }
@@ -222,7 +249,10 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
         bookings?.map(b => `${b.availability_slot_id}-${parseISO(b.start_time).toISOString()}`) || []
       )
 
-      const availableExpandedSlots = expanded.filter(slot => {
+      // Split expanded slots into 15-minute sub-slots for booking
+      const subSlots = splitInto15MinSlots(expanded)
+
+      const availableExpandedSlots = subSlots.filter(slot => {
         const slotTimeKey = `${slot.originalSlotId}-${parseISO(slot.start_time).toISOString()}`
         return !bookedSlotTimes.has(slotTimeKey)
       })
