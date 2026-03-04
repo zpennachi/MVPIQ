@@ -309,33 +309,38 @@ export function DynamicHomepage() {
                           </div>
                         </div>
                         <div className="bg-black border border-[#272727] rounded-lg p-6">
-                          <h5 className="text-lg font-semibold text-white mb-4">Book a 1-on-1 Session</h5>
-                          <div className="space-y-4">
-                            <div className="bg-[#272727]/50 border border-[#272727] rounded-lg p-4">
-                              <div className="flex items-center gap-4 mb-3">
-                                <div className="w-12 h-12 bg-[#ffc700]/20 rounded-full flex items-center justify-center border-2 border-[#ffc700]/40">
-                                  <span className="text-lg font-bold text-[#ffc700]">MS</span>
-                                </div>
-                                <div>
-                                  <h6 className="font-semibold text-white">Marvel Smith</h6>
-                                  <p className="text-xs text-[#d9d9d9]">Professional Mentor</p>
-                                </div>
+                          <div className="flex items-center justify-between mb-4">
+                            <h5 className="text-lg font-semibold text-white">Your Feedback</h5>
+                            <span className="text-xs bg-green-900/40 text-green-400 border border-green-800 px-2 py-0.5 rounded-full">Completed</span>
+                          </div>
+                          {/* Written Feedback */}
+                          <div className="bg-[#272727]/50 border border-[#272727] rounded-lg p-4 mb-4">
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="w-10 h-10 bg-[#ffc700]/20 rounded-full flex items-center justify-center border-2 border-[#ffc700]/40">
+                                <span className="text-sm font-bold text-[#ffc700]">MS</span>
                               </div>
-                              <div className="space-y-2 mb-4">
-                                <div className="flex items-center gap-2 text-sm text-[#d9d9d9]">
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                  </svg>
-                                  <span>Available: Mon-Fri, 2:00 PM - 6:00 PM</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-sm text-[#d9d9d9]">
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  </svg>
-                                  <span>Session Duration: 30 minutes</span>
-                                </div>
+                              <div>
+                                <h6 className="font-semibold text-white text-sm">Marvel Smith</h6>
+                                <p className="text-xs text-[#d9d9d9]">Former NFL Offensive Lineman</p>
                               </div>
-                              <button className="w-full bg-[#ffc700] text-black px-4 py-2.5 rounded font-bold text-sm" disabled>Select Time Slot</button>
+                            </div>
+                            <div className="space-y-2 text-sm text-[#d9d9d9]">
+                              <p className="font-medium text-white">Written Notes:</p>
+                              <p className="leading-relaxed">Great improvement on your footwork! Your stance is much more balanced now. I noticed at the 2:15 mark your hip rotation opens up too early on the pass set &mdash; try to stay square longer before kicking...</p>
+                            </div>
+                          </div>
+                          {/* Video Feedback */}
+                          <div className="bg-[#272727]/50 border border-[#272727] rounded-lg p-4">
+                            <p className="font-medium text-white text-sm mb-3">Video Breakdown:</p>
+                            <div className="relative rounded-lg overflow-hidden bg-black border border-[#272727] aspect-video flex items-center justify-center">
+                              <div className="text-center">
+                                <div className="w-14 h-14 bg-[#ffc700]/20 rounded-full flex items-center justify-center mx-auto mb-2 border-2 border-[#ffc700]/40">
+                                  <svg className="w-7 h-7 text-[#ffc700] ml-1" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z" />
+                                  </svg>
+                                </div>
+                                <p className="text-xs text-[#d9d9d9]">Mentor video feedback &bull; 4:32</p>
+                              </div>
                             </div>
                           </div>
                         </div>
