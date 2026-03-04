@@ -18,6 +18,14 @@ export const metadata: Metadata = {
   title: "MVP-IQ - Empowering the Next Generation of Sports Talent",
   description: "Led by former professional athletes, we deliver advanced video analysis and tailored tools to elevate sports performance, helping players and coaches refine their skills and strategies.",
   viewport: "width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.ico", sizes: "any" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/icon.ico",
+  },
 };
 
 export default function RootLayout({
