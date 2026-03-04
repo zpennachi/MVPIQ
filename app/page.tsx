@@ -9,20 +9,18 @@ export const dynamic = 'force-dynamic'
 export default async function Home() {
   try {
     const supabase = await createClient()
-    if (supabase) {
-      const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user } } = await supabase.auth.getUser()
 
-      if (user) {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single()
+    if (user) {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
 
-        // Only redirect if profile exists and no error
-        if (profile && !error) {
-          redirect('/dashboard')
-        }
+      // Only redirect if profile exists and no error
+      if (profile && !error) {
+        redirect('/dashboard')
       }
     }
   } catch (error) {

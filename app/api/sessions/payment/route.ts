@@ -34,7 +34,7 @@ async function createGoogleCalendarEvent(session: any): Promise<{ meetLink: stri
     })
     
     const supabase = await createClient()
-    
+
     // Get mentor and user details
     const [mentorResult, userResult] = await Promise.all([
       supabase

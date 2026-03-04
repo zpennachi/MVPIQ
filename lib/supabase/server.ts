@@ -5,9 +5,9 @@ export async function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-  // Allow the app to run without real Supabase credentials (local dev with dummy env)
+  // Throw if Supabase credentials are missing (ensures non-null return type)
   if (!url || !key || url.includes('dummy') || key.includes('dummy')) {
-    return null
+    throw new Error('Supabase credentials are not configured')
   }
 
   const cookieStore = await cookies()

@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
-    
+
     // Check if user is authenticated and is admin
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
