@@ -198,17 +198,20 @@ export function DynamicHomepage() {
                           </div>
                         </div>
                         <div className="bg-black border border-[#272727] rounded-lg p-6">
-                          <h5 className="text-lg font-semibold text-white mb-4">Upload a New Video</h5>
-                          <div className="border-2 border-dashed border-[#272727] rounded-lg p-8 text-center hover:border-[#ffc700]/40 transition-all">
-                            <div className="text-[#ffc700] mb-3">
-                              <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                              </svg>
+                          <h5 className="text-lg font-semibold text-white mb-4">Submit a New Video</h5>
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-sm font-medium text-[#d9d9d9] mb-1">Hudl Video URL <span className="text-[#ffc700]">*</span></label>
+                              <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                  <svg className="w-4 h-4 text-[#ffc700]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                  </svg>
+                                </div>
+                                <input type="url" value="https://www.hudl.com/video/3/12345/abc..." className="w-full pl-9 pr-3 py-2 bg-black border border-[#ffc700] rounded text-[#d9d9d9] text-sm" readOnly />
+                              </div>
+                              <p className="text-xs text-[#d9d9d9]/70 mt-1">Paste your Hudl video link</p>
                             </div>
-                            <p className="text-white mb-1">Drag & drop a video file here, or click to select</p>
-                            <p className="text-sm text-[#d9d9d9]/70">Maximum file size: 1GB • Keep videos under 60 seconds</p>
-                          </div>
-                          <div className="mt-4 space-y-3">
                             <input type="text" placeholder="Video Title" className="w-full px-3 py-2 bg-black border border-[#ffc700] rounded text-white text-sm placeholder-[#d9d9d9]/50" readOnly />
                             <textarea rows={3} placeholder="Describe what you'd like reviewed..." className="w-full px-3 py-2 bg-black border border-[#ffc700] rounded text-white text-sm placeholder-[#d9d9d9]/50 resize-none" readOnly />
                             <button className="w-full bg-[#ffc700] text-black px-4 py-2.5 rounded font-bold text-sm" disabled>CHECKOUT ($50)</button>
