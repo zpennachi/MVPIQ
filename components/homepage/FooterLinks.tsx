@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 
 export function FooterLinks() {
@@ -46,16 +47,20 @@ export function FooterLinks() {
         </a>
       </div>
       <div>
-        <a
-          href="#insights"
-          onClick={(e) => handleAnchorClick(e, 'insights')}
+        <Link
+          href="/login"
           className="font-bold text-white mb-4 uppercase tracking-wide hover:text-[#ffc700] transition-all duration-300 cursor-pointer block"
         >
-          Insights
-        </a>
+          Log In
+        </Link>
       </div>
       <div>
-        <h4 className="font-bold text-white mb-4 uppercase tracking-wide">Executive Summary</h4>
+        <Link
+          href="/register"
+          className="font-bold text-white mb-4 uppercase tracking-wide hover:text-[#ffc700] transition-all duration-300 cursor-pointer block"
+        >
+          Sign Up
+        </Link>
       </div>
     </>
   )

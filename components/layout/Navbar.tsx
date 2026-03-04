@@ -106,11 +106,11 @@ export function Navbar() {
 
   if (loading) {
     return (
-      <nav className="bg-black border-b border-[#272727] shadow-mvp">
+      <nav className="fixed top-0 w-full z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <Link href="/" className="flex items-center">
-              <Logo height={32} variant="dark" />
+              <Logo height={32} variant="light" />
             </Link>
           </div>
         </div>
@@ -119,7 +119,7 @@ export function Navbar() {
   }
 
   return (
-    <nav className="bg-white border-b border-gray-200 shadow-sm">
+    <nav className="fixed top-0 w-full z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           <Link href="/" className="flex items-center">
@@ -143,18 +143,17 @@ export function Navbar() {
                 >
                   Platform
                 </a>
-                <a
-                  href="#insights"
-                  onClick={(e) => handleAnchorClick(e, 'insights')}
-                  className="text-sm font-medium text-gray-900 hover:text-[#ffc700] transition-all duration-300"
-                >
-                  Insights
-                </a>
                 <Link
                   href="/login"
                   className="text-sm font-medium text-gray-900 hover:text-[#ffc700] transition-all duration-300"
                 >
                   Log In
+                </Link>
+                <Link
+                  href="/register"
+                  className="bg-[#ffc700] text-black px-5 py-2 rounded-lg font-bold text-sm uppercase tracking-wide hover:bg-[#e6b300] transition-all duration-300 active:scale-95"
+                >
+                  Sign Up
                 </Link>
               </>
             ) : (
@@ -179,7 +178,7 @@ export function Navbar() {
                   <span className="hidden sm:inline">{getFirstName(profile) || profile?.email?.split('@')[0] || 'User'}</span>
                   <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showDropdown ? 'rotate-180' : ''}`} />
                 </button>
-                
+
                 {showDropdown && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
                     <Link

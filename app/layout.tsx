@@ -1,9 +1,18 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Akshar, Outfit } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { ConditionalNavbar } from "@/components/layout/ConditionalNavbar";
 
-const inter = Inter({ subsets: ["latin"] });
+const akshar = Akshar({
+  subsets: ["latin"],
+  variable: "--font-akshar",
+});
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  variable: "--font-outfit",
+});
 
 export const metadata: Metadata = {
   title: "MVP-IQ - Empowering the Next Generation of Sports Talent",
@@ -18,11 +27,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={inter.className}>
+      <body className={`${outfit.variable} ${akshar.variable} font-sans`}>
         <ConditionalNavbar />
         <div className="min-h-screen bg-black text-gray-200">
           {children}
         </div>
+        <Script
+          type="module"
+          src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );

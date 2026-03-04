@@ -9,6 +9,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-outfit)', 'sans-serif'],
+        heading: ['var(--font-akshar)', 'sans-serif'],
+      },
       colors: {
         background: "var(--body-background)",
         foreground: "var(--text)",

@@ -10,18 +10,20 @@ export const dynamic = 'force-dynamic'
 export default async function Home() {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    if (supabase) {
+      const { data: { user } } = await supabase.auth.getUser()
 
-    if (user) {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
+      if (user) {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
 
-      // Only redirect if profile exists and no error
-      if (profile && !error) {
-        redirect('/dashboard')
+        // Only redirect if profile exists and no error
+        if (profile && !error) {
+          redirect('/dashboard')
+        }
       }
     }
   } catch (error) {
@@ -33,7 +35,7 @@ export default async function Home() {
     <div className="min-h-screen bg-black">
       <ScrollToAnchor />
       <DynamicHomepage />
-      
+
       {/* Footer - Always show */}
       <footer className="relative bg-black border-t border-[#272727] text-[#d9d9d9] py-12 dotted-bg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
