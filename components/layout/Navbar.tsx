@@ -110,7 +110,7 @@ export function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <Link href="/" className="flex items-center">
-              <Logo height={32} variant="light" />
+              <Logo height={44} variant="light" />
             </Link>
           </div>
         </div>
@@ -123,7 +123,7 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           <Link href="/" className="flex items-center">
-            <Logo height={40} variant="light" />
+            <Logo height={52} variant="light" />
           </Link>
 
           <div className="flex items-center gap-6">

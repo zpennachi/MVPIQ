@@ -441,23 +441,15 @@ export function DynamicHomepage() {
         </div>
       </section>
 
-      {/* ═══ MVP MENTORSHIP ═══ */}
+      {/* ═══ MVP MENTORSHIP VIDEO ═══ */}
       <section className="relative py-16 sm:py-24 bg-black dotted-bg border-t border-[#272727]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white text-center mb-4 uppercase tracking-tight">
             MVP Mentorship
           </h2>
-          <h3 className="text-xl sm:text-2xl font-semibold text-[#d9d9d9] text-center mb-4">
-            How to get started
-          </h3>
-          <p className="text-lg text-white text-center mb-12 max-w-3xl mx-auto">
-            Follow these three easy steps to begin your journey toward elevating your game:
-          </p>
-
-          {/* Video */}
-          <div className="max-w-4xl mx-auto mb-12">
+          <div className="max-w-4xl mx-auto">
             <video
-              className="w-full rounded-lg shadow-2xl"
+              className="w-full rounded-lg shadow-2xl aspect-video object-cover"
               src={MENTORSHIP_VIDEO}
               autoPlay
               muted
@@ -465,51 +457,82 @@ export function DynamicHomepage() {
               playsInline
             />
           </div>
+        </div>
+      </section>
 
-          {/* 3 Steps */}
-          <div className="max-w-3xl mx-auto space-y-8 mb-12">
-            <div className="flex items-start gap-6">
-              <div className="bg-[#ffc700] text-black rounded-lg w-12 h-12 flex items-center justify-center font-bold flex-shrink-0 text-xl">
-                1
-              </div>
-              <div className="flex-1">
-                <h4 className="font-bold text-white mb-2 text-lg uppercase tracking-wide">Fill Out the Interest Form:</h4>
-                <p className="text-white leading-relaxed">
-                  Start by completing our online interest form to share your goals and needs.
-                </p>
-              </div>
+      {/* ═══ HOW TO GET STARTED ═══ */}
+      <section className="relative py-16 sm:py-24 bg-white dotted-bg-subtle">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+            {/* Left: Heading + Description + CTA */}
+            <div>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-black mb-6 uppercase tracking-tight">
+                How to Get Started
+              </h2>
+              <p className="text-lg text-gray-700 mb-8 leading-relaxed max-w-md">
+                Follow these three easy steps to begin your journey toward elevating your game:
+              </p>
+              <Link
+                href="/register"
+                className="inline-block bg-[#ffc700] border-2 border-[#ffc700] text-black px-8 py-3 rounded-lg font-bold text-base uppercase tracking-wide hover:bg-[#e6b300] hover:border-[#e6b300] transition-all duration-300 active:scale-95"
+              >
+                SIGN UP TODAY
+              </Link>
             </div>
-            <div className="flex items-start gap-6">
-              <div className="bg-[#ffc700] text-black rounded-lg w-12 h-12 flex items-center justify-center font-bold flex-shrink-0 text-xl">
-                2
-              </div>
-              <div className="flex-1">
-                <h4 className="font-bold text-white mb-2 text-lg uppercase tracking-wide">Get Matched with a Professional Athlete:</h4>
-                <p className="text-white leading-relaxed">
-                  We&apos;ll pair you with a former professional athlete who best fits your development objectives.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-6">
-              <div className="bg-[#ffc700] text-black rounded-lg w-12 h-12 flex items-center justify-center font-bold flex-shrink-0 text-xl">
-                3
-              </div>
-              <div className="flex-1">
-                <h4 className="font-bold text-white mb-2 text-lg uppercase tracking-wide">Choose Your Plan and Begin Analysis:</h4>
-                <p className="text-white leading-relaxed">
-                  Select the plan that suits you, and dive into your personalized analysis to start improving your game.
-                </p>
-              </div>
-            </div>
-          </div>
 
-          <div className="text-center">
-            <Link
-              href="/register"
-              className="inline-block bg-[#ffc700] text-black px-10 py-4 rounded-lg font-bold text-lg uppercase tracking-wide hover:bg-[#e6b300] transition-all duration-300 active:scale-95 hover:shadow-lg touch-manipulation"
-            >
-              SIGN UP TODAY
-            </Link>
+            {/* Right: 3 Steps with gold icon badges */}
+            <div className="space-y-8">
+              {/* Step 1 */}
+              <div className="flex items-start gap-5">
+                <div className="bg-[#ffc700] rounded-xl w-14 h-14 flex items-center justify-center flex-shrink-0 shadow-md">
+                  <svg className="w-7 h-7 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-bold text-black text-base uppercase tracking-wide mb-1">
+                    Fill Out the Interest Form:
+                  </h4>
+                  <p className="text-gray-700 leading-relaxed">
+                    Start by completing our online interest form to share your goals and needs.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="flex items-start gap-5">
+                <div className="bg-[#ffc700] rounded-xl w-14 h-14 flex items-center justify-center flex-shrink-0 shadow-md">
+                  <svg className="w-7 h-7 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-bold text-black text-base uppercase tracking-wide mb-1">
+                    Get Matched with a Professional Athlete:
+                  </h4>
+                  <p className="text-gray-700 leading-relaxed">
+                    We&apos;ll pair you with a former professional athlete who best fits your development objectives.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="flex items-start gap-5">
+                <div className="bg-[#ffc700] rounded-xl w-14 h-14 flex items-center justify-center flex-shrink-0 shadow-md">
+                  <svg className="w-7 h-7 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-bold text-black text-base uppercase tracking-wide mb-1">
+                    Choose Your Plan and Begin Analysis:
+                  </h4>
+                  <p className="text-gray-700 leading-relaxed">
+                    Select the plan that suits you, and dive into your personalized analysis to start improving your game.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
