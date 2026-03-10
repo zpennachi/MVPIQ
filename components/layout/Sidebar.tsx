@@ -55,7 +55,7 @@ export function Sidebar() {
           }
 
           // Load notification counts for mentors
-          if (data.role === 'mentor') {
+          if (data.role === 'mentor' || data.role === 'admin_mentor') {
             loadNotificationCounts(user.id)
           }
 
@@ -80,7 +80,7 @@ export function Sidebar() {
 
   // Reload notification counts when navigating to/from relevant pages
   useEffect(() => {
-    if (profile?.role === 'mentor' && user) {
+    if ((profile?.role === 'mentor' || profile?.role === 'admin_mentor') && user) {
       // Mark as seen when viewing feedback page
       if (pathname === '/dashboard/feedback') {
         markFeedbackAsSeen()
@@ -392,7 +392,7 @@ export function Sidebar() {
         )}
 
         {/* Mentor Navigation */}
-        {profile.role === 'mentor' && (
+        {(profile.role === 'mentor' || profile.role === 'admin_mentor') && (
           <>
             <Link
               href="/dashboard/feedback"
