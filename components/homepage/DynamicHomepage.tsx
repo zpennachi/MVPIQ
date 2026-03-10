@@ -17,7 +17,7 @@ const STEPS = [
   {
     number: 1,
     title: 'Video Submission',
-    description: 'Start by submitting your game footage through platforms like Hudl or YouTube. This allows our team of former professional athletes to review your performance.',
+    description: 'Start by submitting your game footage through platforms like Hudl or YouTube. This allows our team of former professional athletes to review your performance. Please ensure your video meets our requirements: maximum 2 minutes length, clear view zoomed in on the player, end zone or above angles preferred, and clearly identify the player being reviewed.',
   },
   {
     number: 2,
@@ -26,16 +26,11 @@ const STEPS = [
   },
   {
     number: 3,
-    title: 'Talent Identification',
-    description: 'Through this evaluation, we identify your strengths, weaknesses, and areas that need improvement, giving you a clear understanding of where you stand.',
-  },
-  {
-    number: 4,
     title: 'Written & Video Feedback',
     description: "You'll receive detailed, actionable feedback directly on your video, highlighting key moments and offering specific guidance to help you improve. Alongside video insights, we provide written guidance designed to help you strategically develop your game.",
   },
   {
-    number: 5,
+    number: 4,
     title: 'Personalized Consultation*',
     description: 'Our platform offers one-on-one consultations with our expert analysts, giving you the opportunity to discuss your progress, ask questions, and receive personalized advice tailored to your development needs.',
     note: '*personalized consultations are a premium offering for an additional charge',
@@ -282,45 +277,6 @@ export function DynamicHomepage() {
                           </div>
                         </div>
                         <div className="bg-black border border-[#272727] rounded-lg p-6">
-                          <h5 className="text-lg font-semibold text-white mb-4">Your Feedback</h5>
-                          <div className="bg-[#272727]/50 border border-[#272727] rounded-lg p-4 mb-4">
-                            <div className="flex items-center justify-between mb-3">
-                              <h6 className="font-semibold text-white">Week 3 Game Highlights</h6>
-                              <span className="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs font-medium border border-green-800">COMPLETED</span>
-                            </div>
-                            <div className="flex items-center gap-2 mb-3">
-                              <div className="flex text-[#ffc700]">
-                                {[...Array(5)].map((_, i) => (
-                                  <svg key={i} className="w-4 h-4 fill-current" viewBox="0 0 20 20">
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                  </svg>
-                                ))}
-                              </div>
-                              <span className="text-sm text-[#d9d9d9]">by Marvel Smith</span>
-                            </div>
-                            <p className="text-sm text-white leading-relaxed mb-3">
-                              Great improvement on your footwork! Your stance is much more balanced now. Focus on keeping your head up when making cuts...
-                            </p>
-                            <button className="bg-[#ffc700] text-black px-4 py-2 rounded text-sm font-medium" disabled>View Full Feedback</button>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  case 4:
-                    return (
-                      <div className="space-y-4">
-                        <div className="bg-gradient-to-r from-[#272727] to-black border border-[#272727] rounded-lg p-4 mb-4">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-[#ffc700]/20 rounded-full flex items-center justify-center border-2 border-[#ffc700]/40">
-                              <span className="text-xl font-bold text-[#ffc700]">JD</span>
-                            </div>
-                            <div>
-                              <h4 className="text-lg font-bold text-white">Welcome back, John!</h4>
-                              <p className="text-sm text-[#d9d9d9]">#23 • Lincoln High School</p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="bg-black border border-[#272727] rounded-lg p-6">
                           <div className="flex items-center justify-between mb-4">
                             <h5 className="text-lg font-semibold text-white">Your Feedback</h5>
                             <span className="text-xs bg-green-900/40 text-green-400 border border-green-800 px-2 py-0.5 rounded-full">Completed</span>
@@ -358,7 +314,7 @@ export function DynamicHomepage() {
                         </div>
                       </div>
                     )
-                  case 5:
+                  case 4:
                     return (
                       <div className="space-y-4">
                         <div className="bg-gradient-to-r from-[#272727] to-black border border-[#272727] rounded-lg p-4 mb-4">
@@ -511,10 +467,10 @@ export function DynamicHomepage() {
                 </div>
                 <div>
                   <h4 className="font-bold text-black text-base uppercase tracking-wide mb-1">
-                    Fill Out the Interest Form:
+                    Sign Up & Choose Your Mentor:
                   </h4>
                   <p className="text-gray-700 leading-relaxed">
-                    Start by completing our online interest form to share your goals and needs.
+                    Create an account and browse our roster of former professional athletes to find the perfect mentor for your position.
                   </p>
                 </div>
               </div>
@@ -528,10 +484,10 @@ export function DynamicHomepage() {
                 </div>
                 <div>
                   <h4 className="font-bold text-black text-base uppercase tracking-wide mb-1">
-                    Get Matched with a Professional Athlete:
+                    Submit Your Game Film:
                   </h4>
                   <p className="text-gray-700 leading-relaxed">
-                    We&apos;ll pair you with a former professional athlete who best fits your development objectives.
+                    Upload your best clips (max 2 minutes) showing clear angles of your play, preferably from the end zone or above.
                   </p>
                 </div>
               </div>
@@ -548,7 +504,7 @@ export function DynamicHomepage() {
                     Choose Your Plan and Begin Analysis:
                   </h4>
                   <p className="text-gray-700 leading-relaxed">
-                    Select the plan that suits you, and dive into your personalized analysis to start improving your game.
+                    Get detailed written & video breakdown of your film for $200, or book a live 1-on-1 consultation session for $300.
                   </p>
                 </div>
               </div>
