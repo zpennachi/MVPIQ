@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (!profile || (profile.role !== 'mentor' && profile.role !== 'admin')) {
+    if (!profile || (profile.role !== 'mentor' && profile.role !== 'admin' && profile.role !== 'admin_mentor')) {
       return NextResponse.redirect(new URL('/dashboard/settings?calendar_error=not_authorized', request.url))
     }
 

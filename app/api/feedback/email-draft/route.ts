@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .select('*')
       .eq('email', proEmail)
-      .eq('role', 'mentor')
+      .in('role', ['mentor', 'admin_mentor'])
       .single()
 
     if (!proProfile) {

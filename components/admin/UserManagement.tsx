@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types/database'
-import { Search, Edit, Trash2, UserCheck, UserX, Key, MoreVertical, UserPlus, X } from 'lucide-react'
+import { Search, Edit, Trash2, UserCheck, UserX, MoreVertical, UserPlus, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { getFullName } from '@/lib/utils'
 
@@ -131,26 +131,6 @@ export function UserManagement({ adminId }: UserManagementProps) {
       alert('User updated successfully')
     } catch (error: any) {
       alert(error.message || 'Failed to update user')
-    }
-  }
-
-  const handleResetPassword = async (userId: string, email: string) => {
-    if (!confirm(`Reset password for ${email}? They will receive an email with reset instructions.`)) return
-
-    try {
-      const response = await fetch('/api/admin/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, email }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) throw new Error(data.error || 'Failed to reset password')
-
-      alert('Password reset email sent successfully')
-    } catch (error: any) {
-      alert(error.message || 'Failed to reset password')
     }
   }
 
@@ -417,13 +397,6 @@ export function UserManagement({ adminId }: UserManagementProps) {
                             title="Edit user"
                           >
                             <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleResetPassword(user.id, user.email)}
-                            className="p-2 text-blue-400 hover:bg-[#272727] rounded transition"
-                            title="Reset password"
-                          >
-                            <Key className="w-4 h-4" />
                           </button>
                           {user.is_active ? (
                             <button

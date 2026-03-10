@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (!profile || profile.role !== 'admin') {
+    if (!profile || (profile.role !== 'admin' && profile.role !== 'admin_mentor')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     const { count: totalMentors } = await supabaseAdmin
       .from('profiles')
       .select('*', { count: 'exact', head: true })
-      .eq('role', 'mentor')
+      .in('role', ['mentor', 'admin_mentor'])
 
     // Total submissions
     const { count: totalSubmissions } = await supabaseAdmin

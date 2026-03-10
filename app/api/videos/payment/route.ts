@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
         .from('profiles')
         .select('id, email, first_name, last_name')
         .eq('id', mentorId)
-        .eq('role', 'mentor')
+        .in('role', ['mentor', 'admin_mentor'])
         .single(),
       supabase
         .from('videos')

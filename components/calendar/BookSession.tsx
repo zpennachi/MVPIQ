@@ -111,7 +111,9 @@ export function BookSession({ userId, userRole, onBookingSuccess }: BookSessionP
       const { data: mentorProfiles, error: mentorError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('role', 'mentor')
+        .in('role', ['mentor', 'admin_mentor'])
+        .order('role', { ascending: false }) // Temporary sort, adjust if needed
+        // Assuming first name order is handled client-side or we can't do it cleanly with full_name JSONb here
         .order('first_name', { ascending: true })
 
       if (mentorError) {

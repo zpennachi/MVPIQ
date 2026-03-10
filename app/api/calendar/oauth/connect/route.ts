@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (!profile || (profile.role !== 'mentor' && profile.role !== 'admin')) {
+    if (!profile || (profile.role !== 'mentor' && profile.role !== 'admin' && profile.role !== 'admin_mentor')) {
       return NextResponse.json(
         { error: 'Only mentors and admins can connect calendar' },
         { status: 403 }

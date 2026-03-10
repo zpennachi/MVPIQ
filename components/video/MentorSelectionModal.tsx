@@ -32,10 +32,11 @@ export function MentorSelectionModal({
 
   const loadMentors = async () => {
     setLoadingMentors(true)
+    // Fetch all mentors
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('role', 'mentor')
+      .in('role', ['mentor', 'admin_mentor'])
       .order('first_name', { ascending: true })
 
     if (error) {

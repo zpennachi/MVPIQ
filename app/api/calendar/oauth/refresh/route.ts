@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (!profile || (profile.role !== 'mentor' && profile.role !== 'admin')) {
+    if (!profile || (profile.role !== 'mentor' && profile.role !== 'admin' && profile.role !== 'admin_mentor')) {
       return NextResponse.json(
         { error: 'Only mentors and admins can refresh OAuth tokens' },
         { status: 403 }
