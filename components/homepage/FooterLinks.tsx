@@ -124,6 +124,12 @@ export function FooterLinks() {
           >
             Sign Up
           </Link>
+          <Link
+            href="/contact"
+            className="text-sm font-medium text-gray-800 hover:text-[#ffc700] transition-colors duration-300"
+          >
+            Contact Us
+          </Link>
         </div>
       </div>
     </div>

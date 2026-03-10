@@ -1,4 +1,4 @@
-export type UserRole = 'player' | 'mentor' | 'coach' | 'admin' | 'school'
+export type UserRole = 'player' | 'mentor' | 'coach' | 'admin' | 'school' | 'admin_mentor'
 
 export interface Profile {
   id: string

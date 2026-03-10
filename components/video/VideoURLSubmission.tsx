@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Video, Plus, X, CreditCard, AlertCircle } from 'lucide-react'
 import { MentorSelectionModal } from './MentorSelectionModal'
@@ -33,6 +33,19 @@ export function VideoURLSubmission({
   const [selectedMentorId, setSelectedMentorId] = useState<string | null>(null)
   const [showMentorModal, setShowMentorModal] = useState(false)
   const [videoId, setVideoId] = useState<string | null>(null)
+  const [price, setPrice] = useState(200)
+
+  useEffect(() => {
+    fetch('/api/stripe/price')
+      .then(res => res.json())
+      .then(data => {
+        if (data.amount) {
+          setPrice(data.amount)
+        }
+      })
+      .catch(err => console.error('Failed to fetch price:', err))
+  }, [])
+
   const supabase = createClient()
 
   const validateURL = (url: string) => {
@@ -292,7 +305,7 @@ export function VideoURLSubmission({
                 className="w-full px-3 py-2.5 text-base border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700] touch-manipulation placeholder:text-[#d9d9d9]/50 disabled:opacity-50"
               />
               <p className="text-xs text-[#d9d9d9]/70 mt-1">
-                Supported platforms: YouTube, Hudl, or any publicly accessible video URL
+                Paste your video link
               </p>
             </div>
 
@@ -378,7 +391,7 @@ export function VideoURLSubmission({
                 ) : (
                   <>
                     <CreditCard className="w-4 h-4" />
-                    {selectedMentorId ? 'Checkout ($50)' : 'Continue to Mentor Selection'}
+                    {selectedMentorId ? `Checkout ($${price})` : 'Continue to Mentor Selection'}
                   </>
                 )}
               </button>

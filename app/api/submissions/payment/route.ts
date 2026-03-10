@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       await supabase.from('payments').insert({
         submission_id: submissionId,
         player_id: user.id,
-        amount: 5000,
+        amount: 20000,
         currency: 'usd',
         stripe_payment_intent_id: 'dev-mode-skip',
         status: 'succeeded',
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
             type: 'payment_confirmation',
             email: user.email,
             data: {
-              amount: 5000,
+              amount: 20000,
               submissionId: submission.id,
               videoTitle: video?.title,
             },
@@ -202,20 +202,37 @@ export async function POST(request: NextRequest) {
     }
 
     // PRODUCTION MODE: Create Stripe checkout session
+    const priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID
+    let paymentAmount = 20000
+
+    if (priceId && stripe) {
+      try {
+        const priceObj = await stripe.prices.retrieve(priceId)
+        if (priceObj.unit_amount) paymentAmount = priceObj.unit_amount
+      } catch (err) {
+        console.error('Error retrieving price from Stripe, using default 20000:', err)
+      }
+    }
+
     const checkoutSession = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `Football Feedback - ${video?.title || 'Video'}`,
-              description: 'Professional feedback on your football playing',
+        priceId
+          ? {
+              price: priceId,
+              quantity: 1,
+            }
+          : {
+              price_data: {
+                currency: 'usd',
+                product_data: {
+                  name: `Football Feedback - ${video?.title || 'Video'}`,
+                  description: 'Professional feedback on your football playing',
+                },
+                unit_amount: paymentAmount, // Dynamic or $200.00 fallback
+              },
+              quantity: 1,
             },
-            unit_amount: 5000, // $50.00
-          },
-          quantity: 1,
-        },
       ],
       mode: 'payment',
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true`,
@@ -241,7 +258,7 @@ export async function POST(request: NextRequest) {
     await supabase.from('payments').insert({
       submission_id: submissionId,
       player_id: user.id,
-      amount: 5000,
+      amount: paymentAmount,
       currency: 'usd',
       stripe_payment_intent_id: checkoutSession.id,
       status: 'pending',

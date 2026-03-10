@@ -156,20 +156,26 @@ export async function POST(request: NextRequest) {
       throw new ValidationError('Stripe is not configured')
     }
 
+    const priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID
     const checkoutSession = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `Video Upload - ${video.title || 'Video'}`,
-              description: 'Upload and get professional feedback on your football video',
+        priceId
+          ? {
+              price: priceId,
+              quantity: 1,
+            }
+          : {
+              price_data: {
+                currency: 'usd',
+                product_data: {
+                  name: `Video Upload - ${video.title || 'Video'}`,
+                  description: 'Upload and get professional feedback on your football video',
+                },
+                unit_amount: 20000, // $200.00
+              },
+              quantity: 1,
             },
-            unit_amount: 5000, // $50.00
-          },
-          quantity: 1,
-        },
       ],
       mode: 'payment',
       success_url: `${env.NEXT_PUBLIC_APP_URL}/dashboard?video_payment=success`,

@@ -15,6 +15,7 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
+  NEXT_PUBLIC_STRIPE_PRICE_ID: z.string().optional(),
   
   // Gmail (uses OAuth, no separate API key needed)
   // GMAIL_FROM_EMAIL is hardcoded to mvpiqweb@gmail.com in lib/gmail.ts
@@ -50,6 +51,7 @@ function getEnv(): Env {
       STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
       STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+      NEXT_PUBLIC_STRIPE_PRICE_ID: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
       // Gmail uses OAuth, no env vars needed
       NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
       CRON_SECRET: process.env.CRON_SECRET,
@@ -75,6 +77,7 @@ function getEnv(): Env {
           STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
           STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+          NEXT_PUBLIC_STRIPE_PRICE_ID: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
       // Gmail uses OAuth, no env vars needed
           NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
           CRON_SECRET: process.env.CRON_SECRET || 'your-secret-key',

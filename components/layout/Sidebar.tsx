@@ -698,6 +698,13 @@ export function Sidebar() {
           <p className="text-sm text-[#d9d9d9]">{getFullName(profile) || profile.email}</p>
           <p className="text-xs text-[#d9d9d9]/70 capitalize">{profile.role}</p>
         </div>
+        <Link
+          href="/contact"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[#d9d9d9] hover:bg-[#272727] hover:text-white transition-all duration-300 active:scale-95"
+        >
+          <MessageSquare className="w-5 h-5" />
+          <span className="font-medium">Contact Us</span>
+        </Link>
         <button
           onClick={handleSignOut}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[#d9d9d9] hover:bg-[#272727] hover:text-white transition-all duration-300 active:scale-95"

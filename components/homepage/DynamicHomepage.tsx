@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Logo } from '@/components/ui/Logo'
 import { ScrollScaleSection } from './ScrollScaleSection'
@@ -36,15 +36,27 @@ const STEPS = [
   },
   {
     number: 5,
-    title: 'Personalized Consultation',
+    title: 'Personalized Consultation*',
     description: 'Our platform offers one-on-one consultations with our expert analysts, giving you the opportunity to discuss your progress, ask questions, and receive personalized advice tailored to your development needs.',
-    note: '*personalized consultations are a premium offering',
+    note: '*personalized consultations are a premium offering for an additional charge',
   },
 ]
 
 export function DynamicHomepage() {
   const modelRef = useRef<any>(null)
   const rotationRef = useRef(0)
+  const [price, setPrice] = useState(200)
+
+  useEffect(() => {
+    fetch('/api/stripe/price')
+      .then(res => res.json())
+      .then(data => {
+        if (data.amount) {
+          setPrice(data.amount)
+        }
+      })
+      .catch(err => console.error('Failed to fetch price:', err))
+  }, [])
 
   const handleFlipCard = () => {
     const mv = modelRef.current
@@ -201,7 +213,7 @@ export function DynamicHomepage() {
                           <h5 className="text-lg font-semibold text-white mb-4">Submit a New Video</h5>
                           <div className="space-y-3">
                             <div>
-                              <label className="block text-sm font-medium text-[#d9d9d9] mb-1">Hudl Video URL <span className="text-[#ffc700]">*</span></label>
+                              <label className="block text-sm font-medium text-[#d9d9d9] mb-1">Video URL <span className="text-[#ffc700]">*</span></label>
                               <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                   <svg className="w-4 h-4 text-[#ffc700]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -210,11 +222,11 @@ export function DynamicHomepage() {
                                 </div>
                                 <input type="url" value="https://www.hudl.com/video/3/12345/abc..." className="w-full pl-9 pr-3 py-2 bg-black border border-[#ffc700] rounded text-[#d9d9d9] text-sm" readOnly />
                               </div>
-                              <p className="text-xs text-[#d9d9d9]/70 mt-1">Paste your Hudl video link</p>
+                              <p className="text-xs text-[#d9d9d9]/70 mt-1">Paste your video link</p>
                             </div>
                             <input type="text" placeholder="Video Title" className="w-full px-3 py-2 bg-black border border-[#ffc700] rounded text-white text-sm placeholder-[#d9d9d9]/50" readOnly />
                             <textarea rows={3} placeholder="Describe what you'd like reviewed..." className="w-full px-3 py-2 bg-black border border-[#ffc700] rounded text-white text-sm placeholder-[#d9d9d9]/50 resize-none" readOnly />
-                            <button className="w-full bg-[#ffc700] text-black px-4 py-2.5 rounded font-bold text-sm" disabled>CHECKOUT ($50)</button>
+                            <button className="w-full bg-[#ffc700] text-black px-4 py-2.5 rounded font-bold text-sm" disabled>CHECKOUT (${price})</button>
                           </div>
                         </div>
                       </div>

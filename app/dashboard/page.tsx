@@ -4,6 +4,7 @@ import { PlayerDashboard } from '@/components/dashboard/PlayerDashboard'
 import { MentorDashboard } from '@/components/dashboard/MentorDashboard'
 import { CoachDashboard } from '@/components/dashboard/CoachDashboard'
 import { AdminDashboard } from '@/components/dashboard/AdminDashboard'
+import { AdminMentorDashboard } from '@/components/dashboard/AdminMentorDashboard'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,7 +28,9 @@ export default async function DashboardPage() {
 
   return (
     <>
-      {profile.role === 'admin' ? (
+      {profile.role === 'admin_mentor' ? (
+        <AdminMentorDashboard userId={user.id} />
+      ) : profile.role === 'admin' ? (
         <AdminDashboard adminId={user.id} />
       ) : profile.role === 'player' ? (
         <PlayerDashboard userId={user.id} />
