@@ -8,7 +8,7 @@ import { MentorAvailability } from '@/components/calendar/MentorAvailability'
 
 interface OneOnOnesClientProps {
   userId: string
-  userRole: 'player' | 'coach' | 'mentor' | 'admin'
+  userRole: 'player' | 'coach' | 'mentor' | 'admin' | 'admin_mentor'
 }
 
 export function OneOnOnesClient({ userId, userRole }: OneOnOnesClientProps) {
@@ -18,7 +18,7 @@ export function OneOnOnesClient({ userId, userRole }: OneOnOnesClientProps) {
   // Get active tab from URL params, default based on role
   const getInitialTab = () => {
     const tab = searchParams?.get('tab')
-    if (userRole === 'mentor') {
+    if (userRole === 'mentor' || userRole === 'admin_mentor') {
       return tab === 'upcoming' ? 'upcoming' : 'availability'
     }
     return tab === 'appointments' ? 'appointments' : 'book'
@@ -29,7 +29,7 @@ export function OneOnOnesClient({ userId, userRole }: OneOnOnesClientProps) {
   // Update tab when URL params change
   useEffect(() => {
     const tab = searchParams?.get('tab')
-    if (userRole === 'mentor') {
+    if (userRole === 'mentor' || userRole === 'admin_mentor') {
       setActiveTab(tab === 'upcoming' ? 'upcoming' : 'availability')
     } else {
       setActiveTab(tab === 'appointments' ? 'appointments' : 'book')
@@ -42,7 +42,7 @@ export function OneOnOnesClient({ userId, userRole }: OneOnOnesClientProps) {
       // Trigger refresh of appointments
       setRefreshKey(prev => prev + 1)
       // Switch to appointments tab to show the new booking
-      if (userRole !== 'mentor') {
+      if (userRole !== 'mentor' && userRole !== 'admin_mentor') {
         setActiveTab('appointments')
       } else {
         setActiveTab('upcoming')
@@ -50,7 +50,7 @@ export function OneOnOnesClient({ userId, userRole }: OneOnOnesClientProps) {
     }, 500) // Small delay to ensure database update completes
   }
 
-  if (userRole === 'mentor') {
+  if (userRole === 'mentor' || userRole === 'admin_mentor') {
     return (
       <div className="space-y-6">
         {/* Tabs - Mobile only */}

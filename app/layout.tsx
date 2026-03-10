@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Akshar, Outfit } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 import { ConditionalNavbar } from "@/components/layout/ConditionalNavbar";
 
@@ -40,11 +39,6 @@ export default function RootLayout({
         <div className="min-h-screen bg-black text-gray-200">
           {children}
         </div>
-        <Script
-          type="module"
-          src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"
-          strategy="afterInteractive"
-        />
       </body>
     </html>
   );

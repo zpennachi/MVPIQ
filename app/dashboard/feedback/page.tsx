@@ -23,7 +23,7 @@ export default async function FeedbackPage() {
     redirect('/login')
   }
 
-  if (profile.role === 'mentor') {
+  if (profile.role === 'mentor' || profile.role === 'admin_mentor') {
     return <MentorFeedbackPage mentorId={user.id} />
   }
 
