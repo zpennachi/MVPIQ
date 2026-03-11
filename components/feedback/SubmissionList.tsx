@@ -193,7 +193,7 @@ export function SubmissionList({
                 className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto sm:flex-shrink-0"
                 onClick={(e) => e.stopPropagation()}
               >
-                {(video?.file_path || video?.video_url) && (
+                {userRole === 'player' && (video?.file_path || video?.video_url) && (
                   <button
                     onClick={() => setSelectedVideo({ 
                       url: video.video_url || video.file_path || '', 

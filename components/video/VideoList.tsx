@@ -216,6 +216,7 @@ export function VideoList({ videos, onVideoAction }: VideoListProps) {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              {/* Mentors don't need this modal button as they use direct URLs */}
               <button
                 onClick={() => setSelectedVideo({ url: video.file_path || video.video_url || '', title: video.title })}
                 className="text-[#ffc700] hover:text-[#e6b300] text-sm font-medium text-center sm:text-left px-3 py-2 rounded-md hover:bg-[#272727] transition-all duration-300 active:scale-95 touch-manipulation border border-[#272727] hover:border-[#ffc700]/40"

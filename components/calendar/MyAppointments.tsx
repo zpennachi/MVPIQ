@@ -61,9 +61,9 @@ export function MyAppointments({ userId, userRole }: MyAppointmentsProps) {
       .in('status', ['pending', 'confirmed'])
       .order('start_time', { ascending: true })
 
-    // If mentor view, filter by mentor_id; otherwise filter by user_id
+    // If mentor view, only show upcoming appointments
     if (isMentorView) {
-      query = query.eq('mentor_id', userId)
+      query = query.eq('mentor_id', userId).gte('start_time', new Date().toISOString())
     } else {
       query = query.eq('user_id', userId)
     }
