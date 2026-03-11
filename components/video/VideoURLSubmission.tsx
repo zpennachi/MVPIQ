@@ -283,6 +283,10 @@ export function VideoURLSubmission({
                 <p className="font-medium text-white mb-1">Video URL Submission:</p>
                 <ul className="list-disc list-inside space-y-1 text-xs">
                   <li>Paste a link from <strong className="text-[#ffc700]">YouTube</strong>, <strong className="text-[#ffc700]">Hudl</strong>, or any publicly accessible video</li>
+                  <li><strong>Maximum 2 minutes length</strong> with several plays</li>
+                  <li>View needs to be <strong>as close to the player</strong> and the play we are analyzing as possible. If the video is shot at a great distance and not zoomed in, it will be difficult to analyze.</li>
+                  <li><strong>End zone</strong> or <strong>Shots from above</strong> are preferable</li>
+                  <li>Clearly <strong>identify the player</strong> in the video</li>
                   <li>Make sure the video is publicly viewable (not private)</li>
                   <li>After submission, you&apos;ll select a mentor and proceed to payment</li>
                 </ul>

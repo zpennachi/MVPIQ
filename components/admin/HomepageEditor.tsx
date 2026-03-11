@@ -273,48 +273,306 @@ export function HomepageEditor() {
                   </div>
                 </div>
 
-                {/* Section-specific content editing */}
                 {section.section_type === 'screenshots' && editedContent.content?.screenshots && (
                   <div>
-                    <label className="block text-sm font-medium text-[#d9d9d9] mb-2">Screenshots</label>
-                    <div className="space-y-3">
+                    <label className="block text-sm font-medium text-[#d9d9d9] mb-4">Steps & Mockup Content</label>
+                    <div className="space-y-6">
                       {editedContent.content.screenshots.map((screenshot: any, idx: number) => (
-                        <div key={idx} className="p-3 bg-[#272727] rounded border border-[#272727]">
-                          <div className="grid grid-cols-2 gap-3 mb-2">
-                            <input
-                              type="text"
-                              value={screenshot.title || ''}
+                        <div key={idx} className="p-4 bg-[#1a1a1a] rounded-lg border border-[#333] space-y-4">
+                          <div className="flex items-center gap-4">
+                             <div className="flex-1">
+                              <label className="block text-[10px] uppercase tracking-wider font-bold text-[#ffc700] mb-1">Step Title</label>
+                              <input
+                                type="text"
+                                value={screenshot.title || ''}
+                                onChange={(e) => {
+                                  const newScreenshots = [...editedContent.content.screenshots]
+                                  newScreenshots[idx].title = e.target.value
+                                  setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
+                                }}
+                                placeholder="Step Title"
+                                className="w-full px-3 py-2 bg-black border border-[#272727] rounded text-white text-sm focus:border-[#ffc700] outline-none"
+                              />
+                            </div>
+                            <div className="w-24">
+                              <label className="block text-[10px] uppercase tracking-wider font-bold text-[#ffc700] mb-1">Step #</label>
+                              <input
+                                type="number"
+                                value={screenshot.step || (idx + 1)}
+                                onChange={(e) => {
+                                  const newScreenshots = [...editedContent.content.screenshots]
+                                  newScreenshots[idx].step = parseInt(e.target.value)
+                                  setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
+                                }}
+                                placeholder="Step #"
+                                className="w-full px-3 py-2 bg-black border border-[#272727] rounded text-white text-sm focus:border-[#ffc700] outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] uppercase tracking-wider font-bold text-[#ffc700] mb-1">Step Description</label>
+                            <textarea
+                              value={screenshot.description || ''}
                               onChange={(e) => {
                                 const newScreenshots = [...editedContent.content.screenshots]
-                                newScreenshots[idx].title = e.target.value
+                                newScreenshots[idx].description = e.target.value
                                 setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
                               }}
-                              placeholder="Title"
-                              className="w-full px-2 py-1 bg-black border border-[#ffc700] rounded text-white text-xs"
-                            />
-                            <input
-                              type="number"
-                              value={screenshot.step || ''}
-                              onChange={(e) => {
-                                const newScreenshots = [...editedContent.content.screenshots]
-                                newScreenshots[idx].step = parseInt(e.target.value)
-                                setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
-                              }}
-                              placeholder="Step #"
-                              className="w-full px-2 py-1 bg-black border border-[#ffc700] rounded text-white text-xs"
+                              placeholder="Step Description"
+                              rows={3}
+                              className="w-full px-3 py-2 bg-black border border-[#272727] rounded text-white text-sm focus:border-[#ffc700] outline-none resize-none"
                             />
                           </div>
-                          <textarea
-                            value={screenshot.description || ''}
-                            onChange={(e) => {
-                              const newScreenshots = [...editedContent.content.screenshots]
-                              newScreenshots[idx].description = e.target.value
-                              setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
-                            }}
-                            placeholder="Description"
-                            rows={2}
-                            className="w-full px-2 py-1 bg-black border border-[#ffc700] rounded text-white text-xs resize-none"
-                          />
+
+                          {/* Mockup Specific Fields */}
+                          <div className="pt-4 border-t border-[#333]">
+                            <h4 className="text-xs font-bold text-white mb-3 uppercase tracking-widest">Dashboard Mockup Copy</h4>
+                            
+                            {screenshot.step === 1 && (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-[10px] text-[#888] mb-1">User Name</label>
+                                  <input
+                                    type="text"
+                                    value={screenshot.mockup?.user_name || 'Welcome back, John!'}
+                                    onChange={(e) => {
+                                      const newScreenshots = [...editedContent.content.screenshots]
+                                      if (!newScreenshots[idx].mockup) newScreenshots[idx].mockup = {}
+                                      newScreenshots[idx].mockup.user_name = e.target.value
+                                      setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
+                                    }}
+                                    className="w-full px-2 py-1 bg-black border border-[#272727] rounded text-white text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] text-[#888] mb-1">User Details</label>
+                                  <input
+                                    type="text"
+                                    value={screenshot.mockup?.user_detail || '#23 • Lincoln High School'}
+                                    onChange={(e) => {
+                                      const newScreenshots = [...editedContent.content.screenshots]
+                                      if (!newScreenshots[idx].mockup) newScreenshots[idx].mockup = {}
+                                      newScreenshots[idx].mockup.user_detail = e.target.value
+                                      setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
+                                    }}
+                                    className="w-full px-2 py-1 bg-black border border-[#272727] rounded text-white text-xs"
+                                  />
+                                </div>
+                                <div className="col-span-2">
+                                  <label className="block text-[10px] text-[#888] mb-1">Form Title</label>
+                                  <input
+                                    type="text"
+                                    value={screenshot.mockup?.form_title || 'Submit a New Video'}
+                                    onChange={(e) => {
+                                      const newScreenshots = [...editedContent.content.screenshots]
+                                      if (!newScreenshots[idx].mockup) newScreenshots[idx].mockup = {}
+                                      newScreenshots[idx].mockup.form_title = e.target.value
+                                      setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
+                                    }}
+                                    className="w-full px-2 py-1 bg-black border border-[#272727] rounded text-white text-xs"
+                                  />
+                                </div>
+                                <div className="col-span-2">
+                                  <label className="block text-[10px] text-[#888] mb-1">Placeholder Video URL</label>
+                                  <input
+                                    type="text"
+                                    value={screenshot.mockup?.video_url || 'https://www.hudl.com/video/3/12345/abc...'}
+                                    onChange={(e) => {
+                                      const newScreenshots = [...editedContent.content.screenshots]
+                                      if (!newScreenshots[idx].mockup) newScreenshots[idx].mockup = {}
+                                      newScreenshots[idx].mockup.video_url = e.target.value
+                                      setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
+                                    }}
+                                    className="w-full px-2 py-1 bg-black border border-[#272727] rounded text-white text-xs"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {screenshot.step === 2 && (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-[10px] text-[#888] mb-1">Mentor Name</label>
+                                  <input
+                                    type="text"
+                                    value={screenshot.mockup?.mentor_name || 'Marvel Smith'}
+                                    onChange={(e) => {
+                                      const newScreenshots = [...editedContent.content.screenshots]
+                                      if (!newScreenshots[idx].mockup) newScreenshots[idx].mockup = {}
+                                      newScreenshots[idx].mockup.mentor_name = e.target.value
+                                      setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
+                                    }}
+                                    className="w-full px-2 py-1 bg-black border border-[#272727] rounded text-white text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] text-[#888] mb-1">Mentor Role</label>
+                                  <input
+                                    type="text"
+                                    value={screenshot.mockup?.mentor_role || 'Professional Mentor'}
+                                    onChange={(e) => {
+                                      const newScreenshots = [...editedContent.content.screenshots]
+                                      if (!newScreenshots[idx].mockup) newScreenshots[idx].mockup = {}
+                                      newScreenshots[idx].mockup.mentor_role = e.target.value
+                                      setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
+                                    }}
+                                    className="w-full px-2 py-1 bg-black border border-[#272727] rounded text-white text-xs"
+                                  />
+                                </div>
+                                <div className="col-span-2">
+                                  <label className="block text-[10px] text-[#888] mb-1">Submission Title</label>
+                                  <input
+                                    type="text"
+                                    value={screenshot.mockup?.submission_title || 'Week 3 Game Highlights'}
+                                    onChange={(e) => {
+                                      const newScreenshots = [...editedContent.content.screenshots]
+                                      if (!newScreenshots[idx].mockup) newScreenshots[idx].mockup = {}
+                                      newScreenshots[idx].mockup.submission_title = e.target.value
+                                      setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
+                                    }}
+                                    className="w-full px-2 py-1 bg-black border border-[#272727] rounded text-white text-xs"
+                                  />
+                                </div>
+                                <div className="col-span-2">
+                                  <label className="block text-[10px] text-[#888] mb-1">Submission Details</label>
+                                  <input
+                                    type="text"
+                                    value={screenshot.mockup?.submission_detail || 'Submitted by John Doe • 2 hours ago'}
+                                    onChange={(e) => {
+                                      const newScreenshots = [...editedContent.content.screenshots]
+                                      if (!newScreenshots[idx].mockup) newScreenshots[idx].mockup = {}
+                                      newScreenshots[idx].mockup.submission_detail = e.target.value
+                                      setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
+                                    }}
+                                    className="w-full px-2 py-1 bg-black border border-[#272727] rounded text-white text-xs"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {screenshot.step === 3 && (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-[10px] text-[#888] mb-1">User Name</label>
+                                  <input
+                                    type="text"
+                                    value={screenshot.mockup?.user_name || 'Welcome back, John!'}
+                                    onChange={(e) => {
+                                      const newScreenshots = [...editedContent.content.screenshots]
+                                      if (!newScreenshots[idx].mockup) newScreenshots[idx].mockup = {}
+                                      newScreenshots[idx].mockup.user_name = e.target.value
+                                      setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
+                                    }}
+                                    className="w-full px-2 py-1 bg-black border border-[#272727] rounded text-white text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] text-[#888] mb-1">Mentor Name</label>
+                                  <input
+                                    type="text"
+                                    value={screenshot.mockup?.mentor_name || 'Marvel Smith'}
+                                    onChange={(e) => {
+                                      const newScreenshots = [...editedContent.content.screenshots]
+                                      if (!newScreenshots[idx].mockup) newScreenshots[idx].mockup = {}
+                                      newScreenshots[idx].mockup.mentor_name = e.target.value
+                                      setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
+                                    }}
+                                    className="w-full px-2 py-1 bg-black border border-[#272727] rounded text-white text-xs"
+                                  />
+                                </div>
+                                <div className="col-span-2">
+                                  <label className="block text-[10px] text-[#888] mb-1">Mentor Notes (Written)</label>
+                                  <textarea
+                                    value={screenshot.mockup?.feedback_notes || 'Great improvement on your footwork! Your stance is much more balanced now. I noticed at the 2:15 mark your hip rotation opens up too early on the pass set — try to stay square longer before kicking...'}
+                                    onChange={(e) => {
+                                      const newScreenshots = [...editedContent.content.screenshots]
+                                      if (!newScreenshots[idx].mockup) newScreenshots[idx].mockup = {}
+                                      newScreenshots[idx].mockup.feedback_notes = e.target.value
+                                      setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
+                                    }}
+                                    rows={3}
+                                    className="w-full px-2 py-1 bg-black border border-[#272727] rounded text-white text-xs resize-none"
+                                  />
+                                </div>
+                                <div className="col-span-2">
+                                  <label className="block text-[10px] text-[#888] mb-1">Video Breakdown Detail</label>
+                                  <input
+                                    type="text"
+                                    value={screenshot.mockup?.breakdown_detail || 'Mentor video feedback • 4:32'}
+                                    onChange={(e) => {
+                                      const newScreenshots = [...editedContent.content.screenshots]
+                                      if (!newScreenshots[idx].mockup) newScreenshots[idx].mockup = {}
+                                      newScreenshots[idx].mockup.breakdown_detail = e.target.value
+                                      setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
+                                    }}
+                                    className="w-full px-2 py-1 bg-black border border-[#272727] rounded text-white text-xs"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {screenshot.step === 4 && (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-[10px] text-[#888] mb-1">Mentor Name</label>
+                                  <input
+                                    type="text"
+                                    value={screenshot.mockup?.mentor_name || 'Marvel Smith'}
+                                    onChange={(e) => {
+                                      const newScreenshots = [...editedContent.content.screenshots]
+                                      if (!newScreenshots[idx].mockup) newScreenshots[idx].mockup = {}
+                                      newScreenshots[idx].mockup.mentor_name = e.target.value
+                                      setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
+                                    }}
+                                    className="w-full px-2 py-1 bg-black border border-[#272727] rounded text-white text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] text-[#888] mb-1">Session Type</label>
+                                  <input
+                                    type="text"
+                                    value={screenshot.mockup?.session_type || '1-on-1 Session'}
+                                    onChange={(e) => {
+                                      const newScreenshots = [...editedContent.content.screenshots]
+                                      if (!newScreenshots[idx].mockup) newScreenshots[idx].mockup = {}
+                                      newScreenshots[idx].mockup.session_type = e.target.value
+                                      setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
+                                    }}
+                                    className="w-full px-2 py-1 bg-black border border-[#272727] rounded text-white text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] text-[#888] mb-1">Session Date</label>
+                                  <input
+                                    type="text"
+                                    value={screenshot.mockup?.session_date || 'Friday, March 15, 2024'}
+                                    onChange={(e) => {
+                                      const newScreenshots = [...editedContent.content.screenshots]
+                                      if (!newScreenshots[idx].mockup) newScreenshots[idx].mockup = {}
+                                      newScreenshots[idx].mockup.session_date = e.target.value
+                                      setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
+                                    }}
+                                    className="w-full px-2 py-1 bg-black border border-[#272727] rounded text-white text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] text-[#888] mb-1">Session Time</label>
+                                  <input
+                                    type="text"
+                                    value={screenshot.mockup?.session_time || '3:00 PM - 3:30 PM'}
+                                    onChange={(e) => {
+                                      const newScreenshots = [...editedContent.content.screenshots]
+                                      if (!newScreenshots[idx].mockup) newScreenshots[idx].mockup = {}
+                                      newScreenshots[idx].mockup.session_time = e.target.value
+                                      setEditedContent({ ...editedContent, content: { ...editedContent.content, screenshots: newScreenshots } })
+                                    }}
+                                    className="w-full px-2 py-1 bg-black border border-[#272727] rounded text-white text-xs"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>

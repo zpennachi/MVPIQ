@@ -12,6 +12,7 @@ export interface Profile {
   google_calendar_access_token: string | null
   google_calendar_refresh_token: string | null
   google_calendar_connected: boolean | null
+  bio: string | null
   created_at: string
   updated_at: string
 }

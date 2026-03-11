@@ -24,6 +24,7 @@ export default function SettingsPage() {
     first_name: '',
     last_name: '',
     email: '',
+    bio: '',
   })
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
@@ -129,6 +130,7 @@ export default function SettingsPage() {
           first_name: profileData.first_name || '',
           last_name: profileData.last_name || '',
           email: profileData.email || '',
+          bio: profileData.bio || '',
         })
         setCurrentPhotoUrl(profileData.profile_photo_url || null)
         setCalendarConnected(profileData.google_calendar_connected || false)
@@ -216,6 +218,7 @@ export default function SettingsPage() {
           first_name: formData.first_name.trim() || null,
           last_name: formData.last_name.trim() || null,
           profile_photo_url: photoUrl,
+          bio: formData.bio.trim() || null,
         })
         .eq('id', user.id)
 
@@ -393,6 +396,22 @@ export default function SettingsPage() {
             />
             <p className="text-xs text-[#d9d9d9]/70 mt-1">
               Changing your email will require verification
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#d9d9d9] mb-2">
+              Bio
+            </label>
+            <textarea
+              value={formData.bio}
+              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+              rows={4}
+              className="w-full px-3 py-2.5 text-base border border-[#ffc700] rounded-md bg-black text-[#d9d9d9] focus:outline-none focus:ring-2 focus:ring-[#ffc700] transition-all duration-300 touch-manipulation placeholder:text-[#d9d9d9]/50 resize-none"
+              placeholder="Tell us about yourself..."
+            />
+            <p className="text-xs text-[#d9d9d9]/70 mt-1">
+              Provide a brief description of your background and expertise
             </p>
           </div>
 

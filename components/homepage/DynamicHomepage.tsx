@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Logo } from '@/components/ui/Logo'
 import { ScrollScaleSection } from './ScrollScaleSection'
+import { createClient } from '@/lib/supabase/client'
 
 // ─── Asset URLs from the original mvp-iq.com ───────────────────────────────
 const HERO_VIDEO = 'https://cdn.prod.website-files.com/66bb4ca5d3e63affa2866828%2F67000341883c0429f6c07bd6_hero-intro-transcode.mp4'
@@ -42,6 +43,8 @@ export function DynamicHomepage() {
   const rotationRef = useRef(0)
   const [price, setPrice] = useState(200)
 
+  const [platformSection, setPlatformSection] = useState<any>(null)
+
   useEffect(() => {
     fetch('/api/stripe/price')
       .then(res => res.json())
@@ -51,7 +54,22 @@ export function DynamicHomepage() {
         }
       })
       .catch(err => console.error('Failed to fetch price:', err))
+
+    // Fetch homepage sections
+    const supabase = createClient()
+    supabase
+      .from('homepage_sections')
+      .select('*')
+      .eq('section_key', 'platform')
+      .single()
+      .then(({ data }: { data: any }) => {
+        if (data && data.is_active) {
+          setPlatformSection(data)
+        }
+      })
   }, [])
+
+  const stepsToDisplay = platformSection?.content?.screenshots || STEPS
 
   const handleFlipCard = () => {
     const mv = modelRef.current
@@ -78,7 +96,7 @@ export function DynamicHomepage() {
         <div className="absolute inset-0 bg-black/75 z-10" />
         <div className="absolute inset-0 dotted-bg opacity-40 z-10" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black z-10" />
-
+ 
         <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-24">
           <div className="flex justify-center mb-6">
             <Logo height={120} variant="dark" />
@@ -183,13 +201,14 @@ export function DynamicHomepage() {
       <section id="platform" className="relative py-16 sm:py-24 bg-black dotted-bg border-t border-[#272727] scroll-mt-20">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white text-center mb-20 uppercase tracking-tight">
-            Unlock Your Full Potential: How Our Platform Elevates Your Game
+            {platformSection?.title || 'Unlock Your Full Potential: How Our Platform Elevates Your Game'}
           </h2>
 
           <div className="space-y-32">
-            {STEPS.map((step) => {
+            {stepsToDisplay.map((step: any) => {
               const renderMockup = () => {
-                switch (step.number) {
+                const mockup = step.mockup || {}
+                switch (step.step || step.number) {
                   case 1:
                     return (
                       <div className="space-y-4">
@@ -199,13 +218,13 @@ export function DynamicHomepage() {
                               <span className="text-xl font-bold text-[#ffc700]">JD</span>
                             </div>
                             <div>
-                              <h4 className="text-lg font-bold text-white">Welcome back, John!</h4>
-                              <p className="text-sm text-[#d9d9d9]">#23 • Lincoln High School</p>
+                               <h4 className="text-lg font-bold text-white">{mockup.user_name || 'Welcome back, John!'}</h4>
+                               <p className="text-sm text-[#d9d9d9]">{mockup.user_detail || '#23 • Lincoln High School'}</p>
                             </div>
                           </div>
                         </div>
                         <div className="bg-black border border-[#272727] rounded-lg p-6">
-                          <h5 className="text-lg font-semibold text-white mb-4">Submit a New Video</h5>
+                           <h5 className="text-lg font-semibold text-white mb-4">{mockup.form_title || 'Submit a New Video'}</h5>
                           <div className="space-y-3">
                             <div>
                               <label className="block text-sm font-medium text-[#d9d9d9] mb-1">Video URL <span className="text-[#ffc700]">*</span></label>
@@ -215,7 +234,7 @@ export function DynamicHomepage() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                                   </svg>
                                 </div>
-                                <input type="url" value="https://www.hudl.com/video/3/12345/abc..." className="w-full pl-9 pr-3 py-2 bg-black border border-[#ffc700] rounded text-[#d9d9d9] text-sm" readOnly />
+                                <input type="url" value={mockup.video_url || 'https://www.hudl.com/video/3/12345/abc...'} className="w-full pl-9 pr-3 py-2 bg-black border border-[#ffc700] rounded text-[#d9d9d9] text-sm" readOnly />
                               </div>
                               <p className="text-xs text-[#d9d9d9]/70 mt-1">Paste your video link</p>
                             </div>
@@ -235,13 +254,13 @@ export function DynamicHomepage() {
                               <span className="text-xl font-bold text-[#ffc700]">MS</span>
                             </div>
                             <div>
-                              <h4 className="text-lg font-bold text-white">Marvel Smith</h4>
-                              <p className="text-sm text-[#d9d9d9]">Professional Mentor</p>
+                               <h4 className="text-lg font-bold text-white">{mockup.mentor_name || 'Marvel Smith'}</h4>
+                               <p className="text-sm text-[#d9d9d9]">{mockup.mentor_role || 'Professional Mentor'}</p>
                             </div>
                           </div>
                         </div>
                         <div className="space-y-3">
-                          <h5 className="text-lg font-semibold text-white mb-3">New Submissions</h5>
+                           <h5 className="text-lg font-semibold text-white mb-3">{mockup.list_title || 'New Submissions'}</h5>
                           <div className="bg-black border border-[#272727] rounded-lg p-4 hover:border-[#ffc700]/40 transition-all">
                             <div className="flex items-start gap-3">
                               <div className="w-10 h-10 bg-[#ffc700]/20 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -250,8 +269,8 @@ export function DynamicHomepage() {
                                 </svg>
                               </div>
                               <div className="flex-1">
-                                <h6 className="font-semibold text-white mb-1">Week 3 Game Highlights</h6>
-                                <p className="text-xs text-[#d9d9d9]/70 mb-2">Submitted by John Doe • 2 hours ago</p>
+                                 <h6 className="font-semibold text-white mb-1">{mockup.submission_title || 'Week 3 Game Highlights'}</h6>
+                                 <p className="text-xs text-[#d9d9d9]/70 mb-2">{mockup.submission_detail || 'Submitted by John Doe • 2 hours ago'}</p>
                                 <div className="flex items-center gap-2">
                                   <span className="px-2 py-1 bg-[#ffc700]/20 text-[#ffc700] rounded text-xs font-medium border border-[#ffc700]/40">ASSIGNED</span>
                                 </div>
@@ -271,14 +290,14 @@ export function DynamicHomepage() {
                               <span className="text-xl font-bold text-[#ffc700]">JD</span>
                             </div>
                             <div>
-                              <h4 className="text-lg font-bold text-white">Welcome back, John!</h4>
-                              <p className="text-sm text-[#d9d9d9]">#23 • Lincoln High School</p>
+                               <h4 className="text-lg font-bold text-white">{mockup.user_name || 'Welcome back, John!'}</h4>
+                               <p className="text-sm text-[#d9d9d9]">{mockup.user_detail || '#23 • Lincoln High School'}</p>
                             </div>
                           </div>
                         </div>
                         <div className="bg-black border border-[#272727] rounded-lg p-6">
                           <div className="flex items-center justify-between mb-4">
-                            <h5 className="text-lg font-semibold text-white">Your Feedback</h5>
+                             <h5 className="text-lg font-semibold text-white">{mockup.feedback_title || 'Your Feedback'}</h5>
                             <span className="text-xs bg-green-900/40 text-green-400 border border-green-800 px-2 py-0.5 rounded-full">Completed</span>
                           </div>
                           {/* Written Feedback */}
@@ -288,18 +307,18 @@ export function DynamicHomepage() {
                                 <span className="text-sm font-bold text-[#ffc700]">MS</span>
                               </div>
                               <div>
-                                <h6 className="font-semibold text-white text-sm">Marvel Smith</h6>
-                                <p className="text-xs text-[#d9d9d9]">Former NFL Offensive Lineman</p>
+                                 <h6 className="font-semibold text-white text-sm">{mockup.mentor_name || 'Marvel Smith'}</h6>
+                                 <p className="text-xs text-[#d9d9d9]">{mockup.mentor_role || 'Former NFL Offensive Lineman'}</p>
                               </div>
                             </div>
                             <div className="space-y-2 text-sm text-[#d9d9d9]">
                               <p className="font-medium text-white">Written Notes:</p>
-                              <p className="leading-relaxed">Great improvement on your footwork! Your stance is much more balanced now. I noticed at the 2:15 mark your hip rotation opens up too early on the pass set &mdash; try to stay square longer before kicking...</p>
+                               <p className="leading-relaxed">{mockup.feedback_notes || 'Great improvement on your footwork! Your stance is much more balanced now. I noticed at the 2:15 mark your hip rotation opens up too early on the pass set — try to stay square longer before kicking...'}</p>
                             </div>
                           </div>
                           {/* Video Feedback */}
                           <div className="bg-[#272727]/50 border border-[#272727] rounded-lg p-4">
-                            <p className="font-medium text-white text-sm mb-3">Video Breakdown:</p>
+                             <p className="font-medium text-white text-sm mb-3">{mockup.breakdown_title || 'Video Breakdown:'}</p>
                             <div className="relative rounded-lg overflow-hidden bg-black border border-[#272727] aspect-video flex items-center justify-center">
                               <div className="text-center">
                                 <div className="w-14 h-14 bg-[#ffc700]/20 rounded-full flex items-center justify-center mx-auto mb-2 border-2 border-[#ffc700]/40">
@@ -307,7 +326,7 @@ export function DynamicHomepage() {
                                     <path d="M8 5v14l11-7z" />
                                   </svg>
                                 </div>
-                                <p className="text-xs text-[#d9d9d9]">Mentor video feedback &bull; 4:32</p>
+                                 <p className="text-xs text-[#d9d9d9]">{mockup.breakdown_detail || 'Mentor video feedback • 4:32'}</p>
                               </div>
                             </div>
                           </div>
@@ -323,13 +342,13 @@ export function DynamicHomepage() {
                               <span className="text-xl font-bold text-[#ffc700]">JD</span>
                             </div>
                             <div>
-                              <h4 className="text-lg font-bold text-white">Welcome back, John!</h4>
-                              <p className="text-sm text-[#d9d9d9]">#23 • Lincoln High School</p>
+                               <h4 className="text-lg font-bold text-white">{mockup.user_name || 'Welcome back, John!'}</h4>
+                               <p className="text-sm text-[#d9d9d9]">{mockup.user_detail || '#23 • Lincoln High School'}</p>
                             </div>
                           </div>
                         </div>
                         <div className="bg-black border border-[#272727] rounded-lg p-6">
-                          <h5 className="text-lg font-semibold text-white mb-4">My Appointments</h5>
+                           <h5 className="text-lg font-semibold text-white mb-4">{mockup.list_title || 'My Appointments'}</h5>
                           <div className="space-y-3">
                             <div className="bg-[#272727]/50 border border-[#272727] rounded-lg p-4 hover:border-[#ffc700]/40 transition-all">
                               <div className="flex items-start justify-between">
@@ -339,23 +358,23 @@ export function DynamicHomepage() {
                                       <span className="text-sm font-bold text-[#ffc700]">MS</span>
                                     </div>
                                     <div>
-                                      <h6 className="font-semibold text-white">Marvel Smith</h6>
-                                      <p className="text-xs text-[#d9d9d9]">1-on-1 Session</p>
+                                       <h6 className="font-semibold text-white">{mockup.mentor_name || 'Marvel Smith'}</h6>
+                                       <p className="text-xs text-[#d9d9d9]">{mockup.session_type || '1-on-1 Session'}</p>
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-2 text-sm text-[#d9d9d9] mb-2">
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
-                                    <span>Friday, March 15, 2024</span>
+                                     <span>{mockup.session_date || 'Friday, March 15, 2024'}</span>
                                   </div>
                                   <div className="flex items-center gap-2 text-sm text-[#d9d9d9]">
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
-                                    <span>3:00 PM - 3:30 PM</span>
+                                     <span>{mockup.session_time || '3:00 PM - 3:30 PM'}</span>
                                   </div>
-                                  <a href="#" className="text-[#ffc700] text-xs hover:underline mt-2 inline-block">Join Google Meet →</a>
+                                   <span className="text-[#ffc700] text-xs hover:underline mt-2 inline-block cursor-default">{mockup.meet_text || 'Join Google Meet →'}</span>
                                 </div>
                                 <span className="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs font-medium border border-green-800">CONFIRMED</span>
                               </div>
@@ -369,11 +388,13 @@ export function DynamicHomepage() {
                 }
               }
 
+              const stepNumber = step.step || step.number
+
               return (
-                <div key={step.number} className="text-center">
+                <div key={stepNumber} className="text-center">
                   {/* Number badge */}
                   <div className="w-16 h-16 mx-auto bg-[#ffc700] rounded-xl flex items-center justify-center mb-6 shadow-lg">
-                    <span className="text-3xl font-bold text-black">{step.number}</span>
+                    <span className="text-3xl font-bold text-black">{stepNumber}</span>
                   </div>
                   {/* Title */}
                   <h3 className="text-2xl sm:text-3xl font-bold text-[#ffc700] mb-4 uppercase tracking-tight">
