@@ -22,8 +22,8 @@ const STEPS = [
   },
   {
     number: 2,
-    title: 'Evaluation Process',
-    description: 'Our experts conduct a thorough analysis of your video, focusing on technical skills, tactical awareness, and physical conditioning to provide a well-rounded assessment.',
+    title: 'Professional Analysis',
+    description: 'Our experts conduct a thorough analysis of your video, focusing on technical skills, tactical awareness, and physical conditioning to provide a well-rounded assessment of your performance and potential.',
   },
   {
     number: 3,
@@ -33,7 +33,7 @@ const STEPS = [
   {
     number: 4,
     title: 'Personalized Consultation*',
-    description: 'Our platform offers one-on-one consultations with our expert analysts, giving you the opportunity to discuss your progress, ask questions, and receive personalized advice tailored to your development needs.',
+    description: 'Our platform offers one-on-one 15-minute consultations with our expert analysts, giving you the opportunity to discuss your progress, ask questions, and receive personalized advice tailored to your development needs.',
     note: '*personalized consultations are a premium offering for an additional charge',
   },
 ]
@@ -208,8 +208,10 @@ export function DynamicHomepage() {
             {stepsToDisplay.map((step: any) => {
               const renderMockup = () => {
                 const mockup = step.mockup || {}
-                switch (step.step || step.number) {
-                  case 1:
+                const title = (step.title || '').toLowerCase()
+                
+                // Match based on title content for better robustness
+                if (title.includes('submission')) {
                     return (
                       <div className="space-y-4">
                         <div className="bg-gradient-to-r from-[#272727] to-black border border-[#272727] rounded-lg p-4 mb-4">
@@ -245,7 +247,9 @@ export function DynamicHomepage() {
                         </div>
                       </div>
                     )
-                  case 2:
+                }
+                
+                if (title.includes('evaluation') || title.includes('analysis') || title.includes('identification')) {
                     return (
                       <div className="space-y-4">
                         <div className="bg-gradient-to-r from-[#272727] to-black border border-[#272727] rounded-lg p-4 mb-4">
@@ -281,7 +285,9 @@ export function DynamicHomepage() {
                         </div>
                       </div>
                     )
-                  case 3:
+                }
+                
+                if (title.includes('feedback')) {
                     return (
                       <div className="space-y-4">
                         <div className="bg-gradient-to-r from-[#272727] to-black border border-[#272727] rounded-lg p-4 mb-4">
@@ -333,7 +339,9 @@ export function DynamicHomepage() {
                         </div>
                       </div>
                     )
-                  case 4:
+                }
+                
+                if (title.includes('consultation') || title.includes('appointment')) {
                     return (
                       <div className="space-y-4">
                         <div className="bg-gradient-to-r from-[#272727] to-black border border-[#272727] rounded-lg p-4 mb-4">
@@ -372,7 +380,7 @@ export function DynamicHomepage() {
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
-                                     <span>{mockup.session_time || '3:00 PM - 3:30 PM'}</span>
+                                     <span>{mockup.session_time || '3:00 PM - 3:15 PM'}</span>
                                   </div>
                                    <span className="text-[#ffc700] text-xs hover:underline mt-2 inline-block cursor-default">{mockup.meet_text || 'Join Google Meet →'}</span>
                                 </div>
@@ -383,9 +391,9 @@ export function DynamicHomepage() {
                         </div>
                       </div>
                     )
-                  default:
-                    return null
                 }
+
+                return null
               }
 
               const stepNumber = step.step || step.number
@@ -477,7 +485,7 @@ export function DynamicHomepage() {
               </Link>
             </div>
 
-            {/* Right: 3 Steps with gold icon badges */}
+            {/* Right: 4 Steps with gold icon badges */}
             <div className="space-y-8">
               {/* Step 1 */}
               <div className="flex items-start gap-5">
@@ -491,7 +499,7 @@ export function DynamicHomepage() {
                     Sign Up & Choose Your Mentor:
                   </h4>
                   <p className="text-gray-700 leading-relaxed">
-                    Create an account and browse our roster of former professional athletes to find the perfect mentor for your position.
+                    Create an account and connect with 2x Super Bowl Champion Marvel Smith to find the perfect mentor for your position.
                   </p>
                 </div>
               </div>
@@ -517,15 +525,32 @@ export function DynamicHomepage() {
               <div className="flex items-start gap-5">
                 <div className="bg-[#ffc700] rounded-xl w-14 h-14 flex items-center justify-center flex-shrink-0 shadow-md">
                   <svg className="w-7 h-7 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </div>
                 <div>
                   <h4 className="font-bold text-black text-base uppercase tracking-wide mb-1">
-                    Choose Your Plan and Begin Analysis:
+                    Receive Professional Feedback:
                   </h4>
                   <p className="text-gray-700 leading-relaxed">
-                    Get detailed written & video breakdown of your film for $200, or book a live 1-on-1 consultation session for $300.
+                    Get detailed written notes and a video breakdown from your mentor highlighing strengths and areas for growth.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 4 */}
+              <div className="flex items-start gap-5">
+                <div className="bg-[#ffc700] rounded-xl w-14 h-14 flex items-center justify-center flex-shrink-0 shadow-md">
+                  <svg className="w-7 h-7 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-bold text-black text-base uppercase tracking-wide mb-1">
+                    Book a Personalized Consultation:
+                  </h4>
+                  <p className="text-gray-700 leading-relaxed">
+                    Take your game to the next level with a live 15-minute 1-on-1 session to discuss your progress and strategy.
                   </p>
                 </div>
               </div>
