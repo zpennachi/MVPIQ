@@ -39,8 +39,9 @@ SET content = '{
     },
     {
       "step": 4,
-      "title": "PERSONALIZED CONSULTATION",
+      "title": "PERSONALIZED CONSULTATION*",
       "description": "Book a one-on-one 15-minute session with your mentor to discuss your progress, ask questions, and receive personalized coaching tailored to your development goals.",
+      "note": "*personalized consultations are a premium offering for an additional charge",
       "mockup": {
         "list_title": "My Appointments",
         "mentor_name": "Marvel Smith",
